@@ -7,7 +7,7 @@ body { overflow: hidden; user-select: none; -webkit-user-select: none; }
 .box b { font-size: 1.35rem; color: #C9A227; line-height: 1.2; }
 .lbl { font-size: .7rem; color: #F3EBD3; opacity: .85; }
 .sub { font-size: .68rem; opacity: .75; min-height: .9em; }
-#nextBox { flex: 0 0 auto; align-items: center; cursor: pointer; }
+#nextBox { flex: 0 0 auto; align-items: center; }
 #next { width: 64px; height: 64px; }
 #pauseBtn { flex: 0 0 28px; font: bold 12px Georgia, serif; background: #253058; color: #C9A227; border: 1px solid #8C6F12; border-radius: 6px; padding: 0; }
 #muteBtn { flex: 0 0 28px; font: bold 14px Georgia, serif; background: #253058; color: #C9A227; border: 1px solid #8C6F12; border-radius: 6px; padding: 0; margin-left: 6px; }

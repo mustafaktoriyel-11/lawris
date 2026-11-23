@@ -1,6 +1,6 @@
 // Lawris - oyun mantığı
 import { Board, COLS, ROWS, nextId } from './board.js';
-import { TYPES, NAMES, cellsOf, sizeOf, clearSpriteCache } from './pieces.js';
+import { TYPES, WEIGHTS, cellsOf, sizeOf, clearSpriteCache } from './pieces.js';
 import { Renderer } from './render.js';
 import { initInput } from './input.js';
 import { music } from './music.js';
@@ -21,13 +21,14 @@ let state = 'menu'; // menu | play | pause | over
 let piece = null, next = null;
 let score = 0, rows = 0, level = 0, best = 0;
 let lockMs = 0, resets = 0, lowestY = 0;
-let doubleLeft = 0, slowMs = 0, swapAvail = false, acc = 0, last = 0;
+let doubleLeft = 0, slowMs = 0, acc = 0, last = 0;
 
 try { best = parseInt(localStorage.getItem('lawris.best') || '0', 10) || 0; } catch (_) { best = 0; }
 
-function newPiece(forceNormal) {
-  const type = TYPES[Math.floor(Math.random() * TYPES.length)];
-  return { type, rot: 0, x: 0, y: 0, golden: !forceNormal && Math.random() < GOLD_CHANCE, id: 0 };
+function newPiece() {
+  let r = Math.random() * TYPES.reduce((a, t) => a + WEIGHTS[t], 0), type = TYPES[0];
+  for (const t of TYPES) { r -= WEIGHTS[t]; if (r < 0) { type = t; break; } }
+  return { type, rot: 0, x: 0, y: 0, golden: Math.random() < GOLD_CHANCE, id: 0 };
 }
 function spawn() {
   piece = next || newPiece();
@@ -63,7 +64,6 @@ function hud() {
   $('best').textContent = best;
   $('level').textContent = LEVELS[level];
   $('status').textContent = (doubleLeft > 0 ? 'x2 puan (' + doubleLeft + ') ' : '') + (slowMs > 0 ? 'yavaş ' + Math.ceil(slowMs / 1000) + 'sn' : '');
-  $('swap').hidden = !swapAvail;
 }
 
 function ghostY() {
@@ -92,9 +92,9 @@ function applyGolden(p) {
       score += 250; slowMs = 10000;
       toast('Altın Terazi: +250 puan, yerçekimi 10 sn yavaş.');
       break;
-    case 'cilt':
+    case 'kanun':
       doubleLeft = 3;
-      toast('Altın Kanun cildi: sonraki 3 satır silmede puan iki katı.');
+      toast('Altın Kanun: sonraki 3 satır silmede puan iki katı.');
       break;
     case 'paragraf': {
       const t = board.topRow();
@@ -102,10 +102,14 @@ function applyGolden(p) {
       toast('Altın Paragraf: itiraz! En üst satır kaldırıldı.');
       break;
     }
-    case 'muhur':
-      swapAvail = true;
-      toast('Altın Mühür: sıradaki davayı değiştirmek için önizlemeye dokun.');
+    case 'kilic': {
+      const bl = [cells[4], cells[5]];
+      if (bl[0][0] === bl[1][0]) board.clearColumn(p.x + bl[0][0]);
+      else board.removeRows([p.y + bl[0][1]]);
+      score += 150;
+      toast('Kılıç hükmü kesti: bıçağın sütunu temizlendi.');
       break;
+    }
   }
 }
 
@@ -173,7 +177,7 @@ function start() {
   music.init();
   music.start();
   board.reset();
-  score = 0; rows = 0; level = 0; doubleLeft = 0; slowMs = 0; swapAvail = false;
+  score = 0; rows = 0; level = 0; doubleLeft = 0; slowMs = 0;
   next = null; piece = null;
   for (const id of ['menu', 'over', 'pause']) $(id).hidden = true;
   state = 'play';
@@ -235,14 +239,6 @@ function showMute() {
 }
 $('muteBtn').addEventListener('click', () => { music.setMuted(!music.isMuted()); showMute(); });
 showMute();
-$('nextBox').addEventListener('click', () => {
-  if (state !== 'play' || !swapAvail) return;
-  swapAvail = false;
-  next = newPiece(true);
-  renderer.drawPreview(prevCv, next);
-  toast('Sıradaki dava değiştirildi.');
-  hud();
-});
 document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') act.pause(); });
 window.addEventListener('resize', layout);
 window.addEventListener('orientationchange', () => setTimeout(layout, 150));

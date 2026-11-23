@@ -45,6 +45,11 @@ export class Board {
     return list.length;
   }
 
+  // x sütunundaki tüm hücreleri boşaltır
+  clearColumn(x) {
+    for (let y = 0; y < ROWS; y++) this.grid[y][x] = null;
+  }
+
   topRow() {
     for (let y = 0; y < ROWS; y++) if (this.grid[y].some(Boolean)) return y;
     return -1;

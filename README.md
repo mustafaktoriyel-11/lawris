@@ -2,7 +2,7 @@
 
 **▶ Oyna: https://mustafaktoriyel-11.github.io/lawris/**
 
-Lawris, hukuk temalı, düşen bloklu bir bulmaca oyunudur. Tahta 11 sütun x 18 satırdır ve parçalar 5-6 hücreli hukuk nesneleridir: Tokmak, Terazi, Sütun, Kanun cildi, Paragraf ve Mühür. Düz HTML, CSS ve JavaScript (Canvas 2D) ile yazılmıştır; paket veya ağ bağımlılığı yoktur.
+Lawris, hukuk temalı, düşen bloklu bir bulmaca oyunudur. Tahta 11 sütun x 18 satırdır ve parçalar 4-6 hücreli evrensel hukuk sembolleridir: Sütun, Tokmak, Kanun, Terazi, Paragraf ve Kılıç (Kılıç diğerlerinin yarı olasılığıyla gelir). Düz HTML, CSS ve JavaScript (Canvas 2D) ile yazılmıştır; paket veya ağ bağımlılığı yoktur.
 
 ## Nasıl oynanır
 
@@ -14,9 +14,9 @@ Lawris, hukuk temalı, düşen bloklu bir bulmaca oyunudur. Tahta 11 sütun x 18
   - Tokmak: dokunduğu en alt satırı siler.
   - Sütun: altındaki boş hücreleri mermerle doldurur.
   - Terazi: bonus puan verir, 10 sn yerçekimini yavaşlatır.
-  - Kanun cildi: sonraki 3 satır silmede puan iki katı.
+  - Kanun: sonraki 3 satır silmede puan iki katı.
   - Paragraf: yığının en üst satırını kaldırır (itiraz).
-  - Mühür: önizlemeye bir kez dokunarak sıradaki parçayı değiştirebilirsiniz.
+  - Kılıç: bıçağının bulunduğu sütundaki tüm blokları siler (yatay duruyorsa bıçağın satırını).
 
 ## Kontroller
 
