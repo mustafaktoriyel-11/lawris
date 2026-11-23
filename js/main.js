@@ -5,6 +5,7 @@ import { Renderer } from './render.js';
 import { setLevelColors, tickColors } from './theme.js';
 import { initInput } from './input.js';
 import { music } from './music.js';
+import { aslanHukum, aslanSeviye, kediSoyle, kediMenu, kediOver, maskotReset } from './maskot.js';
 
 const LEVELS = ['Sulh', 'Asliye', 'İstinaf', 'Yargıtay'];
 const LINE_SCORE = [0, 100, 300, 500, 800, 1200, 1800];
@@ -50,6 +51,7 @@ const gravityMs = () => {
 };
 
 function toast(text) {
+  if (state === 'play' && /^Altın|^Kılıç/.test(text)) { kediSoyle(text, 2200); return; }
   const el = $('toast');
   el.textContent = text;
   el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
@@ -125,9 +127,10 @@ function lockPiece() {
     if (doubleLeft > 0) { pts *= 2; doubleLeft--; }
     score += pts; rows += n;
     flash('Hüküm!');
+    if (n >= 2) aslanHukum(n);
     music.knock();
     const nl = Math.min(LEVELS.length - 1, Math.floor(rows / 8));
-    if (nl > level) { level = nl; music.setLevel(level); toast('Yeni mahkeme: ' + LEVELS[level]); setLevelColors(level); }
+    if (nl > level) { level = nl; music.setLevel(level); aslanSeviye(LEVELS[level]); setLevelColors(level); }
   }
   piece = null;
   spawn();
@@ -175,6 +178,7 @@ const act = {
 };
 
 function start() {
+  maskotReset();
   music.init();
   music.start();
   board.reset();
@@ -198,6 +202,8 @@ function gameOver() {
   $('final').textContent = score;
   $('finalBest').textContent = best;
   $('over').hidden = false;
+  maskotReset();
+  kediOver();
   hud();
 }
 
@@ -248,6 +254,7 @@ window.addEventListener('orientationchange', () => setTimeout(layout, 150));
 
 initInput(act, canvas, () => renderer.cellCss);
 $('best').textContent = best;
+kediMenu();
 layout();
 requestAnimationFrame((t) => { last = t; frame(t); });
 window.__lawris = { board, act, get state() { return state; }, get piece() { return piece; } };

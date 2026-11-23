@@ -41,3 +41,29 @@ body.playing #pauseBtn { flex: 0 0 28px; font: bold 12px Georgia, serif; backgro
 .doc { max-width: 640px; margin: 0 auto; padding: 24px 16px; overflow: auto; height: 100vh; line-height: 1.55; }
 .doc a { color: #C9A227; }
 body:has(.doc) { overflow: auto; user-select: text; }
+
+/* Maskotlar */
+.mascot-badge { width: var(--ms, 72px); height: var(--ms, 72px); border-radius: 50%; background: rgba(243,235,211,.92); border: 2px solid #C9A227; box-shadow: 0 2px 8px rgba(0,0,0,.45); flex: 0 0 auto; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.mascot-badge svg { width: 90%; height: 90%; display: block; }
+.bubble { position: relative; background: #F3EBD3; color: #2A0E14; border: 1px solid #C9A227; border-radius: 10px; padding: 6px 9px; font: .78rem/1.25 Georgia, 'Times New Roman', serif; max-width: 180px; text-align: left; }
+.bubble::before { content: ''; position: absolute; width: 9px; height: 9px; background: #F3EBD3; border: solid #C9A227; border-width: 0 0 1px 1px; transform: rotate(45deg); }
+#mascotLayer { position: absolute; inset: 0; pointer-events: none; z-index: 4; overflow: hidden; }
+.pop { position: absolute; display: flex; align-items: flex-end; gap: 6px; pointer-events: none; opacity: 0; animation-duration: var(--dur, 1.5s); animation-timing-function: ease-in-out; animation-fill-mode: both; }
+.pop .bubble::before { bottom: 12px; left: -5px; transform: rotate(45deg); }
+.pop.aslan-side { --ms: 72px; right: 2px; top: 10%; flex-direction: row-reverse; animation-name: popSide; }
+.pop.aslan-side .bubble { max-width: 108px; }
+.pop.aslan-side .bubble::before { left: auto; right: -5px; transform: rotate(-135deg); }
+.pop.kedi-corner { --ms: 64px; left: 2px; bottom: 2px; animation-name: popUp; }
+.pop.aslan-big { --ms: 120px; top: 1%; left: 50%; flex-direction: column; align-items: center; transform: translateX(-50%); animation-name: popBig; }
+.pop.aslan-big .bubble { max-width: 200px; text-align: center; order: -1; margin-bottom: 8px; }
+.pop.aslan-big .bubble::before { bottom: -5px; left: calc(50% - 4px); transform: rotate(-45deg); }
+@keyframes popSide { 0% { opacity: 0; transform: translateX(80%) scale(.7); } 15%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateX(80%) scale(.7); } }
+@keyframes popUp { 0% { opacity: 0; transform: translateY(70%) scale(.7); } 15%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(70%) scale(.7); } }
+@keyframes popBig { 0% { opacity: 0; transform: translateX(-50%) scale(.6); } 15%, 85% { opacity: 1; transform: translateX(-50%); } 100% { opacity: 0; transform: translateX(-50%) scale(.8); } }
+.pop.rm { animation-name: popFade !important; }
+@keyframes popFade { 0%, 100% { opacity: 0; } 15%, 85% { opacity: 1; } }
+.menu-hero { display: flex; align-items: center; gap: 8px; --ms: 84px; }
+.menu-hero .bubble { max-width: 180px; }
+.menu-hero .bubble::before { top: 50%; left: -5px; margin-top: -4px; }
+#over .menu-hero { margin-top: 4px; }
+#over .small { font-size: .75rem; }
