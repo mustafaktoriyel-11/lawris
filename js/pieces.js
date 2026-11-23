@@ -1,3 +1,4 @@
+import { THEME } from './theme.js';
 // Lawris - parça tanımları ve sprite çizimi
 export const TYPES = ['sutun', 'tokmak', 'kanun', 'terazi', 'paragraf', 'kilic'];
 export const NAMES = {
@@ -47,7 +48,7 @@ const PAL = {
   tokmak: { main: C.wood, dark: C.woodD, acc: C.gold },
   terazi: { main: C.steel, dark: C.steelD, acc: C.gold },
   sutun: { main: C.marble, dark: C.marbleD, acc: C.marbleD },
-  kanun: { main: C.bordo, dark: C.bordoD, acc: C.gold, accD: C.goldD },
+  kanun: { main: THEME.kanun ? THEME.kanun.main : C.bordo, dark: THEME.kanun ? THEME.kanun.dark : C.bordoD, acc: C.gold, accD: C.goldD },
   paragraf: { main: C.green, dark: C.greenD, acc: C.ink },
   kilic: { main: C.steel, dark: C.steelD, acc: C.gold, accD: C.goldD, grip: C.wood, gripD: C.woodD, gem: C.bordo },
 };

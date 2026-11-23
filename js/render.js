@@ -1,5 +1,6 @@
 // Lawris - çizim
 import { COLS, ROWS } from './board.js';
+import { THEME as TH } from './theme.js';
 import { getSprite, hasCell, sizeOf, COLORS as C } from './pieces.js';
 
 const TOP = 1.7;     // alınlık yüksekliği (hücre)
@@ -27,10 +28,10 @@ export class Renderer {
 
   draw(g) {
     const c = this.ctx, s = this.s, W = this.cv.width, H = this.cv.height;
-    c.fillStyle = '#1B2340'; c.fillRect(0, 0, W, H);
+    c.fillStyle = TH.bg; c.fillRect(0, 0, W, H);
     this.drawFrame(c, s, W, H);
     // ızgara
-    c.strokeStyle = '#253058'; c.lineWidth = 1; c.beginPath();
+    c.strokeStyle = TH.grid; c.lineWidth = 1; c.beginPath();
     for (let x = 0; x <= COLS; x++) { c.moveTo(this.bx + x * s + 0.5, this.by); c.lineTo(this.bx + x * s + 0.5, this.by + ROWS * s); }
     for (let y = 0; y <= ROWS; y++) { c.moveTo(this.bx, this.by + y * s + 0.5); c.lineTo(this.bx + COLS * s, this.by + y * s + 0.5); }
     c.stroke();
@@ -87,27 +88,29 @@ export class Renderer {
   drawFrame(c, s, W, H) {
     const colH = H - this.by - BOTTOM * s;
     // alınlık
-    c.fillStyle = C.marble;
+    c.fillStyle = TH.f;
     c.beginPath(); c.moveTo(0, 1.25 * s); c.lineTo(W / 2, 0.05 * s); c.lineTo(W, 1.25 * s); c.closePath(); c.fill();
-    c.fillStyle = '#1B2340';
+    c.fillStyle = TH.bg;
     c.beginPath(); c.moveTo(0.9 * s, 1.15 * s); c.lineTo(W / 2, 0.38 * s); c.lineTo(W - 0.9 * s, 1.15 * s); c.closePath(); c.fill();
-    c.fillStyle = C.marbleD; c.fillRect(0, 1.25 * s, W, 0.45 * s);
-    c.fillStyle = C.marble; c.fillRect(0, 1.25 * s, W, 0.14 * s);
+    c.fillStyle = TH.fD; c.fillRect(0, 1.25 * s, W, 0.45 * s);
+    c.fillStyle = TH.f; c.fillRect(0, 1.25 * s, W, 0.14 * s);
+    if (TH.band) { c.fillStyle = TH.band; c.fillRect(0, 1.62 * s, W, 0.06 * s); }
     c.fillStyle = C.gold; c.font = 'bold ' + Math.round(s * 0.62) + 'px Georgia, serif';
     c.textAlign = 'center'; c.textBaseline = 'alphabetic';
     c.fillText('L A W R I S', W / 2, 1.08 * s);
     // sütunlar
     for (const cx of [0, W - COLW * s]) {
-      c.fillStyle = C.marble; c.fillRect(cx + 0.15 * s, this.by, 0.7 * s, colH);
-      c.strokeStyle = C.marbleD; c.lineWidth = Math.max(1, s * 0.05);
+      c.fillStyle = TH.f; c.fillRect(cx + 0.15 * s, this.by, 0.7 * s, colH);
+      c.strokeStyle = TH.fD; c.lineWidth = Math.max(1, s * 0.05);
       for (const f of [0.35, 0.5, 0.65]) { c.beginPath(); c.moveTo(cx + f * s, this.by + 0.3 * s); c.lineTo(cx + f * s, this.by + colH - 0.1 * s); c.stroke(); }
-      c.fillStyle = C.marble; c.fillRect(cx + 0.03 * s, this.by, 0.94 * s, 0.25 * s);
-      c.fillStyle = C.marbleD; c.fillRect(cx + 0.03 * s, this.by + 0.22 * s, 0.94 * s, 0.05 * s);
-      c.fillStyle = C.marble; c.fillRect(cx + 0.05 * s, this.by + colH - 0.2 * s, 0.9 * s, 0.2 * s);
+      c.fillStyle = TH.f; c.fillRect(cx + 0.03 * s, this.by, 0.94 * s, 0.25 * s);
+      c.fillStyle = TH.fD; c.fillRect(cx + 0.03 * s, this.by + 0.22 * s, 0.94 * s, 0.05 * s);
+      c.fillStyle = TH.f; c.fillRect(cx + 0.05 * s, this.by + colH - 0.2 * s, 0.9 * s, 0.2 * s);
+      if (TH.band) { c.fillStyle = TH.band; c.fillRect(cx + 0.03 * s, this.by + 0.25 * s, 0.94 * s, 0.07 * s); c.fillRect(cx + 0.05 * s, this.by + colH - 0.27 * s, 0.9 * s, 0.07 * s); }
     }
     // kaide
-    c.fillStyle = C.marbleD; c.fillRect(0, this.by + colH, W, BOTTOM * s);
-    c.fillStyle = C.marble; c.fillRect(0, this.by + colH, W, 0.14 * s);
+    c.fillStyle = TH.fD; c.fillRect(0, this.by + colH, W, BOTTOM * s);
+    c.fillStyle = TH.f; c.fillRect(0, this.by + colH, W, 0.14 * s);
     c.fillStyle = C.goldD; c.fillRect(this.bx, this.by - 0.05 * s, COLS * s, 0.05 * s);
   }
 
