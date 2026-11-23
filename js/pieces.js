@@ -46,7 +46,7 @@ const C = {
 };
 const PAL = {
   tokmak: { main: C.wood, dark: C.woodD, acc: C.gold },
-  terazi: { main: C.steel, dark: C.steelD, acc: C.gold },
+  terazi: { main: '#4F5D78', dark: '#2E3850', acc: C.gold },
   sutun: { main: C.marble, dark: C.marbleD, acc: C.marbleD },
   kanun: { main: THEME.kanun ? THEME.kanun.main : C.bordo, dark: THEME.kanun ? THEME.kanun.dark : C.bordoD, acc: C.gold, accD: C.goldD },
   paragraf: { main: C.green, dark: C.greenD, acc: C.ink },
@@ -160,50 +160,51 @@ function dParagraf(c, s, P, cells) {
   c.fillText('§', (m[0] + 0.5) * s, (m[1] + 0.55) * s);
 }
 function dTerazi(c, s, P, cells) {
-  const lw = Math.max(1, s * 0.05), ctr = (q) => [(q[0] + 0.5) * s, (q[1] + 0.5) * s];
+  // Kabartma levha: hücreleri tam dolduran plaka + üstüne işlenmiş dik terazi
+  unionPlate(c, s, cells, P);
+  const ctr = (q) => [(q[0] + 0.5) * s, (q[1] + 0.5) * s];
   const arms = cells.filter(([x, y]) => nb(cells, x, y).length === 1);
   const bar = cells.filter((q) => !arms.includes(q));
   const mid = bar.find(([x, y]) => !arms.some((a) => Math.abs(a[0] - x) + Math.abs(a[1] - y) === 1));
   const ends = bar.filter((q) => q !== mid);
-  const horiz = ends[0][1] === ends[1][1];
   const endOf = (a) => ends.find((q) => Math.abs(q[0] - a[0]) + Math.abs(q[1] - a[1]) === 1);
-  const d = [arms[0][0] - endOf(arms[0])[0], arms[0][1] - endOf(arms[0])[1]]; // kefe yönü
+  const E = P.acc, G = P.pivot || P.acc;
   const [mx, my] = ctr(mid);
-  c.lineCap = 'butt';
-  // kısa direk (kefelerin tarafına doğru)
-  c.beginPath();
-  c.moveTo(mx - d[1] * 0.16 * s, my - d[0] * 0.16 * s); c.lineTo(mx + d[1] * 0.16 * s, my + d[0] * 0.16 * s);
-  c.lineTo(mx + d[0] * 0.48 * s + d[1] * 0.26 * s, my + d[1] * 0.48 * s + d[0] * 0.26 * s);
-  c.lineTo(mx + d[0] * 0.48 * s - d[1] * 0.26 * s, my + d[1] * 0.48 * s - d[0] * 0.26 * s);
-  c.closePath(); fillStroke(c, P.dark, P.dark, lw);
-  // kefeler: askı kolu, zincirler, kase (hep aşağı sarkar)
-  for (const a of arms) {
-    const b = endOf(a), [bx, by] = ctr(b);
-    const hx = (a[0] + 0.5) * s, hy = (a[1] + 0.1) * s;
-    const ry = (a[1] + 0.52) * s;
-    c.strokeStyle = P.dark; c.lineWidth = s * 0.1; c.lineCap = 'round';
-    c.beginPath(); c.moveTo(bx, by); c.lineTo(hx, hy); c.stroke();
-    c.lineCap = 'butt';
-    c.beginPath(); c.moveTo(hx, hy); c.lineTo(hx - 0.42 * s, ry); c.lineTo(hx + 0.42 * s, ry); c.closePath();
-    c.fillStyle = 'rgba(0,0,0,0.22)'; c.fill();
-    c.strokeStyle = P.dark; c.lineWidth = Math.max(1.2, s * 0.06); c.stroke();
-    c.beginPath(); c.ellipse(hx, ry, 0.46 * s, 0.44 * s, 0, 0, Math.PI);
-    c.closePath(); fillStroke(c, P.main, P.dark, lw);
-    c.fillStyle = P.acc; c.fillRect(hx - 0.46 * s, ry - 0.04 * s, 0.92 * s, 0.1 * s);
+  c.lineCap = 'round'; c.lineJoin = 'round';
+  // iç çerçeve (kabartma hissi)
+  c.save(); c.globalAlpha = 0.35; c.strokeStyle = E; c.lineWidth = Math.max(1, s * 0.03);
+  for (const [x, y] of cells) {
+    const has = (dx, dy) => cells.some((q) => q[0] === x + dx && q[1] === y + dy), i = 0.16 * s;
+    c.beginPath();
+    if (!has(0, -1)) { c.moveTo(x * s + (has(-1, 0) ? 0 : i), y * s + i); c.lineTo((x + 1) * s - (has(1, 0) ? 0 : i), y * s + i); }
+    if (!has(0, 1)) { c.moveTo(x * s + (has(-1, 0) ? 0 : i), (y + 1) * s - i); c.lineTo((x + 1) * s - (has(1, 0) ? 0 : i), (y + 1) * s - i); }
+    if (!has(-1, 0)) { c.moveTo(x * s + i, y * s + (has(0, -1) ? 0 : i)); c.lineTo(x * s + i, (y + 1) * s - (has(0, 1) ? 0 : i)); }
+    if (!has(1, 0)) { c.moveTo((x + 1) * s - i, y * s + (has(0, -1) ? 0 : i)); c.lineTo((x + 1) * s - i, (y + 1) * s - (has(0, 1) ? 0 : i)); }
+    c.stroke();
   }
-  // kiriş: bar hücrelerini kalın bir çubukla doldurur
-  const xs = ends.map((q) => q[0]), ys = ends.map((q) => q[1]);
-  const x0 = Math.min(...xs) * s, y0 = Math.min(...ys) * s;
-  const bw = horiz ? 3 * s : s, bh = horiz ? s : 3 * s, t = 0.5 * s;
-  const rx = horiz ? x0 + 0.03 * s : x0 + (s - t) / 2, ry2 = horiz ? y0 + (s - t) / 2 : y0 + 0.03 * s;
-  const rw = horiz ? bw - 0.06 * s : t, rh = horiz ? t : bh - 0.06 * s;
-  rr(c, rx, ry2, rw, rh, 0.1 * s); fillStroke(c, P.main, P.dark, lw);
-  c.fillStyle = P.acc;
-  if (horiz) { c.fillRect(rx + 0.45 * s, ry2, 0.08 * s, t); c.fillRect(rx + rw - 0.53 * s, ry2, 0.08 * s, t); }
-  else { c.fillRect(rx, ry2 + 0.45 * s, t, 0.08 * s); c.fillRect(rx, ry2 + rh - 0.53 * s, t, 0.08 * s); }
-  // orta mafsal
-  c.beginPath(); c.arc(mx, my, 0.3 * s, 0, Math.PI * 2); fillStroke(c, P.acc, P.dark, lw);
-  c.beginPath(); c.arc(mx, my, 0.1 * s, 0, Math.PI * 2); c.fillStyle = P.dark; c.fill();
+  c.restore();
+  // kiriş
+  const [e0x, e0y] = ctr(ends[0]), [e1x, e1y] = ctr(ends[1]);
+  c.strokeStyle = E; c.lineWidth = s * 0.13;
+  c.beginPath(); c.moveTo(e0x, e0y); c.lineTo(e1x, e1y); c.stroke();
+  for (const [ex, ey] of [[e0x, e0y], [e1x, e1y]]) { c.beginPath(); c.arc(ex, ey, s * 0.11, 0, Math.PI * 2); c.fillStyle = E; c.fill(); }
+  // kefeler (her zaman aşağı sarkar)
+  for (const a of arms) {
+    const [bx, by] = ctr(endOf(a));
+    const hx = (a[0] + 0.5) * s, hy = (a[1] + 0.2) * s, ry = (a[1] + 0.6) * s, w = 0.3 * s;
+    c.lineWidth = s * 0.06; c.strokeStyle = E;
+    if (Math.abs(bx - hx) > 1 || Math.abs(by - hy) > 0.35 * s) { c.beginPath(); c.moveTo(bx, by); c.lineTo(hx, hy); c.stroke(); }
+    c.lineWidth = Math.max(1, s * 0.035);
+    c.beginPath(); c.moveTo(hx, hy); c.lineTo(hx - w, ry); c.moveTo(hx, hy); c.lineTo(hx + w, ry); c.stroke();
+    c.beginPath(); c.moveTo(hx - w - 0.04 * s, ry); c.quadraticCurveTo(hx, ry + 0.42 * s, hx + w + 0.04 * s, ry); c.closePath();
+    c.fillStyle = E; c.fill();
+    c.beginPath(); c.arc(hx, hy, s * 0.05, 0, Math.PI * 2); c.fill();
+  }
+  // orta mafsal ve tepelik
+  c.beginPath(); c.arc(mx, my, s * 0.2, 0, Math.PI * 2); c.fillStyle = G; c.fill();
+  c.strokeStyle = P.dark; c.lineWidth = Math.max(1, s * 0.04); c.stroke();
+  c.beginPath(); c.arc(mx, my, s * 0.07, 0, Math.PI * 2); c.fillStyle = P.dark; c.fill();
+  c.lineCap = 'butt'; c.lineJoin = 'miter';
 }
 function dKilic(c, s, P) {
   const lw = Math.max(1, s * 0.05);
