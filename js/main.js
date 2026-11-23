@@ -7,6 +7,8 @@ import { initInput } from './input.js';
 const LEVELS = ['Sulh', 'Asliye', 'İstinaf', 'Yargıtay'];
 const LINE_SCORE = [0, 100, 300, 500, 800, 1200, 1800];
 const GOLD_CHANCE = 0.08;
+const LOCK_DELAY = 500;   // yere değdikten sonra kayma/döndürme süresi (ms)
+const MAX_RESETS = 15;    // aynı yükseklikte süreyi en fazla kaç kez yenileyebilir
 const $ = (id) => document.getElementById(id);
 
 const board = new Board();
@@ -17,6 +19,7 @@ const prevCv = $('next');
 let state = 'menu'; // menu | play | pause | over
 let piece = null, next = null;
 let score = 0, rows = 0, level = 0, best = 0;
+let lockMs = 0, resets = 0, lowestY = 0;
 let doubleLeft = 0, slowMs = 0, swapAvail = false, acc = 0, last = 0;
 
 try { best = parseInt(localStorage.getItem('lawris.best') || '0', 10) || 0; } catch (_) { best = 0; }
@@ -32,7 +35,7 @@ function spawn() {
   piece.rot = 0;
   piece.x = Math.floor((COLS - sizeOf(piece.type, 0).w) / 2);
   piece.y = 0;
-  acc = 0;
+  acc = 0; lockMs = 0; resets = 0; lowestY = 0;
   renderer.drawPreview(prevCv, next);
   if (board.collides(piece)) gameOver();
 }
@@ -124,23 +127,31 @@ function lockPiece() {
   hud();
 }
 
+const grounded = () => board.collides(piece, piece.x, piece.y + 1);
+function fell() {
+  if (piece.y > lowestY) { lowestY = piece.y; resets = 0; }
+}
 function stepDown() {
-  if (!board.collides(piece, piece.x, piece.y + 1)) piece.y++;
-  else lockPiece();
+  if (!grounded()) { piece.y++; fell(); }
+}
+// Yerdeyken yapılan başarılı hareket kilit süresini yeniler (sınırlı sayıda)
+function moved() {
+  if (resets < MAX_RESETS) { lockMs = 0; resets++; }
 }
 
 const act = {
-  left() { if (state === 'play' && !board.collides(piece, piece.x - 1, piece.y)) piece.x--; },
-  right() { if (state === 'play' && !board.collides(piece, piece.x + 1, piece.y)) piece.x++; },
+  left() { if (state === 'play' && !board.collides(piece, piece.x - 1, piece.y)) { piece.x--; moved(); } },
+  right() { if (state === 'play' && !board.collides(piece, piece.x + 1, piece.y)) { piece.x++; moved(); } },
   down() {
     if (state !== 'play') return;
-    if (!board.collides(piece, piece.x, piece.y + 1)) { piece.y++; score += 1; acc = 0; hud(); }
+    if (!grounded()) { piece.y++; fell(); score += 1; acc = 0; hud(); }
   },
   rotate() {
     if (state !== 'play') return;
     const nr = (piece.rot + 1) & 3;
-    for (const dx of [0, -1, 1, -2, 2]) {
-      if (!board.collides(piece, piece.x + dx, piece.y, nr)) { piece.x += dx; piece.rot = nr; return; }
+    const kicks = [[0, 0], [-1, 0], [1, 0], [-2, 0], [2, 0], [0, -1], [-1, -1], [1, -1]];
+    for (const [dx, dy] of kicks) {
+      if (piece.y + dy >= 0 && !board.collides(piece, piece.x + dx, piece.y + dy, nr)) { piece.x += dx; piece.y += dy; piece.rot = nr; moved(); return; }
     }
   },
   drop() {
@@ -183,9 +194,14 @@ function frame(t) {
   const dt = Math.min(100, t - last); last = t;
   if (state === 'play' && piece) {
     if (slowMs > 0) { slowMs = Math.max(0, slowMs - dt); }
-    acc += dt;
-    const g = gravityMs();
-    while (acc >= g && state === 'play') { acc -= g; stepDown(); }
+    if (grounded()) {
+      acc = 0; lockMs += dt;
+      if (lockMs >= LOCK_DELAY) lockPiece();
+    } else {
+      lockMs = 0; acc += dt;
+      const g = gravityMs();
+      while (acc >= g && state === 'play' && !grounded()) { acc -= g; stepDown(); }
+    }
     if ($('status').textContent !== '' || slowMs > 0) hud();
   }
   renderer.draw({ board, piece: state === 'menu' ? null : piece, ghostY: piece ? ghostY() : 0 });
