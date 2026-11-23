@@ -26,9 +26,12 @@ button.big { font: bold 1.3rem Georgia, serif; padding: 12px 36px; background: #
 #toast { position: absolute; left: 8%; right: 8%; bottom: 8%; background: #8C6F12; color: #F3EBD3; border: 1px solid #C9A227; border-radius: 6px; padding: 8px 10px; font-size: .85rem; text-align: center; opacity: 0; pointer-events: none; z-index: 3; }
 #toast.show { animation: toast 3s ease-out; }
 @keyframes toast { 0% { opacity: 0; } 8% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; } }
-#pad { display: flex; gap: 6px; padding: 8px 0 10px; }
-#pad button { flex: 1; height: 64px; background: #253058; color: #F3EBD3; border: 1px solid #8C6F12; border-radius: 10px; font: .72rem Georgia, serif; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; touch-action: none; padding: 0; }
-#pad button i { font-style: normal; font-size: 1.4rem; color: #C9A227; }
+#pad { display: flex; justify-content: space-between; gap: 14px; padding: 8px 2px 18px; }
+#pad .grp { display: flex; gap: 8px; align-items: center; }
+#pad button { width: 58px; height: 58px; background: #253058; color: #F3EBD3; border: 1px solid #8C6F12; border-radius: 10px; font: .72rem Georgia, serif; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; touch-action: none; padding: 0; }
+#pad button i { font-style: normal; font-size: 1.6rem; color: #C9A227; }
+#pad button.rot { width: 74px; height: 74px; border-radius: 50%; border-width: 2px; }
+#pad button.rot i { font-size: 2.2rem; }
 #pad button:active { background: #3a4878; }
 @media (pointer: fine) and (min-width: 700px) { #pad { display: none; } }
 body.playing #pauseBtn { flex: 0 0 28px; font: bold 12px Georgia, serif; background: #253058; color: #C9A227; border: 1px solid #8C6F12; border-radius: 6px; padding: 0; }

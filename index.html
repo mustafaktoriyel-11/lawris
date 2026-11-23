@@ -41,11 +41,15 @@
     </section>
   </main>
   <nav id="pad">
-    <button data-act="left"><i>◀</i>sol</button>
-    <button data-act="rotate"><i>⟳</i>döndür</button>
-    <button data-act="right"><i>▶</i>sağ</button>
-    <button data-act="down"><i>▼</i>aşağı</button>
-    <button data-act="drop"><i>⤓</i>düşür</button>
+    <div class="grp">
+      <button data-act="left" aria-label="Sol"><i>◀</i></button>
+      <button data-act="down" aria-label="Aşağı"><i>▼</i></button>
+      <button data-act="right" aria-label="Sağ"><i>▶</i></button>
+    </div>
+    <div class="grp">
+      <button data-act="drop" aria-label="Düşür"><i>⤓</i></button>
+      <button data-act="rotate" class="rot" aria-label="Döndür"><i>⟳</i></button>
+    </div>
   </nav>
 </div>
 <script type="module" src="js/main.js"></script>
