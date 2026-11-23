@@ -3,6 +3,7 @@ import { Board, COLS, ROWS, nextId } from './board.js';
 import { TYPES, NAMES, cellsOf, sizeOf, clearSpriteCache } from './pieces.js';
 import { Renderer } from './render.js';
 import { initInput } from './input.js';
+import { music } from './music.js';
 
 const LEVELS = ['Sulh', 'Asliye', 'İstinaf', 'Yargıtay'];
 const LINE_SCORE = [0, 100, 300, 500, 800, 1200, 1800];
@@ -119,8 +120,9 @@ function lockPiece() {
     if (doubleLeft > 0) { pts *= 2; doubleLeft--; }
     score += pts; rows += n;
     flash('Hüküm!');
+    music.knock();
     const nl = Math.min(LEVELS.length - 1, Math.floor(rows / 8));
-    if (nl > level) { level = nl; toast('Yeni mahkeme: ' + LEVELS[level]); }
+    if (nl > level) { level = nl; music.setLevel(level); toast('Yeni mahkeme: ' + LEVELS[level]); }
   }
   piece = null;
   spawn();
@@ -162,12 +164,14 @@ const act = {
     lockPiece();
   },
   pause() {
-    if (state === 'play') { state = 'pause'; $('pause').hidden = false; }
-    else if (state === 'pause') { state = 'play'; $('pause').hidden = true; last = performance.now(); }
+    if (state === 'play') { state = 'pause'; $('pause').hidden = false; music.pause(); }
+    else if (state === 'pause') { state = 'play'; $('pause').hidden = true; last = performance.now(); music.resume(); }
   },
 };
 
 function start() {
+  music.init();
+  music.start();
   board.reset();
   score = 0; rows = 0; level = 0; doubleLeft = 0; slowMs = 0; swapAvail = false;
   next = null; piece = null;
@@ -180,6 +184,7 @@ function start() {
 
 function gameOver() {
   state = 'over';
+  music.fadeOut();
   if (score > best) {
     best = score;
     try { localStorage.setItem('lawris.best', String(best)); } catch (_) { /* yoksay */ }
@@ -221,6 +226,15 @@ $('play').addEventListener('click', start);
 $('again').addEventListener('click', start);
 $('resume').addEventListener('click', () => act.pause());
 $('pauseBtn').addEventListener('click', () => act.pause());
+function showMute() {
+  const b = $('muteBtn'), m = music.isMuted();
+  b.textContent = m ? '\u266A\u0338' : '\u266A';
+  b.classList.toggle('off', m);
+  b.setAttribute('aria-pressed', String(!m));
+  b.setAttribute('aria-label', m ? 'Müziği aç' : 'Müziği kapat');
+}
+$('muteBtn').addEventListener('click', () => { music.setMuted(!music.isMuted()); showMute(); });
+showMute();
 $('nextBox').addEventListener('click', () => {
   if (state !== 'play' || !swapAvail) return;
   swapAvail = false;
