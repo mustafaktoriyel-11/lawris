@@ -1,5 +1,7 @@
 # Lawris
 
+**▶ Oyna: https://mustafaktoriyel-11.github.io/lawris/**
+
 Lawris, hukuk temalı, düşen bloklu bir bulmaca oyunudur. Tahta 11 sütun x 18 satırdır ve parçalar 5-6 hücreli hukuk nesneleridir: Tokmak, Terazi, Sütun, Kanun cildi, Paragraf ve Mühür. Düz HTML, CSS ve JavaScript (Canvas 2D) ile yazılmıştır; paket veya ağ bağımlılığı yoktur.
 
 ## Nasıl oynanır
