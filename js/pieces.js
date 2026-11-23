@@ -69,10 +69,12 @@ function dTokmak(c, s, P) {
   const lw = Math.max(1, s * 0.05);
   // sap (konik) + topuz
   c.beginPath();
-  c.moveTo(1.5 * s - 0.22 * s, 0.7 * s); c.lineTo(1.5 * s + 0.22 * s, 0.7 * s);
-  c.lineTo(1.5 * s + 0.13 * s, 2.72 * s); c.lineTo(1.5 * s - 0.13 * s, 2.72 * s);
+  c.moveTo(1.5 * s - 0.18 * s, 0.7 * s); c.lineTo(1.5 * s + 0.18 * s, 0.7 * s);
+  c.lineTo(1.5 * s + 0.16 * s, 2.7 * s); c.lineTo(1.5 * s - 0.16 * s, 2.7 * s);
   c.closePath(); fillStroke(c, P.main, P.dark, lw);
-  c.beginPath(); c.arc(1.5 * s, 2.77 * s, 0.2 * s, 0, Math.PI * 2); fillStroke(c, P.main, P.dark, lw);
+  c.beginPath(); c.arc(1.5 * s, 2.74 * s, 0.22 * s, 0, Math.PI * 2); fillStroke(c, P.main, P.dark, lw);
+  // sapta altın bilezik
+  c.fillStyle = P.acc; c.fillRect(1.5 * s - 0.17 * s, 2.25 * s, 0.34 * s, 0.08 * s);
   // başlık
   rr(c, 0.04 * s, 0.16 * s, 2.92 * s, 0.7 * s, 0.12 * s); fillStroke(c, P.main, P.dark, lw);
   // koyu uç kapaklar
