@@ -84,22 +84,6 @@ function dTokmak(c, s, P) {
   c.fillRect(0.5 * s, 0.16 * s, 0.1 * s, 0.7 * s);
   c.fillRect(2.4 * s, 0.16 * s, 0.1 * s, 0.7 * s);
 }
-function dTerazi(c, s, P) {
-  const lw = Math.max(1, s * 0.05);
-  c.strokeStyle = P.dark; c.lineWidth = Math.max(1, s * 0.06);
-  for (const cx of [0.5, 2.5]) {
-    c.beginPath(); c.moveTo(cx * s, 0.4 * s); c.lineTo((cx - 0.38) * s, 1.25 * s);
-    c.moveTo(cx * s, 0.4 * s); c.lineTo((cx + 0.38) * s, 1.25 * s); c.stroke();
-    c.beginPath(); c.arc(cx * s, 1.25 * s, 0.4 * s, 0, Math.PI); c.closePath();
-    fillStroke(c, P.main, P.dark, lw);
-  }
-  // gövde direği + ibre
-  c.beginPath(); c.moveTo(1.38 * s, 1.0 * s); c.lineTo(1.62 * s, 1.0 * s);
-  c.lineTo(1.54 * s, 0.3 * s); c.lineTo(1.46 * s, 0.3 * s); c.closePath(); fillStroke(c, P.main, P.dark, lw);
-  // kiriş
-  rr(c, 0.1 * s, 0.2 * s, 2.8 * s, 0.22 * s, 0.1 * s); fillStroke(c, P.main, P.dark, lw);
-  c.beginPath(); c.arc(1.5 * s, 0.2 * s, 0.15 * s, 0, Math.PI * 2); fillStroke(c, P.acc, P.dark, lw);
-}
 function dSutun(c, s, P) {
   const lw = Math.max(1, s * 0.04);
   c.fillStyle = P.main; c.strokeStyle = P.dark; c.lineWidth = lw;
@@ -130,8 +114,8 @@ function dCilt(c, s, P) {
   c.beginPath(); c.moveTo(0.95 * s, 1.3 * s); c.lineTo(1.5 * s, 1.3 * s);
   c.moveTo(0.95 * s, 1.5 * s); c.lineTo(1.5 * s, 1.5 * s); c.moveTo(0.95 * s, 1.7 * s); c.lineTo(1.35 * s, 1.7 * s); c.stroke();
 }
-function unionPlate(c, s, type, P) {
-  const cells = BASE[type]; const has = (x, y) => cells.some((q) => q[0] === x && q[1] === y);
+function unionPlate(c, s, cells, P) {
+  const has = (x, y) => cells.some((q) => q[0] === x && q[1] === y);
   const lw = Math.max(1.5, s * 0.07), i = 0.04 * s;
   c.fillStyle = P.main;
   for (const [x, y] of cells) {
@@ -151,20 +135,54 @@ function unionPlate(c, s, type, P) {
   }
   c.lineCap = 'butt';
 }
-function dParagraf(c, s, P) {
-  unionPlate(c, s, 'paragraf', P);
+function nb(cells, x, y) { return cells.filter((q) => Math.abs(q[0] - x) + Math.abs(q[1] - y) === 1); }
+// Döndürülmüş hücrelerden dik (yerçekimine göre) çizim
+function dParagraf(c, s, P, cells) {
+  unionPlate(c, s, cells, P);
+  const m = cells.find(([x, y]) => nb(cells, x, y).length === 3);
   c.fillStyle = P.acc; c.font = 'bold ' + Math.round(s * 0.95) + 'px Georgia, serif';
   c.textAlign = 'center'; c.textBaseline = 'middle';
-  c.fillText('§', 1.5 * s, 1.55 * s);
+  c.fillText('§', (m[0] + 0.5) * s, (m[1] + 0.55) * s);
+}
+function dTerazi(c, s, P, cells) {
+  const lw = Math.max(1, s * 0.05), ctr = (q) => [(q[0] + 0.5) * s, (q[1] + 0.5) * s];
+  const arms = cells.filter(([x, y]) => nb(cells, x, y).length === 1);
+  const bar = cells.filter((q) => !arms.includes(q));
+  const mid = bar.find(([x, y]) => !arms.some((a) => Math.abs(a[0] - x) + Math.abs(a[1] - y) === 1));
+  const ends = bar.filter((q) => q !== mid);
+  c.lineCap = 'round';
+  // kiriş (çubuk) bar boyunca
+  c.strokeStyle = P.dark; c.lineWidth = s * 0.26;
+  c.beginPath(); c.moveTo(...ctr(ends[0])); c.lineTo(...ctr(ends[1])); c.stroke();
+  c.strokeStyle = P.main; c.lineWidth = s * 0.16;
+  c.beginPath(); c.moveTo(...ctr(ends[0])); c.lineTo(...ctr(ends[1])); c.stroke();
+  for (const a of arms) {
+    const b = ends.find((q) => Math.abs(q[0] - a[0]) + Math.abs(q[1] - a[1]) === 1);
+    const hx = (a[0] + 0.5) * s, hy = (a[1] + 0.1) * s;
+    // askı kolu: kiriş ucundan kefenin asılma noktasına
+    c.strokeStyle = P.dark; c.lineWidth = s * 0.08;
+    c.beginPath(); c.moveTo(...ctr(b)); c.lineTo(hx, hy); c.stroke();
+    // zincirler ve kefe (hep aşağı sarkar)
+    const py = (a[1] + 0.52) * s;
+    c.lineWidth = Math.max(1, s * 0.05);
+    c.beginPath(); c.moveTo(hx, hy); c.lineTo(hx - 0.36 * s, py); c.moveTo(hx, hy); c.lineTo(hx + 0.36 * s, py); c.stroke();
+    c.beginPath(); c.arc(hx, py, 0.38 * s, 0, Math.PI); c.closePath(); fillStroke(c, P.main, P.dark, lw);
+  }
+  c.lineCap = 'butt';
+  // orta mafsal
+  const [mx, my] = ctr(mid);
+  c.beginPath(); c.arc(mx, my, 0.2 * s, 0, Math.PI * 2); fillStroke(c, P.acc, P.dark, lw);
+  c.beginPath(); c.arc(mx, my, 0.07 * s, 0, Math.PI * 2); c.fillStyle = P.dark; c.fill();
 }
 function dMuhur(c, s, P) {
-  unionPlate(c, s, 'muhur', P);
+  unionPlate(c, s, BASE.muhur, P);
   const lw = Math.max(1, s * 0.05);
   c.beginPath(); c.arc(1.5 * s, 1.5 * s, 0.42 * s, 0, Math.PI * 2); fillStroke(c, P.dark, P.acc, lw);
   c.beginPath(); c.arc(1.5 * s, 1.5 * s, 0.26 * s, 0, Math.PI * 2); c.strokeStyle = P.main; c.lineWidth = lw; c.stroke();
   c.fillStyle = P.main; c.fillRect(1.5 * s - lw / 2, 1.5 * s - 0.14 * s, lw, 0.28 * s);
   c.fillRect(1.5 * s - 0.14 * s, 1.5 * s - lw / 2, 0.28 * s, lw);
 }
+const UPRIGHT = new Set(['terazi', 'paragraf']);
 const DRAW = { tokmak: dTokmak, terazi: dTerazi, sutun: dSutun, cilt: dCilt, paragraf: dParagraf, muhur: dMuhur };
 
 function mk(w, h) {
@@ -182,7 +200,11 @@ export function getSprite(type, rot, golden, s) {
   const key = type + '|' + (rot & 3) + '|' + (golden ? 1 : 0) + '|' + s;
   let cv = cache.get(key);
   if (cv) return cv;
-  if ((rot & 3) === 0) {
+  if (UPRIGHT.has(type)) {
+    const sz = sizeOf(type, rot);
+    cv = mk(sz.w * s, sz.h * s);
+    DRAW[type](cv.getContext('2d'), s, golden ? GOLDEN : PAL[type], cellsOf(type, rot));
+  } else if ((rot & 3) === 0) {
     const sz = sizeOf(type, 0);
     cv = mk(sz.w * s, sz.h * s);
     DRAW[type](cv.getContext('2d'), s, golden ? GOLDEN : PAL[type]);
