@@ -85,16 +85,17 @@ function dTokmak(c, s, P) {
   }
   c.restore();
   c.fillStyle = A;
-  // başlık
-  rr(c, 0.34 * s, 0.3 * s, 2.32 * s, 0.4 * s, 0.12 * s); c.fill();
-  rr(c, 0.22 * s, 0.24 * s, 0.24 * s, 0.52 * s, 0.08 * s); c.fill();
-  rr(c, 2.54 * s, 0.24 * s, 0.24 * s, 0.52 * s, 0.08 * s); c.fill();
-  c.fillStyle = D; c.fillRect(0.62 * s, 0.3 * s, 0.06 * s, 0.4 * s); c.fillRect(2.32 * s, 0.3 * s, 0.06 * s, 0.4 * s);
-  // bilezik ve sap
-  c.fillStyle = A; rr(c, 1.3 * s, 0.66 * s, 0.4 * s, 0.14 * s, 0.04 * s); c.fill();
-  rr(c, 1.39 * s, 0.78 * s, 0.22 * s, 1.7 * s, 0.06 * s); c.fill();
-  c.fillStyle = D; c.fillRect(1.39 * s, 2.05 * s, 0.22 * s, 0.05 * s);
-  c.fillStyle = A; c.beginPath(); c.arc(1.5 * s, 2.58 * s, 0.17 * s, 0, Math.PI * 2); c.fill();
+  // başlık: ortalanmış, dolgun fıçı biçimi; uçlarda kalın kapaklar
+  rr(c, 0.66 * s, 0.26 * s, 1.68 * s, 0.48 * s, 0.16 * s); c.fill();
+  rr(c, 0.5 * s, 0.2 * s, 0.26 * s, 0.6 * s, 0.1 * s); c.fill();
+  rr(c, 2.24 * s, 0.2 * s, 0.26 * s, 0.6 * s, 0.1 * s); c.fill();
+  c.fillStyle = D; c.fillRect(0.86 * s, 0.26 * s, 0.05 * s, 0.48 * s); c.fillRect(2.09 * s, 0.26 * s, 0.05 * s, 0.48 * s);
+  c.globalAlpha = 0.35; c.fillRect(0.9 * s, 0.34 * s, 1.2 * s, 0.07 * s); c.globalAlpha = 1;
+  // sap: hafif incelen, bilezikli, topuzlu
+  c.fillStyle = A; rr(c, 1.34 * s, 0.7 * s, 0.32 * s, 0.12 * s, 0.04 * s); c.fill();
+  c.beginPath(); c.moveTo(1.39 * s, 0.8 * s); c.lineTo(1.61 * s, 0.8 * s); c.lineTo(1.58 * s, 2.42 * s); c.lineTo(1.42 * s, 2.42 * s); c.closePath(); c.fill();
+  c.fillStyle = D; c.fillRect(1.4 * s, 2.08 * s, 0.2 * s, 0.05 * s);
+  c.fillStyle = A; c.beginPath(); c.ellipse(1.5 * s, 2.55 * s, 0.17 * s, 0.15 * s, 0, 0, Math.PI * 2); c.fill();
 }
 function dSutun(c, s, P) {
   const lw = Math.max(1, s * 0.04);
@@ -184,18 +185,22 @@ function dTerazi(c, s, P, cells) {
   c.restore();
   // kiriş
   const [e0x, e0y] = ctr(ends[0]), [e1x, e1y] = ctr(ends[1]);
-  c.strokeStyle = E; c.lineWidth = s * 0.13;
-  c.beginPath(); c.moveTo(e0x, e0y); c.lineTo(e1x, e1y); c.stroke();
-  for (const [ex, ey] of [[e0x, e0y], [e1x, e1y]]) { c.beginPath(); c.arc(ex, ey, s * 0.11, 0, Math.PI * 2); c.fillStyle = E; c.fill(); }
+  // kiriş: ortada kalın, uçlara doğru incelen zarif kol
+  c.fillStyle = E;
+  { const dx = e1x - e0x, dy = e1y - e0y, L = Math.hypot(dx, dy), nx = -dy / L, ny = dx / L, w0 = s * 0.1, w1 = s * 0.04;
+    c.beginPath();
+    c.moveTo(e0x + nx * w1, e0y + ny * w1); c.lineTo(mx + nx * w0, my + ny * w0); c.lineTo(e1x + nx * w1, e1y + ny * w1);
+    c.lineTo(e1x - nx * w1, e1y - ny * w1); c.lineTo(mx - nx * w0, my - ny * w0); c.lineTo(e0x - nx * w1, e0y - ny * w1); c.closePath(); c.fill(); }
+  for (const [ex, ey] of [[e0x, e0y], [e1x, e1y]]) { c.beginPath(); c.arc(ex, ey, s * 0.08, 0, Math.PI * 2); c.fill(); }
   // kefeler (her zaman aşağı sarkar)
   for (const a of arms) {
     const [bx, by] = ctr(endOf(a));
-    const hx = (a[0] + 0.5) * s, hy = (a[1] + 0.2) * s, ry = (a[1] + 0.6) * s, w = 0.3 * s;
+    const hx = (a[0] + 0.5) * s, hy = (a[1] + 0.14) * s, ry = (a[1] + 0.56) * s, w = 0.34 * s;
     c.lineWidth = s * 0.06; c.strokeStyle = E;
     if (Math.abs(bx - hx) > 1 || Math.abs(by - hy) > 0.35 * s) { c.beginPath(); c.moveTo(bx, by); c.lineTo(hx, hy); c.stroke(); }
     c.lineWidth = Math.max(1, s * 0.035);
     c.beginPath(); c.moveTo(hx, hy); c.lineTo(hx - w, ry); c.moveTo(hx, hy); c.lineTo(hx + w, ry); c.stroke();
-    c.beginPath(); c.moveTo(hx - w - 0.04 * s, ry); c.quadraticCurveTo(hx, ry + 0.42 * s, hx + w + 0.04 * s, ry); c.closePath();
+    c.beginPath(); c.moveTo(hx - w - 0.05 * s, ry); c.quadraticCurveTo(hx, ry + 0.5 * s, hx + w + 0.05 * s, ry); c.closePath();
     c.fillStyle = E; c.fill();
     c.beginPath(); c.arc(hx, hy, s * 0.05, 0, Math.PI * 2); c.fill();
   }
