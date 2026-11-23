@@ -70,24 +70,31 @@ function fillStroke(c, fill, stroke, lw) {
 
 // ---------- Parça çizimleri (rot 0) ----------
 function dTokmak(c, s, P) {
-  const lw = Math.max(1, s * 0.05);
-  // sap: (1,1) ve (1,2) hücrelerini geniş ve düz doldurur
-  rr(c, 1.2 * s, 0.85 * s, 0.6 * s, 1.85 * s, 0.05 * s); fillStroke(c, P.main, P.dark, lw);
-  c.fillStyle = P.dark; c.fillRect(1.2 * s + lw, 0.9 * s, 0.1 * s, 1.7 * s);
-  // sapta altın bilezikler
-  c.fillStyle = P.acc;
-  c.fillRect(1.2 * s, 1.15 * s, 0.6 * s, 0.1 * s);
-  c.fillRect(1.2 * s, 2.0 * s, 0.6 * s, 0.1 * s);
-  // topuz
-  rr(c, 1.08 * s, 2.58 * s, 0.84 * s, 0.38 * s, 0.14 * s); fillStroke(c, P.main, P.dark, lw);
-  // başlık: 0. satırı tamamen doldurur
-  rr(c, 0.03 * s, 0.06 * s, 2.94 * s, 0.88 * s, 0.12 * s); fillStroke(c, P.main, P.dark, lw);
-  c.fillStyle = P.dark;
-  rr(c, 0.03 * s, 0.06 * s, 0.46 * s, 0.88 * s, 0.1 * s); c.fill();
-  rr(c, 2.51 * s, 0.06 * s, 0.46 * s, 0.88 * s, 0.1 * s); c.fill();
-  c.fillStyle = P.acc;
-  c.fillRect(0.55 * s, 0.06 * s, 0.12 * s, 0.88 * s);
-  c.fillRect(2.33 * s, 0.06 * s, 0.12 * s, 0.88 * s);
+  // Levha: T biçimli ceviz plaka + üstüne altınla işlenmiş tokmak
+  const cells = BASE.tokmak, A = P.acc, D = P.dark;
+  unionPlate(c, s, cells, P);
+  c.save(); c.globalAlpha = 0.35; c.strokeStyle = A; c.lineWidth = Math.max(1, s * 0.03);
+  for (const [x, y] of cells) {
+    const has = (dx, dy) => cells.some((q) => q[0] === x + dx && q[1] === y + dy), i = 0.16 * s;
+    c.beginPath();
+    if (!has(0, -1)) { c.moveTo(x * s + (has(-1, 0) ? 0 : i), y * s + i); c.lineTo((x + 1) * s - (has(1, 0) ? 0 : i), y * s + i); }
+    if (!has(0, 1)) { c.moveTo(x * s + (has(-1, 0) ? 0 : i), (y + 1) * s - i); c.lineTo((x + 1) * s - (has(1, 0) ? 0 : i), (y + 1) * s - i); }
+    if (!has(-1, 0)) { c.moveTo(x * s + i, y * s + (has(0, -1) ? 0 : i)); c.lineTo(x * s + i, (y + 1) * s - (has(0, 1) ? 0 : i)); }
+    if (!has(1, 0)) { c.moveTo((x + 1) * s - i, y * s + (has(0, -1) ? 0 : i)); c.lineTo((x + 1) * s - i, (y + 1) * s - (has(0, 1) ? 0 : i)); }
+    c.stroke();
+  }
+  c.restore();
+  c.fillStyle = A;
+  // başlık
+  rr(c, 0.34 * s, 0.3 * s, 2.32 * s, 0.4 * s, 0.12 * s); c.fill();
+  rr(c, 0.22 * s, 0.24 * s, 0.24 * s, 0.52 * s, 0.08 * s); c.fill();
+  rr(c, 2.54 * s, 0.24 * s, 0.24 * s, 0.52 * s, 0.08 * s); c.fill();
+  c.fillStyle = D; c.fillRect(0.62 * s, 0.3 * s, 0.06 * s, 0.4 * s); c.fillRect(2.32 * s, 0.3 * s, 0.06 * s, 0.4 * s);
+  // bilezik ve sap
+  c.fillStyle = A; rr(c, 1.3 * s, 0.66 * s, 0.4 * s, 0.14 * s, 0.04 * s); c.fill();
+  rr(c, 1.39 * s, 0.78 * s, 0.22 * s, 1.7 * s, 0.06 * s); c.fill();
+  c.fillStyle = D; c.fillRect(1.39 * s, 2.05 * s, 0.22 * s, 0.05 * s);
+  c.fillStyle = A; c.beginPath(); c.arc(1.5 * s, 2.58 * s, 0.17 * s, 0, Math.PI * 2); c.fill();
 }
 function dSutun(c, s, P) {
   const lw = Math.max(1, s * 0.04);
@@ -105,50 +112,17 @@ function dSutun(c, s, P) {
 }
 // Kanun: 2x2 kitap, her zaman dik çizilir
 function dKanun(c, s, P) {
-  // Levha: 2x2 kanun cildi + kapakta Themis (gözü bağlı, terazi ve kılıçla)
-  const cells = BASE.kanun;
+  // Levha: 2x2 kanun cildi, kapakta "LAW"
+  const cells = BASE.kanun, A = P.acc, D = P.dark;
   unionPlate(c, s, cells, P);
-  const A = P.acc, D = P.dark;
-  // sırt şeridi ve iç çerçeve
   c.fillStyle = D; c.globalAlpha = 0.55; c.fillRect(0.1 * s, 0.1 * s, 0.32 * s, 1.8 * s); c.globalAlpha = 1;
   c.fillStyle = A; c.fillRect(0.1 * s, 0.3 * s, 0.32 * s, 0.07 * s); c.fillRect(0.1 * s, 1.63 * s, 0.32 * s, 0.07 * s);
   c.save(); c.globalAlpha = 0.5; c.strokeStyle = A; c.lineWidth = Math.max(1, s * 0.03);
   rr(c, 0.52 * s, 0.16 * s, 1.32 * s, 1.68 * s, 0.06 * s); c.stroke(); c.restore();
-  // Themis
-  const cx = 1.24 * s, u = s;
-  c.fillStyle = A; c.strokeStyle = A; c.lineCap = 'round'; c.lineJoin = 'round';
-  // elbise (dökümlü)
-  c.beginPath();
-  c.moveTo(cx - 0.07 * u, 0.66 * u); c.lineTo(cx + 0.07 * u, 0.66 * u);
-  c.quadraticCurveTo(cx + 0.16 * u, 1.2 * u, cx + 0.3 * u, 1.7 * u);
-  c.lineTo(cx - 0.3 * u, 1.7 * u);
-  c.quadraticCurveTo(cx - 0.16 * u, 1.2 * u, cx - 0.07 * u, 0.66 * u); c.closePath(); c.fill();
-  // elbise kıvrımları
-  c.strokeStyle = D; c.lineWidth = Math.max(1, u * 0.025); c.globalAlpha = 0.6;
-  c.beginPath(); c.moveTo(cx - 0.03 * u, 0.9 * u); c.lineTo(cx - 0.12 * u, 1.66 * u); c.moveTo(cx + 0.05 * u, 0.95 * u); c.lineTo(cx + 0.1 * u, 1.66 * u); c.stroke();
-  c.globalAlpha = 1; c.strokeStyle = A;
-  // baş ve göz bağı
-  c.beginPath(); c.arc(cx, 0.52 * u, 0.11 * u, 0, Math.PI * 2); c.fill();
-  c.strokeStyle = D; c.lineWidth = Math.max(1, u * 0.045);
-  c.beginPath(); c.moveTo(cx - 0.11 * u, 0.5 * u); c.lineTo(cx + 0.11 * u, 0.5 * u); c.lineTo(cx + 0.17 * u, 0.56 * u); c.stroke();
-  c.strokeStyle = A; c.lineWidth = Math.max(1, u * 0.05);
-  // sol kol yukarı: terazi
-  const hx = cx - 0.34 * u, hy = 0.4 * u;
-  c.beginPath(); c.moveTo(cx - 0.06 * u, 0.72 * u); c.lineTo(hx, hy); c.stroke();
-  c.beginPath(); c.moveTo(hx - 0.2 * u, hy); c.lineTo(hx + 0.2 * u, hy); c.stroke();
-  c.lineWidth = Math.max(1, u * 0.02);
-  for (const px of [hx - 0.2 * u, hx + 0.2 * u]) {
-    c.beginPath(); c.moveTo(px, hy); c.lineTo(px - 0.07 * u, hy + 0.2 * u); c.moveTo(px, hy); c.lineTo(px + 0.07 * u, hy + 0.2 * u); c.stroke();
-    c.beginPath(); c.moveTo(px - 0.09 * u, hy + 0.2 * u); c.quadraticCurveTo(px, hy + 0.3 * u, px + 0.09 * u, hy + 0.2 * u); c.closePath(); c.fill();
-  }
-  // sağ kol aşağı: kılıç
-  c.lineWidth = Math.max(1, u * 0.05);
-  const sx = cx + 0.34 * u;
-  c.beginPath(); c.moveTo(cx + 0.06 * u, 0.74 * u); c.lineTo(sx, 0.98 * u); c.stroke();
-  c.beginPath(); c.moveTo(sx - 0.1 * u, 1.0 * u); c.lineTo(sx + 0.1 * u, 1.0 * u); c.stroke();
-  c.beginPath(); c.moveTo(sx - 0.035 * u, 1.02 * u); c.lineTo(sx + 0.035 * u, 1.02 * u); c.lineTo(sx + 0.035 * u, 1.56 * u); c.lineTo(sx, 1.64 * u); c.lineTo(sx - 0.035 * u, 1.56 * u); c.closePath(); c.fill();
-  c.beginPath(); c.moveTo(sx, 0.98 * u); c.lineTo(sx, 0.88 * u); c.stroke();
-  c.lineCap = 'butt'; c.lineJoin = 'miter';
+  const cx = 1.18 * s;
+  c.fillStyle = A; c.fillRect(cx - 0.42 * s, 0.62 * s, 0.84 * s, 0.05 * s); c.fillRect(cx - 0.42 * s, 1.33 * s, 0.84 * s, 0.05 * s);
+  c.font = 'bold ' + Math.round(s * 0.5) + 'px Georgia, serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText('LAW', cx, 1.02 * s);
 }
 function unionPlate(c, s, cells, P) {
   const has = (x, y) => cells.some((q) => q[0] === x && q[1] === y);
