@@ -232,8 +232,8 @@ function dKilic(c, s, P) {
   c.strokeStyle = D; c.lineWidth = Math.max(1, s * 0.04); c.stroke();
   c.beginPath(); c.moveTo(cx, 1.7 * s); c.lineTo(cx, 3.4 * s); c.stroke();
   // balçak: üç hücre boyunca
-  rr(c, 0.22 * s, 1.36 * s, 2.56 * s, 0.28 * s, 0.14 * s); c.fillStyle = G; c.fill();
-  for (const ex of [0.3, 2.7]) { c.beginPath(); c.arc(ex * s, 1.5 * s, 0.17 * s, 0, Math.PI * 2); c.fill(); }
+  rr(c, 0.62 * s, 1.37 * s, 1.76 * s, 0.26 * s, 0.13 * s); c.fillStyle = G; c.fill();
+  for (const ex of [0.66, 2.34]) { c.beginPath(); c.arc(ex * s, 1.5 * s, 0.17 * s, 0, Math.PI * 2); c.fill(); }
   c.beginPath(); c.arc(cx, 1.5 * s, 0.12 * s, 0, Math.PI * 2); c.fillStyle = C.bordo; c.fill();
   // kabza ve topuz
   rr(c, cx - 0.12 * s, 0.42 * s, 0.24 * s, 0.94 * s, 0.06 * s); c.fillStyle = D; c.fill();
