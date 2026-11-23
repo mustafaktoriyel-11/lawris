@@ -2,6 +2,7 @@
 import { Board, COLS, ROWS, nextId } from './board.js';
 import { TYPES, WEIGHTS, cellsOf, sizeOf, clearSpriteCache } from './pieces.js';
 import { Renderer } from './render.js';
+import { setLevelColors, tickColors } from './theme.js';
 import { initInput } from './input.js';
 import { music } from './music.js';
 
@@ -126,7 +127,7 @@ function lockPiece() {
     flash('Hüküm!');
     music.knock();
     const nl = Math.min(LEVELS.length - 1, Math.floor(rows / 8));
-    if (nl > level) { level = nl; music.setLevel(level); toast('Yeni mahkeme: ' + LEVELS[level]); }
+    if (nl > level) { level = nl; music.setLevel(level); toast('Yeni mahkeme: ' + LEVELS[level]); setLevelColors(level); }
   }
   piece = null;
   spawn();
@@ -178,6 +179,7 @@ function start() {
   music.start();
   board.reset();
   score = 0; rows = 0; level = 0; doubleLeft = 0; slowMs = 0;
+  setLevelColors(0, true);
   next = null; piece = null;
   for (const id of ['menu', 'over', 'pause']) $(id).hidden = true;
   state = 'play';
@@ -201,6 +203,7 @@ function gameOver() {
 
 function frame(t) {
   const dt = Math.min(100, t - last); last = t;
+  tickColors(dt);
   if (state === 'play' && piece) {
     if (slowMs > 0) { slowMs = Math.max(0, slowMs - dt); }
     if (grounded()) {
