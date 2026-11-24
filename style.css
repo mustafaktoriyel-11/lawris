@@ -319,3 +319,11 @@ html[class*="ui-"] #over .menu-hero { margin: 2px 0; }
 html[class*="ui-"] #over .small { padding: 6px; }
 html[class*="ui-"] #over .alt { padding: 8px 12px; min-height: 36px; }
 .kayit[hidden], .kayit-sonuc[hidden], .kursu-bos[hidden], .overlay .alt[hidden] { display: none; }
+
+/* Açılış: Gemini illüstrasyonu (gece adliyesi) */
+html.ui-mix #menu, html.ui-2 #menu {
+  background: url("img/acilis-adliye.webp") center bottom / cover no-repeat, #120c2a;
+  padding-bottom: 48vh; padding-bottom: 48dvh; justify-content: center;
+}
+html.ui-mix #menu .deco-2, html.ui-2 #menu .deco-2 { display: none; }
+html.ui-mix #menu h1, html.ui-2 #menu h1 { text-shadow: 0 0 18px rgba(240,196,106,.35), 0 2px 6px rgba(0,0,0,.6); }
