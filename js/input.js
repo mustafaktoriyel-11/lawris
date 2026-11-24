@@ -44,11 +44,13 @@ export function initInput(a, canvas, getCell) {
     e.preventDefault();
     if (e.pointerType === 'mouse') return;   // masaüstünde fare tıklaması oyunu etkilemez (klavye kullanılır)
     try { canvas.setPointerCapture(e.pointerId); } catch (_) { /* yoksay */ }
-    st = { x: e.clientX, y: e.clientY, t: performance.now(), ax: e.clientX, ay: e.clientY, moved: false, axis: null, done: false };
+    st = { x: e.clientX, y: e.clientY, t: performance.now(), ax: e.clientX, ay: e.clientY, moved: false, axis: null, done: false, v: 0, ly: e.clientY, lt: performance.now() };
   });
   canvas.addEventListener('pointermove', (e) => {
     if (!st || st.done) return;
     const c = getCell(), dx = e.clientX - st.x, dy = e.clientY - st.y;
+    // anlık dikey hız (px/ms), yumuşatılmış: fiske ile sürüklemeyi ayırmak için
+    { const now = performance.now(), ddt = Math.max(1, now - st.lt), vi = (e.clientY - st.ly) / ddt; st.v = st.v * 0.5 + vi * 0.5; st.ly = e.clientY; st.lt = now; }
     if (!st.axis) {
       const lock = c * 0.55;
       if (Math.abs(dx) < lock && Math.abs(dy) < lock) return;
@@ -61,8 +63,8 @@ export function initInput(a, canvas, getCell) {
       while (st.ax - e.clientX > cell) { st.ax -= cell; st.moved = true; fire('left'); }
     } else {
       const dt = performance.now() - st.t;
-      // hızlı aşağı fiske: hemen düşür (parmak kalkmayı beklemeden)
-      if (dy > c * 2.2 && dt < 220) { st.done = true; st.moved = true; fire('drop'); return; }
+      // Çok hızlı ve uzun aşağı fiske: hemen düşür. (Eşik yüksek tutuldu: hızlıca aşağı sürüklemek kazara dibe çakmasın.)
+      if (dy > c * 4 && dt < 150) { st.done = true; st.moved = true; fire('drop'); return; }
       const cell = c * 1.1;
       while (e.clientY - st.ay > cell) { st.ay += cell; st.moved = true; fire('down'); }
       // Aşağı sürüklerken yan yönlendirme: parmak belirgin şekilde yana giderse bir hücre kayar.
@@ -78,7 +80,8 @@ export function initInput(a, canvas, getCell) {
     const dt = performance.now() - st.t, dx = e.clientX - st.x, dy = e.clientY - st.y, c = getCell();
     if (!st.done) {
       if (!st.axis && Math.abs(dx) < 10 && Math.abs(dy) < 10 && dt < 350) fire('rotate');
-      else if (st.axis === 'y' && dy > c * 3 && dt < 320) fire('drop');
+      // Parmak kalkarken: yalnız gerçekten hızlı bir fiske dibe çakar (hız eşiği hücre boyuna göre ölçeklenir)
+      else if (st.axis === 'y' && dy > c * 3 && dt < 300 && st.v > 1.7 * c / 33) fire('drop');
       else if (st.axis === 'y' && -dy > c * 2.2 && dt < 320) fire('hold');
     }
     st = null;
