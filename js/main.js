@@ -344,3 +344,8 @@ kediMenu();
 layout();
 requestAnimationFrame((t) => { last = t; frame(t); });
 window.__lawris = { board, act, get state() { return state; }, get piece() { return piece; } };
+
+// Çevrimdışı çalışma ve her açılışta güncel sürüm
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+}
