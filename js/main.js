@@ -8,7 +8,8 @@ import { music } from './music.js';
 import { sfx } from './sfx.js';
 import * as skor from './skor.js';
 import { initRehber } from './rehber.js';
-import { t, setLang, onLang, getLang, fmtDate, courtLabel, isDefaultName, roman } from './i18n.js';
+import { initLangSw } from './langsw.js';
+import { t, onLang, getLang, fmtDate, courtLabel, isDefaultName, roman } from './i18n.js';
 import { aslanHukum, aslanSeviye, aslanSoyle, kediSoyle, kediMenu, kediOver, maskotReset } from './maskot.js';
 import * as gunluk from './gunluk.js';
 import './menuyigin.js';
@@ -243,7 +244,8 @@ function lockPiece(hard) {
 
 const grounded = () => board.collides(piece, piece.x, piece.y + 1);
 function fell() {
-  if (piece.y > lowestY) { lowestY = piece.y; resets = 0; }
+  // Yalnız gerçekten daha aşağı inince kilit sayacı ve yenileme hakkı sıfırlanır
+  if (piece.y > lowestY) { lowestY = piece.y; resets = 0; lockMs = 0; }
 }
 function stepDown() {
   if (!grounded()) { piece.y++; fell(); }
@@ -269,8 +271,10 @@ const act = {
     const ex = piece.x + (piece.rx || 0) + (o.w - n.w) / 2, ey = piece.y + (piece.ry || 0) + (o.h - n.h) / 2;
     const bx = Math.round(ex), by = Math.round(ey), rx = ex - bx, ry = ey - by;
     // Önce yerinde, sonra yanlara, sonra aşağı; yukarı itme en son çare
-    const kicks = [[0, 0], [-1, 0], [1, 0], [-2, 0], [2, 0], [0, 1], [-1, 1], [1, 1],
-      [0, -1], [-1, -1], [1, -1], [-2, -1], [2, -1], [0, -2], [-1, -2], [1, -2]];
+    // Fiziksel olarak geçemeyeceği aralıklardan geçmesin: aşağı itme yok, yana en çok 1 hücre, yukarı en çok 1 hücre.
+    // Uzun parçalar (sütun, kalem) duvar kenarında dönebilsin diye 2 hücre yana/yukarı istisnası var.
+    const uzun = piece.type === 'sutun' || piece.type === 'kalem';
+    const kicks = [[0, 0], [-1, 0], [1, 0], [0, -1], [-1, -1], [1, -1]].concat(uzun ? [[-2, 0], [2, 0], [0, -2]] : []);
     for (const [dx, dy] of kicks) {
       const x = bx + dx, y = by + dy;
       if (y >= 0 && !board.collides(piece, x, y, nr)) { piece.x = x; piece.y = y; piece.rot = nr; piece.rx = rx; piece.ry = ry; moved(); sfx.rotate(); renderer.kick(4); return; }
@@ -513,7 +517,8 @@ function frame(t) {
       acc = 0; lockMs += dt;
       if (lockMs >= LOCK_DELAY) lockPiece();
     } else {
-      lockMs = 0; acc += dt;
+      // Döndürme parçayı bir anlığına zeminden kaldırsa bile kilit süresi sıfırlanmaz (sonsuz döndürme olmasın)
+      acc += dt;
       const g = gravityMs();
       while (acc >= g && state === 'play' && !grounded()) { acc -= g; stepDown(); }
     }
@@ -607,7 +612,7 @@ document.querySelectorAll('[data-snd]').forEach((b) => b.addEventListener('click
 }));
 showSnd();
 // Dil düğmeleri (açılış ekranı + duraklatma kartı) ve canlı yenileme
-document.querySelectorAll('[data-lang]').forEach((b) => b.addEventListener('click', () => { setLang(b.dataset.lang); b.blur(); }));
+initLangSw();
 onLang(() => {
   showSnd(); hud(); dailyMenu();
   if (!$('over').hidden && daily && daily.res) dailyOverRender();

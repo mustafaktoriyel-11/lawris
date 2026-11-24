@@ -92,7 +92,7 @@
         <rect x="40" y="168" width="330" height="8"/><rect x="26" y="176" width="358" height="10"/><rect x="12" y="186" width="386" height="12"/><rect x="0" y="198" width="390" height="22"/></g>
         <path d="M26 72L195 16 364 72" fill="none" stroke="#ffbf6b" stroke-opacity=".35" stroke-width="1"/></svg></div>
       <div class="deco deco-3" aria-hidden="true"><svg class="co tl"><use href="#lw-corner"/></svg><svg class="co tr"><use href="#lw-corner"/></svg><svg class="co bl"><use href="#lw-corner"/></svg><svg class="co br"><use href="#lw-corner"/></svg></div>
-      <div class="menu-snd"><div class="lang-sw" role="group" data-i18n-attr="aria-label:lang.label" aria-label="Dil"><button type="button" data-lang="tr" aria-pressed="true">TR</button><button type="button" data-lang="en" aria-pressed="false">EN</button></div><button id="menuMuteBtn" class="snd" data-snd="music" type="button" data-i18n-attr="aria-label:aria.musicOff" aria-label="Müziği kapat" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="ic" d="M9 18V6l10-2v12"/><circle class="ic" cx="6.5" cy="18" r="2.5"/><circle class="ic" cx="16.5" cy="16" r="2.5"/><path class="slash" d="M3.5 3.5l17 17"/></svg></button><button id="menuSfxBtn" class="snd" data-snd="sfx" type="button" data-i18n-attr="aria-label:aria.sfxOff" aria-label="Efektleri kapat" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="ic" d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="ic w1" d="M15.2 9.2a4 4 0 010 5.6"/><path class="ic w2" d="M17.6 6.8a7.5 7.5 0 010 10.4"/><path class="slash" d="M3.5 3.5l17 17"/></svg></button></div>
+      <div class="menu-snd"><div class="lang-sw" data-lang-menu></div><button id="menuMuteBtn" class="snd" data-snd="music" type="button" data-i18n-attr="aria-label:aria.musicOff" aria-label="Müziği kapat" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="ic" d="M9 18V6l10-2v12"/><circle class="ic" cx="6.5" cy="18" r="2.5"/><circle class="ic" cx="16.5" cy="16" r="2.5"/><path class="slash" d="M3.5 3.5l17 17"/></svg></button><button id="menuSfxBtn" class="snd" data-snd="sfx" type="button" data-i18n-attr="aria-label:aria.sfxOff" aria-label="Efektleri kapat" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="ic" d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="ic w1" d="M15.2 9.2a4 4 0 010 5.6"/><path class="ic w2" d="M17.6 6.8a7.5 7.5 0 010 10.4"/><path class="slash" d="M3.5 3.5l17 17"/></svg></button></div>
       <div class="menu-hero"><div class="mascot-badge"><svg viewBox="0 0 120 120" aria-hidden="true"><use href="#mf-aslan"/></svg></div><div class="bubble" id="menuBubble" data-i18n="menu.bubble">Duruşma açılıyor! Kürsü seni bekliyor.</div></div>
       <h1>LEX STACK</h1>
       <i class="rule" aria-hidden="true"></i>
@@ -108,7 +108,7 @@
       <h2 data-i18n="pause.title">Duraklatıldı</h2>
       <button id="resume" class="big" data-i18n="pause.resume">Devam</button>
       <button id="pauseMenu" class="alt" type="button" data-i18n="pause.menu">Ana menü</button>
-      <div class="lang-sw" role="group" data-i18n-attr="aria-label:lang.label" aria-label="Dil"><button type="button" data-lang="tr" aria-pressed="true">TR</button><button type="button" data-lang="en" aria-pressed="false">EN</button></div>
+      <div class="lang-sw" data-lang-menu></div>
     </section>
     <section id="over" class="overlay" hidden>
       <h2 data-i18n="over.title">Dava düştü</h2>
@@ -140,7 +140,7 @@
       <button id="kursuTemizle" class="alt" type="button" data-i18n="kursu.clear">Listeyi temizle</button>
     </section>
     <section id="rehber" class="overlay" hidden role="dialog" aria-modal="true" aria-labelledby="rehberBaslik">
-      <div class="lang-sw rh-lang" role="group" data-i18n-attr="aria-label:lang.label" aria-label="Dil"><button type="button" data-lang="tr" aria-pressed="true">TR</button><button type="button" data-lang="en" aria-pressed="false">EN</button></div>
+      <div class="lang-sw rh-lang" data-lang-menu></div>
       <button id="rehberX" class="rh-x" type="button" data-i18n-attr="aria-label:aria.close" aria-label="Kapat">&times;</button>
       <h2 id="rehberBaslik" data-i18n="rh.title">Nasıl oynanır</h2>
       <div class="menu-hero rh-hero"><div class="mascot-badge"><svg viewBox="0 0 120 120" aria-hidden="true"><use href="#mf-kedi"/></svg></div><div class="bubble" id="rehberBubble"></div></div>
@@ -160,11 +160,11 @@
         <article class="rh-card" data-i="2"><h3 data-i18n="rh.c2.title">Altın parçalar</h3><p data-i18n="rh.c2.text">Yalnızca Sütun ve Kanun altın olabilir; yaklaşık her 7 parçada bir altın gelir. Parıldayarak gelir, etkisini gösterince söner.</p>
           <div class="rh-demo"><canvas id="demoCv" aria-hidden="true"></canvas><div class="rh-cap" aria-live="off"><b id="demoName"></b><span id="demoText"></span></div></div>
           <ul class="rh-gold" id="rhGold"><li><button type="button" data-p="sutun" data-n="Sütun" data-d="Altındaki boşlukları mermerle doldurur." data-i18n-attr="data-n:piece.sutun;data-d:gold.sutun"><canvas data-t="sutun" data-g="1" aria-hidden="true"></canvas><span data-i18n="piece.sutun">Sütun</span></button></li><li><button type="button" data-p="kanun" data-n="Kanun" data-d="Kanun hükmü: en alttaki 2 dolu satırı siler, +100 puan." data-i18n-attr="data-n:piece.kanun;data-d:gold.kanun"><canvas data-t="kanun" data-g="1" aria-hidden="true"></canvas><span data-i18n="piece.kanun">Kanun</span></button></li></ul></article>
-        <article class="rh-card" data-i="3"><h3 data-i18n="rh.c3.title">Roma mekânları</h3><ol class="rh-courts"><li data-i18n="court.0.full">Forum Romanum</li><li data-i18n="court.1.full">Bazilika</li><li data-i18n="court.2.full">Curia (Senato)</li><li data-i18n="court.3.full">Pantheon</li></ol>
-          <p data-i18n="rh.c3.p1">Her 8 satırda bir sonraki mekâna geçersin.</p>
-          <p data-i18n="rh.c3.p2">Yükseldikçe her satır daha çok puan: Pantheon'da 4 katı.</p>
-          <p data-i18n="rh.c3.p3">Aynı anda birden çok satır sil, aslan hükmünü okusun!</p>
-          <p class="rh-note" data-i18n="rh.c3.note">Duruşma süresi sayılır; en iyilerin Şeref kürsüsüne yazılır.</p></article>
+        <article class="rh-card" data-i="3"><h3 data-i18n="rh.c3.title">Roma mekânları</h3><ol class="rh-courts"><li style="--c:#2C5E92" data-i18n="court.0.short">Forum</li><li style="--c:#1C6B7C" data-i18n="court.1.short">Bazilika</li><li style="--c:#15608E" data-i18n="court.2.short">Rostra</li><li style="--c:#5A4A18" data-i18n="court.3.short">Tabularium</li><li style="--c:#8A3C27" data-i18n="court.4.short">Senato</li><li style="--c:#603C14" data-i18n="court.5.short">Kapitol</li><li style="--c:#3C2C78" data-i18n="court.6.short">Palatin</li><li style="--c:#1E2659" data-i18n="court.7.short">Pantheon</li></ol>
+          <p data-i18n="rh.c3.p1">Her 8 satırda yeni bir mekâna geçersin. Her mekânın 3 aşaması (I, II, III) vardır; aşama atladıkça hız artar.</p>
+          <p data-i18n="rh.c3.p2">Pantheon'dan sonra sonsuz İmparatorluk başlar: mekânlar yeniden döner, hız artmaya devam eder.</p>
+          <p data-i18n="rh.c3.p3">Satır sildiğinde anıt bir an renklenir; yerleşen parçalar mermere işlenir.</p>
+          <p class="rh-note" data-i18n="rh.c3.note">Günlük Dava: her gün herkese aynı parçalar, 2 dakika.</p></article>
       </div>
       <div class="rh-dots" id="rehberDots" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
       <div class="rh-nav"><button id="rehberGeri" class="alt" type="button" data-i18n="rh.back">Geri</button><button id="rehberIleri" class="mini" type="button" data-i18n="rh.next">İleri</button></div>

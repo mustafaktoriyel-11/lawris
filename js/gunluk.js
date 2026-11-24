@@ -86,7 +86,7 @@ export function recent(n = 7, key = dayKey()) {
 }
 
 export function fmtNum(n, lang) {
-  try { return Math.floor(n).toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-US'); } catch (_) { return String(n); }
+  try { return Math.floor(n).toLocaleString({ tr: 'tr-TR', es: 'es-ES', pt: 'pt-BR' }[lang] || 'en-US'); } catch (_) { return String(n); }
 }
 
 // Panoya kopyala (clipboard API, olmazsa eski yöntem)

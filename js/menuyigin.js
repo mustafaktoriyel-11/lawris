@@ -335,3 +335,24 @@ function basla() {
 }
 addEventListener('resize', () => { clearTimeout(kur.t); kur.t = setTimeout(() => { if (kur()) { statikCiz(); } }, 150); });
 basla();
+
+// Tapınağın çatısı menü düğmelerinin (Oyna, Günlük Dava, bağlantılar) altında kalsın:
+// uzun telefonlarda resmi gerektiği kadar aşağı kaydırır (yalnız dikey telefon düzeninde, ui-mix).
+const TEPE = 0.338;            // resimde alınlık tepesinin yüksekliğe oranı (acilis-tapinak.webp)
+const IW = 1193, IH = 2576;
+function tapinakHizala() {
+  const m = document.getElementById('menu');
+  if (!m || m.hidden || !document.documentElement.classList.contains('ui-mix')) return;
+  const r = m.getBoundingClientRect(); const W = r.width, H = r.height;
+  if (!W || !H || W / H >= 0.56) { m.style.backgroundPosition = ''; return; }   // geniş ekranda poster düzeni
+  const els = ['.menu-links', '#dailyBtn', 'button.big'].map((q) => m.querySelector(q)).filter(Boolean);
+  if (!els.length) return;
+  const alt = Math.max(...els.map((el) => el.getBoundingClientRect().bottom)) - r.top;
+  const k = Math.max(W / IW, H / IH), ih = IH * k, vh = innerHeight / 100;
+  const ust = H - ih + 16 * vh;                  // CSS: center bottom -16vh
+  const fazla = Math.max(0, Math.ceil(alt + 12 - (ust + TEPE * ih)));
+  m.style.backgroundPosition = fazla ? `center bottom calc(-16vh - ${fazla}px)` : '';
+}
+addEventListener('resize', () => setTimeout(tapinakHizala, 160));
+addEventListener('lawris:lang', () => setTimeout(tapinakHizala, 60));
+setTimeout(tapinakHizala, 50); setTimeout(tapinakHizala, 600);
