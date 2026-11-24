@@ -1,0 +1,16 @@
+Audio samples in this folder
+============================
+
+All .mp3 files in this folder are derived from the Versilian Community Sample
+Library (VCSL), https://github.com/sgossner/VCSL , released under
+CC0 1.0 Universal (public domain dedication):
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Source instruments: Folk Harp, Concert Harp, Bowed and Plucked Psaltery,
+Baroque Soprano and Alto Recorder, Frame Drum, Darbuka, Finger Cymbals,
+Tambourine, Claps, Small Shaker.
+
+Modifications: single notes/hits selected, silence trimmed, shortened with a
+fade-out, high-pass filtered (45 Hz), loudness-normalized, converted to mono
+32 kHz MP3 (64 kbps). No attribution is required under CC0; credit is given
+here as a courtesy to the library's authors and contributors.

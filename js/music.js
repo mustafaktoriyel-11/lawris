@@ -1,10 +1,13 @@
-// Lex Stack - prosedürel arka plan müziği ve "Hüküm" sesi (Web Audio, dosyasız)
-// Antik Roma / Akdeniz havasında neşeli, dans ettiren "casual oyun" müziği (~124 BPM):
-// Dorian / Miksolidyen ezgi, Frig-dominant (bII-I, yükseltilmiş 3.) renkler; telli lir/kithara (Karplus-Strong),
-// aulos (çift kamışlı, formantlı lider), tef/tympanon davulu, parmak zilleri, kristal çınlama (crotale), alkış
-// ve section başlarında / seviye geçişlerinde kısa cornu (buccina) fanfarı.
+// Lex Stack - arka plan müziği ve "Hüküm" sesi (Web Audio)
+// Antik Roma / Akdeniz havasında neşeli, dans ettiren "casual oyun" müziği (~124 BPM): Dorian / Miksolidyen ezgi,
+// Frig-dominant (bII-I, yükseltilmiş 3.) renkler. GERÇEK ÇALGI KAYITLARI (audio/*.mp3, CC0 Versilian Community Sample
+// Library): blok flüt (aulos rolü, lider), folk harp (lir / kithara: cevaplar + arpejler), konser harbi (bas),
+// psaltery (ışıltı + yaylı zemin), çerçeve davulu + darbuka (ritim), tef, shaker, alkış, parmak zilleri.
+// Örnekler ilk init'ten sonra tembelce yüklenir; hazır olana dek eski prosedürel sesler (Karplus-Strong lir, aulos,
+// cornu...) çalar ve bir sonraki ölçü başında kesintisiz örneklere geçilir (örnekler yüklenemezse sentez sürer).
 // Kanca (aulos soru -> lir cevap) oyunun kimliğidir. A / B / A' / C = 32 ölçü (~1 dk) döngü.
-// Her mahkeme derecesinde enerji artar (katman + tempo + ton yükselişi); gerginlikte 16'lık tef roll'ları ve tempo itişi.
+// Her mahkeme derecesinde enerji artar (katman + tempo + ton yükselişi); seviye >= 8 (sonsuz mod) güvenle sınırlanır.
+// Gerginlikte darbuka 16'lık dolguları + shaker ve tempo itişi.
 const LS_KEY = 'lawris.music';
 const BASE_BPM = 124;
 const LOOKAHEAD = 0.3;   // sn (tablette ana iş parçacığı yoğunken kesinti olmasın diye geniş)
@@ -15,6 +18,7 @@ const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
 const rnd = (a) => (Math.random() * 2 - 1) * a;
 const clamp01 = (x) => Math.max(0, Math.min(1, x));
 const wrapTo = (m, lo) => lo + (((m - lo) % 12) + 12) % 12;   // m'nin perde sınıfını [lo, lo+12) aralığına al
+const fold = (m, lo, hi) => { while (m > hi) m -= 12; while (m < lo) m += 12; return m; };   // oktav katlayarak aralığa sığdır
 
 // Akorlar: kök (Do'ya göre yarım ses; ana ton Re) + tür
 const CH = {
@@ -67,7 +71,7 @@ const BASS = [
   [[0, 0, 2], [4, 12, 1], [6, 0, 1], [8, 7, 2], [10, 0, 1], [12, 12, 1], [14, 0, 1]],
 ];
 const BASS_MENU = [[0, 0, 6], [8, 0, 5]];
-// Cornu / buccina fanfarı: (adım, tondan aralık, uzunluk) - boş beşli/oktav, hem majör hem minör akorla uyumlu
+// Cornu / buccina fanfarı (yalnızca sentez yedeğinde): (adım, tondan aralık, uzunluk) - boş beşli/oktav
 const FAN = [[0, 0, 2], [3, 0, 1], [4, 7, 2], [6, 12, 2]];
 
 const mk = (...names) => names.map((n) => CH[n]);
@@ -82,29 +86,38 @@ let TOTAL_BARS = 0;
 for (const s of SECTIONS) { SEC_START.push(TOTAL_BARS); TOTAL_BARS += s.chords.length; }   // 32 ölçü = ~1 dk
 const MENU_BARS = 16;    // menü yalnızca A + B bölümünü döndürür
 const XF = 2.4;          // seviye geçişi çapraz solma süresi (sn)
-const MAX_LEVEL = 3;
-const MAX_OSC = 64;      // aynı anda canlı kısa ömürlü osilatör sınırı (mobil CPU)
-// Mahkeme derecesi: Forum (sabah) hafif, lir ağırlıklı / Bazilika alkışlı, dolgun / Senato cornu vurgulu, yürüyüş / Pantheon en büyük, kristal ışıltılı
-// Her derecede tempo (+~3.5 BPM) ve ton yükselişi (key: yarım ses)
+const MAX_TIER = 3;      // katman tablosu (LV) 0..3; daha yüksek seviyeler ek enerji (ex) + tempo + ton kaydırır
+const MAX_LVL = 99;      // setLevel üst sınırı (sonsuz mod güvenliği)
+const MAX_OSC = 64;      // aynı anda canlı kısa ömürlü osilatör / kaynak sınırı (mobil CPU)
+const MAX_V = 52;        // örnek sesleri için ses sayısı sınırı (öncelik düşük olanlar 38'de susar)
+// Seviye başına ton (yarım ses) ve tempo (+3 BPM / seviye, 7. seviyede sınır)
+const KEY = [0, 0, 2, 3, 4, 5, 5, 6];
+const keyOf = (n) => KEY[Math.min(n, KEY.length - 1)];
+const bpmOf = (n) => BASE_BPM + 3 * Math.min(n, 7);
+// Mahkeme derecesi: Forum (sabah) hafif, harp ağırlıklı / Bazilika tef + alkışlı / Senato shaker + psaltery ışıltılı / Pantheon en büyük
+// fd: çerçeve davulu, dar: darbuka, psal: psaltery ışıltı, lyre: folk harp eşlik, rec: blok flüt, brs: fanfar gücü
 const LV = [
-  { thud: 0.7, slap: 0.5, clap: 0,   fcym: 0.5, crot: 0,   lyre: 1,   aul: 0.8, brs: 0,   pad: 1,   send: 0.3,  fb: 0.26, dlf: 2400, tempo: 1,     key: 0 },
-  { thud: 1,   slap: 0.8, clap: 1,   fcym: 0.7, crot: 0,   lyre: 1,   aul: 1,   brs: 0.3, pad: 1,   send: 0.24, fb: 0.24, dlf: 2600, tempo: 1.028, key: 0 },
-  { thud: 1,   slap: 1,   clap: 1,   fcym: 0.8, crot: 0.5, lyre: 0.9, aul: 1,   brs: 1,   pad: 0.9, send: 0.24, fb: 0.26, dlf: 2800, tempo: 1.056, key: 2 },
-  { thud: 1,   slap: 1,   clap: 1,   fcym: 1,   crot: 1,   lyre: 1,   aul: 1,   brs: 1.1, pad: 1,   send: 0.26, fb: 0.28, dlf: 3000, tempo: 1.085, key: 3 },
+  { fd: 0.7, dar: 0.3,  clap: 0,   fcym: 0.5, psal: 0,   tamb: 0,   shk: 0,   lyre: 1,   rec: 0.8, brs: 0,   pad: 1,   send: 0.26, fb: 0.24, dlf: 2400 },
+  { fd: 1,   dar: 0.6,  clap: 0.8, fcym: 0.7, psal: 0,   tamb: 0.6, shk: 0,   lyre: 1,   rec: 1,   brs: 0.3, pad: 1,   send: 0.22, fb: 0.22, dlf: 2600 },
+  { fd: 1,   dar: 0.85, clap: 1,   fcym: 0.8, psal: 0.5, tamb: 0.85, shk: 0.6, lyre: 0.9, rec: 1,   brs: 1,   pad: 0.9, send: 0.22, fb: 0.24, dlf: 2800 },
+  { fd: 1,   dar: 1,    clap: 1,   fcym: 1,   psal: 1,   tamb: 1,   shk: 1,   lyre: 1,   rec: 1,   brs: 1.1, pad: 1,   send: 0.24, fb: 0.26, dlf: 3000 },
 ];
-const RAMPED = ['thud', 'slap', 'clap', 'fcym', 'crot', 'lyre', 'aul', 'brs', 'pad', 'send', 'fb', 'dlf'];
+const RAMPED = ['fd', 'dar', 'clap', 'fcym', 'psal', 'tamb', 'shk', 'lyre', 'rec', 'brs', 'pad', 'send', 'fb', 'dlf'];
+// Örnek ses seviyeleri (normalize edilmiş MP3'lere çarpan; yedek sentezle yaklaşık aynı genel ses)
+const G = { harp: 0.5, rec: 0.44, bass: 0.5, psal: 0.3, pad: 0.32, doum: 0.34, tek: 0.2, dar: 0.27, tamb: 0.13, clap: 0.18, shk: 0.14, fc: 0.1 };
 
 let ctx = null, fade = null, bus = null, master = null;
 let timer = null, nextT = 0, step = 0, bar = 0, loopN = 0;
 let level = 0;       // istenen (bekleyen) seviye - setLevel yazar
 let curLevel = 0;    // çalan seviye - yalnızca ölçü başında güncellenir
+let tier = 0, ex = 0;   // tier: katman tablosu satırı (0..3); ex: 3. seviyenin üstündeki ek enerji (0..1)
 let live = 0;        // canlı kısa ömürlü osilatör / kaynak sayısı
-let fanOn = false, fanV = 0;   // bu ölçüde cornu fanfarı var mı (ilk yarıda ezgi susar)
-let bassBus = null, dfade = null, dryBus = null, sendG = null, fbG = null, dlyLp = null, mainLp = null, bassLp = null;
+let fanOn = false, fanV = 0;   // bu ölçüde fanfar var mı (ilk yarıda ezgi susar)
+let bassBus = null, dfade = null, dryBus = null, sendG = null, fbG = null, dlyLp = null, mainLp = null, bassNodes = [];
 // Tehlike (0..1): hedef + yumuşatılmış değer (ctx.currentTime ile; duraklatılınca donar)
 let tensTarget = 0, tens = 0, tensT = 0;
 const T_UP = 0.65, T_DOWN = 1.3;   // zaman sabitleri (sn): ~1.5 sn'de yükselir, ~3 sn'de gevşer
-const LP_LO = 4600, LP_HI = 7000;  // ana alçak geçiren: sakin -> gergin (parlaklık artar)
+const LP_LO = 5200, LP_HI = 8000;  // ana alçak geçiren: sakin -> gergin (parlaklık artar)
 const TRIM = 0.08;                 // gergin müzikte genel seviye payı
 const R = {};        // katman rampaları: ad -> {v0, v1, t0, t1}
 let muted = false, running = false, paused = false;
@@ -127,7 +140,10 @@ function build() {
   const lim = ctx.createDynamicsCompressor();
   lim.threshold.value = -6; lim.knee.value = 6; lim.ratio.value = 12; lim.attack.value = 0.003; lim.release.value = 0.2;
   duckG = ctx.createGain(); holdG = ctx.createGain();   // duckG: büyük efektlerde müziği kıs; holdG: duraklatma
-  lp.connect(duckG); duckG.connect(holdG); holdG.connect(master); master.connect(lim); lim.connect(ctx.destination);
+  // Telefon hoparlörü için ton dengesi: 150–300 Hz çamurunu azalt, 2.5 kHz üstüne parlaklık/varlık ekle
+  const eqLo = ctx.createBiquadFilter(); eqLo.type = 'peaking'; eqLo.frequency.value = 230; eqLo.Q.value = 0.9; eqLo.gain.value = -3;
+  const eqHi = ctx.createBiquadFilter(); eqHi.type = 'highshelf'; eqHi.frequency.value = 2500; eqHi.gain.value = 4;
+  lp.connect(eqLo); eqLo.connect(eqHi); eqHi.connect(duckG); duckG.connect(holdG); holdG.connect(master); master.connect(lim); lim.connect(ctx.destination);
   buildSfxBus(lim);
   fade = null;
   bus = ctx.createGain();
@@ -141,9 +157,22 @@ function build() {
   const send = ctx.createGain(); send.gain.value = 0.35;
   bus.connect(send); send.connect(dly); dly.connect(dlp); dlp.connect(dhp); dhp.connect(fb); fb.connect(dly); dlp.connect(lp);
   sendG = send; fbG = fb; dlyLp = dlp;
+  // hafif oda yankısı (üretilmiş, karanlık, çift kanallı dürtü yanıtı ~1.2 sn): örnekler daha "odada" duyulsun
+  try {
+    const sr = ctx.sampleRate, len = Math.floor(sr * 1.2), ir = ctx.createBuffer(2, len, sr), pre = Math.floor(sr * 0.012);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = ir.getChannelData(ch); let lpv = 0;
+      for (let i = pre; i < len; i++) { lpv += ((Math.random() * 2 - 1) - lpv) * 0.4; d[i] = lpv * Math.pow(1 - (i - pre) / (len - pre), 3.2); }
+    }
+    const cv = ctx.createConvolver(); cv.buffer = ir;
+    const rs = ctx.createGain(); rs.gain.value = 0.2;
+    const rd = ctx.createGain(); rd.gain.value = 0.05;
+    const rlp = ctx.createBiquadFilter(); rlp.type = 'lowpass'; rlp.frequency.value = 4200;
+    bus.connect(rs); dryBus.connect(rd); rs.connect(cv); rd.connect(cv); cv.connect(rlp); rlp.connect(lp);
+  } catch (_) { /* yankısız devam */ }
+  setTimeout(loadSamples, 60);   // açılışı bloklama: örnekler arka planda yüklenir
   return true;
 }
-
 // Efekt veriyolu: yumuşak sınırlama (tanh) + kısa oda yankısı + kendi seviyesi
 function buildSfxBus(lim) {
   sfxIn = ctx.createGain(); sfxIn.gain.value = 1;
@@ -165,7 +194,7 @@ function buildSfxBus(lim) {
 // Oturum: her müzik başlangıcı (menü / oyun) kendi solma düğümlerini alır; eskisi ~1 sn'de söner (çapraz solma)
 function newSession(target, inDur) {
   const t = ctx.currentTime;
-  const old = { fade, dfade, bass: bassBus, blp: bassLp };
+  const old = { fade, dfade, bass: bassBus, nodes: bassNodes };
   for (const f of [old.fade, old.dfade]) if (f) {
     f.gain.cancelScheduledValues(t); f.gain.setValueAtTime(Math.max(f.gain.value, 0.0001), t);
     f.gain.linearRampToValueAtTime(0.0001, t + inDur);
@@ -174,14 +203,19 @@ function newSession(target, inDur) {
   fade.connect(bus);                      // melodi + bas: yankı gönderimi var
   dfade = ctx.createGain(); dfade.gain.setValueAtTime(0.0001, t); dfade.gain.linearRampToValueAtTime(target, t + inDur);
   dfade.connect(dryBus);                  // davul: yankısız (kuru) yol
+  // bas zinciri: 75 Hz altı kes (telefonda boğuk uğultu yapmasın) + 2.-3. harmonik bölgesine hafif vurgu + alçak geçiren
   bassBus = ctx.createGain(); bassBus.gain.value = 1;
-  bassLp = ctx.createBiquadFilter(); bassLp.type = 'lowpass'; bassLp.frequency.value = 900; bassLp.Q.value = 0.5;
-  bassBus.connect(bassLp); bassLp.connect(fade);
+  const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 75; hp.Q.value = 0.6;
+  const pk = ctx.createBiquadFilter(); pk.type = 'peaking'; pk.frequency.value = 260; pk.Q.value = 0.9; pk.gain.value = 3.5;
+  const bl = ctx.createBiquadFilter(); bl.type = 'lowpass'; bl.frequency.value = 2200; bl.Q.value = 0.5;
+  bassBus.connect(hp); hp.connect(pk); pk.connect(bl); bl.connect(fade);
+  bassNodes = [hp, pk, bl];
   setTimeout(() => {
-    try { for (const n of [old.fade, old.dfade, old.bass, old.blp]) if (n) n.disconnect(); } catch (_) { /* yoksay */ }
+    try { for (const n of [old.fade, old.dfade, old.bass, ...old.nodes]) if (n) n.disconnect(); } catch (_) { /* yoksay */ }
   }, (inDur + 0.5) * 1000);
 }
 
+// ---- YEDEK SENTEZ SESLERİ (örnekler yüklenene / yüklenemezse): önceki prosedürel müzik ----
 // Kısa ömürlü osilatör: sayaçlı, bitince düğümleri serbest bırakır
 function osc(type, f, t0, t1, dest) {
   const o = ctx.createOscillator(); o.type = type; o.frequency.value = f;
@@ -354,6 +388,135 @@ function crotale(t, midi, v) {
   g.connect(fade); g2.connect(fade); freeAfter(o2, [g2]);
 }
 
+// ---- GERÇEK ÇALGI ÖRNEKLERİ (audio/*.mp3, mono 32 kHz): tembel yükleme, bir kez çözülür, tamponlar önbellekte ----
+const NN = ['C', 'Cs', 'D', 'Ds', 'E', 'F', 'Fs', 'G', 'Gs', 'A', 'As', 'B'];
+const nname = (m) => NN[m % 12] + (Math.floor(m / 12) - 1);   // 60 -> C4
+const range = (a, b, st) => { const r = []; for (let m = a; m <= b; m += st) r.push(m); return r; };
+// Perdeli gruplar: [midi listesi, dosya öneki]. Blok flüt: kısa (staccato) ve uzun (sustain); alto ~87'ye kadar, üstü soprano
+const GROUPS = {
+  harp: [range(48, 92, 2).map((m) => [m, 'harp_' + nname(m)])],
+  charp: [[38, 41, 45, 48, 52, 55, 59, 62, 65, 69].map((m) => [m, 'charp_' + nname(m)])],
+  recS: [range(70, 86, 2).map((m) => [m, 'rec_s_' + nname(m)]).concat([88, 90, 94].map((m) => [m, 'recS_s_' + nname(m)]))],
+  recL: [[70, 74, 78, 82, 86].map((m) => [m, 'rec_l_' + nname(m)]).concat([88, 90, 94].map((m) => [m, 'recS_l_' + nname(m)]))],
+  psal: [range(72, 90, 2).map((m) => [m, 'psal_' + nname(m)])],
+  psalb: [[72, 76, 80, 84, 88].map((m) => [m, 'psalb_' + nname(m)])],
+};
+const CORE_NAMES = [].concat(
+  GROUPS.harp[0].map((e) => e[1]), GROUPS.charp[0].map((e) => e[1]), GROUPS.recS[0].map((e) => e[1]),
+  ['fdrum_doum1', 'fdrum_doum2', 'fdrum_tek1', 'fdrum_tek2', 'fdrum_tak1', 'dar_doum1', 'dar_doum2', 'dar_tek1', 'dar_tek2',
+    'dar_ka1', 'dar_ka2', 'dar_slap1', 'fcym1', 'clap1', 'clap2', 'tamb_hit1', 'tamb_hit2', 'tamb_shake1', 'shk1', 'shk2', 'shk3', 'shk4']);
+const LATE_NAMES = [].concat(GROUPS.recL[0].map((e) => e[1]), GROUPS.psal[0].map((e) => e[1]), GROUPS.psalb[0].map((e) => e[1]));
+const SMP = {};            // ad -> { b: AudioBuffer, off: ilk ses saniyesi (kodlayıcı gecikmesine karşı) }
+let sampReady = false, sampLoading = false, useSamp = false;
+const audioUrl = (n) => new URL('../audio/' + n + '.mp3', import.meta.url).href;
+const decode = (ab) => new Promise((res, rej) => {
+  try { const p = ctx.decodeAudioData(ab, res, rej); if (p && p.then) p.then(res, rej); } catch (e) { rej(e); }   // Safari: geri çağırma biçimi
+});
+// MP3 kodlayıcı/çözücü gecikmesi platforma göre değişir: gerçek ilk sesi bul ve başlangıç ofseti yap (vuruşlar kaymasın)
+function onsetOf(buf) {
+  const d = buf.getChannelData(0), n = Math.min(d.length, Math.floor(buf.sampleRate * 0.12));
+  let mx = 0; for (let i = 0; i < n; i++) { const v = Math.abs(d[i]); if (v > mx) mx = v; }
+  const thr = Math.max(0.004, mx * 0.04);
+  let k = 0; while (k < n && Math.abs(d[k]) < thr) k++;
+  return k >= n ? 0 : Math.max(0, k / buf.sampleRate - 0.0015);
+}
+async function loadSamples() {
+  if (sampLoading || !ctx) return;
+  sampLoading = true;
+  const queue = CORE_NAMES.concat(LATE_NAMES).filter((n) => !SMP[n]);
+  let coreLeft = CORE_NAMES.filter((n) => !SMP[n]).length;
+  const markCore = () => { if (coreLeft <= 0 && SMP.harp_C4 && SMP.fdrum_doum1) sampReady = true; };
+  const worker = async () => {
+    while (queue.length && ctx) {
+      const n = queue.shift(), isCore = CORE_NAMES.includes(n);
+      try {
+        const r = await fetch(audioUrl(n)); if (!r.ok) throw new Error('http ' + r.status);
+        const buf = await decode(await r.arrayBuffer());
+        SMP[n] = { b: buf, off: onsetOf(buf) };
+      } catch (_) { /* bu örnek yok: o ses yedeğe düşer */ }
+      if (isCore) { coreLeft--; markCore(); }
+    }
+  };
+  try { await Promise.all([worker(), worker(), worker(), worker()]); } catch (_) { /* yoksay */ }
+  sampLoading = false;
+}
+// grup içinden en yakın (yüklü) örneği seç -> [örnek, çalma hızı]
+function pick(group, m) {
+  let best = null, bd = 99;
+  for (const [pm, nm] of GROUPS[group][0]) { const d = Math.abs(pm - m); if (SMP[nm] && d < bd) { bd = d; best = [SMP[nm], Math.pow(2, (m - pm) / 12)]; } }
+  return best;
+}
+const rrs = {};
+const rr = (k) => (rrs[k] = (rrs[k] || 0) ^ 1) + 1;   // 1,2,1,2... (aynı vuruş tekrarında makine tüfeği etkisi olmasın)
+// Örnek sesi: hold>0 ise o süre sonra rel sn'de söner; 0 ise doğal uzunluğunda. prio: düşük öncelikli sesler kalabalıkta susar
+function sPlay(P, t, peak, hold, rel, atk, dest, pan, prio) {
+  if (!P || peak < 0.004 || live > (prio ? MAX_V - 14 : MAX_V)) return false;
+  const smp = P[0], rate = P[1];
+  const src = ctx.createBufferSource(); src.buffer = smp.b; src.playbackRate.value = rate;
+  const nat = Math.max(0.05, (smp.b.duration - smp.off) / rate);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(peak, t + atk);
+  let stopAt = t + nat;
+  if (hold > atk + 0.01 && hold < nat) {
+    g.gain.setValueAtTime(peak, t + hold); g.gain.exponentialRampToValueAtTime(0.0001, t + hold + rel);
+    stopAt = t + hold + rel + 0.02;
+  }
+  let pn = null;
+  if (pan && ctx.createStereoPanner) { pn = ctx.createStereoPanner(); pn.pan.value = pan; src.connect(g); g.connect(pn); pn.connect(dest); }
+  else { src.connect(g); g.connect(dest); }
+  live++;
+  src.onended = () => { live--; try { src.disconnect(); g.disconnect(); if (pn) pn.disconnect(); } catch (_) { /* yoksay */ } };
+  src.start(t, smp.off); src.stop(stopAt + 0.03);
+  return true;
+}
+const drum = (name, t, v, rate, pan) => !!SMP[name] && sPlay([SMP[name], (rate || 1) * (1 + rnd(0.012))], t, v * (1 + rnd(0.07)), 0, 0, 0.001, dfade, pan || 0, false);
+
+// ---- Ses rolleri: örnekler hazırsa gerçek çalgı, değilse eski sentez (bar başında yapılan geçiş) ----
+// folk harp (lir / kithara): dur sn'de yumuşakça söner
+function vLyre(t, m, vel, dur, lowPrio) {
+  if (useSamp) { const P = pick('harp', fold(m, 48, 92)); if (P && sPlay(P, t, vel * G.harp, dur || 1.1, 0.3, 0.002, fade, 0, lowPrio)) return; }
+  lyre(t, m, vel);
+}
+// blok flüt (aulos rolü): len >= 3 adımda uzun (sustain) örnek, aksi halde kısa (staccato)
+function vLead(t, m, len, vel, sd) {
+  if (useSamp) {
+    const long = len >= 3, dur = Math.max(0.17, len * sd * 0.92), mm = fold(m, 68, 95);
+    const P = (long && pick('recL', mm)) || pick('recS', mm);
+    if (P && sPlay(P, t, vel * G.rec, long ? dur : dur * 1.2, long ? 0.09 : 0.05, long ? 0.014 : 0.004, fade)) return;
+  }
+  aulos(t, m, len * sd * 0.9, vel);
+}
+// konser harbi: tok, kısa bas çekimi (2.-3. harmonikler telefonda bası taşır)
+function vBass(t, m, dur, vol) {
+  if (useSamp) { const P = pick('charp', fold(m, 38, 71)); if (P && sPlay(P, t, vol * G.bass, Math.max(0.22, dur * 1.15), 0.2, 0.003, bassBus)) return; }
+  bassNote(t, m, dur, vol);
+}
+// zemin: yaylı psaltery (yumuşak uzun nota); yedek: boş beşli drone
+function vPad(t, m, dur, k) {
+  if (useSamp) { const P = pick('psalb', fold(m + 24, 72, 88)); if (P && sPlay(P, t, k * G.pad, Math.max(0.5, dur - 0.1), 0.6, 0.3, fade, 0, true)) return; }
+  pad(t, m, dur, k * 0.8);
+}
+// ışıltı: çekilmiş psaltery; yedek: crotale
+function vSpark(t, m, v) {
+  if (useSamp) { const P = pick('psal', fold(m, 72, 90)); if (P && sPlay(P, t, v * G.psal, 0, 0, 0.002, fade, 0.25, true)) return; }
+  crotale(t, m, v);
+}
+// perküsyon: doum (çerçeve davulu), tek (çerçeve davulu kenar), darbuka, alkış, parmak zili, tef, shaker
+function vDoum(t, v) { if (useSamp && drum('fdrum_doum' + rr('fdd'), t, v * G.doum)) return; thud(t, v); }
+function vTek(t, v) { if (useSamp && drum('fdrum_tek' + rr('fdt'), t, v * G.tek)) return; slap(t, v); }
+function vTak(t, v) { if (useSamp && drum('fdrum_tak1', t, v * G.tek)) return; slap(t, v * 0.6); }
+function vDar(t, kind, v) {
+  if (useSamp) {
+    const nm = kind === 'slap' ? 'dar_slap1' : 'dar_' + kind + (kind === 'doum' || kind === 'tek' || kind === 'ka' ? rr('d' + kind) : '');
+    if (drum(nm, t, v * G.dar * (kind === 'doum' ? 1.1 : 1), 1, kind === 'ka' ? -0.2 : 0.15)) return;
+  }
+  slap(t, v * 0.6);
+}
+function vClap(t, v) { if (useSamp && drum('clap' + rr('cl'), t, v * G.clap, 1, 0)) return; clap(t, v); }
+function vFc(t, v) { if (useSamp && drum('fcym1', t, v * G.fc, Math.random() < 0.5 ? 1 : 1.12, 0.3)) return; fcym(t, v); }
+function vTamb(t, v, shake) { if (useSamp && drum(shake ? 'tamb_shake1' : 'tamb_hit' + rr('tb'), t, v * G.tamb, 1, -0.25)) return; nz(t, 'highpass', 6500, 0.7, 0.05, 0.03 * v, dfade); }
+function vShk(t, v) { if (useSamp && drum('shk' + (1 + Math.floor(Math.random() * 4)), t, v * G.shk, 1, -0.35)) return; nz(t, 'highpass', 7500, 0.7, 0.03, 0.02 * v, dfade); }
+
 // ---- Katman rampaları (ölçü sınırında çapraz solma) ----
 function val(name, t) {
   const r = R[name]; if (!r) return 0;
@@ -373,94 +536,126 @@ function ramp(name, to, t, dur) {
   const p = paramOf(name);
   if (p) { p.cancelScheduledValues(t); p.setValueAtTime(Math.max(from, 0.0001), t); p.linearRampToValueAtTime(Math.max(to, 0.0001), t + dur); }
 }
-function resetRamps(lv) {
-  for (const k of RAMPED) R[k] = { v0: LV[lv][k], v1: LV[lv][k], t0: 0, t1: 0 };
+function resetRamps(tr) {
+  for (const k of RAMPED) R[k] = { v0: LV[tr][k], v1: LV[tr][k], t0: 0, t1: 0 };
 }
 
 // Ölçü başında: bekleyen seviyeyi uygula (katman rampaları; ton ve tempo bu ölçüden itibaren). Değiştiyse true
 function applyLevel(t) {
   if (curLevel === level) return false;
-  curLevel = level;
-  for (const k of RAMPED) ramp(k, LV[curLevel][k], t, XF);
+  curLevel = level; tier = Math.min(MAX_TIER, curLevel); ex = clamp01((curLevel - MAX_TIER) / 4);
+  for (const k of RAMPED) ramp(k, LV[tier][k], t, XF);
   return true;
 }
 
-const tempoK = () => LV[Math.min(MAX_LEVEL, curLevel)].tempo * (1 + 0.06 * tens) * (mode === 'menu' ? 0.85 : 1);   // tehlike: +%0..6 tempo (yumuşak)
+const tempoK = () => (bpmOf(curLevel) / BASE_BPM) * (1 + 0.06 * tens) * (mode === 'menu' ? 0.85 : 1);   // tehlike: +%0..6 tempo (yumuşak)
 const stepDur = () => 60 / (BASE_BPM * tempoK()) / 4;
 
 function scheduleStep(t, s, b) {
   let lvUp = false;
-  if (s === 0) lvUp = applyLevel(t);
+  if (s === 0) { lvUp = applyLevel(t); useSamp = sampReady; }
   let si = SECTIONS.length - 1; while (SEC_START[si] > b) si--;
   const sec = SECTIONS[si], bi = b - SEC_START[si];
-  const c = sec.chords[bi], tri = TRI[c.q], key = LV[curLevel].key, sd = stepDur(), menu = mode === 'menu';
+  const c = sec.chords[bi], tri = TRI[c.q], key = keyOf(curLevel), sd = stepDur(), menu = mode === 'menu';
   const hot = clamp01((tens - 0.3) / 0.7);
   const tt = t + (s % 2 ? sd * 0.1 : 0);   // hafif swing: tek 16'lıklar biraz geç (zıplama)
-  const thudK = val('thud', t), slapK = val('slap', t), clapK = val('clap', t), fcK = val('fcym', t), crK = val('crot', t);
-  const lyK = val('lyre', t), auK = val('aul', t), brK = val('brs', t);
+  const fdK = val('fd', t), darK = val('dar', t), clapK = val('clap', t), fcK = val('fcym', t), spK = val('psal', t);
+  const tbK = val('tamb', t), shK = val('shk', t), lyK = val('lyre', t), auK = val('rec', t), brK = val('brs', t);
 
-  // Cornu fanfarı: B ve C bölümü başında, döngü başında (Senato+), her seviye geçişinde; ilk yarı ölçüde ezgi susar
+  // Fanfar (B ve C bölümü başı, döngü başı (Senato+), her seviye geçişi): ilk yarı ölçüde ezgi susar.
+  // Örneklerle: harp glissando + parmak zili + çerçeve davulu roll'u; sentez yedeğinde cornu
   if (s === 0) {
     fanOn = !menu && ((lvUp && curLevel >= 1) || (bi === 0 && (((si === 1 || si === 3) && brK > 0.25) || (b === 0 && loopN > 0 && curLevel >= 2))));
     fanV = lvUp ? 0.7 : Math.min(1.1, Math.max(0.5, brK));
+    if (fanOn && useSamp) {
+      const base = wrapTo(c.r + key, 55), gl = [0, tri[1], tri[2], 12, 12 + tri[1], 12 + tri[2], 24, 24 + tri[1], 24 + tri[2]];
+      gl.forEach((iv, i) => vLyre(t + i * sd * 0.5, base + iv, (0.45 + 0.06 * i) * Math.min(1, fanV + 0.2), 1.3));
+      vFc(t, 1); vDoum(t, 1);
+    }
   }
-  if (fanOn) for (const [fs, iv, len] of FAN) if (fs === s) {
+  if (fanOn && !useSamp) for (const [fs, iv, len] of FAN) if (fs === s) {
     const m = 62 + key + iv;
     brass(t, m, len * sd * 0.92, fanV);
-    if (curLevel >= 3) brass(t, m + 12, len * sd * 0.92, fanV * 0.4);
+    if (tier >= 3) brass(t, m + 12, len * sd * 0.92, fanV * 0.4);
   }
-  // Yürüyüş vurguları (Senato / Pantheon): cornu boş beşli darbeleri
-  if (!menu && sec.march && brK > 0.3 && !(fanOn && s < 8) && (s === 0 || s === 10) && (s === 0 ? bi % 2 === 0 : bi % 2 === 1)) {
+  if (fanOn && useSamp && s >= 12) vTek(t, 0.45 + 0.15 * (s - 12));   // roll
+  // Yürüyüş vurguları (Senato / Pantheon): sentez yedeğinde cornu boş beşli darbeleri; örneklerde çeyrek doumlar
+  if (!menu && sec.march && brK > 0.3 && !(fanOn && s < 8) && (s === 0 || s === 10) && (s === 0 ? bi % 2 === 0 : bi % 2 === 1) && !useSamp) {
     const hb = wrapTo(c.r + key, 50);
     brass(t, hb, sd * 1.6, 0.55 * Math.min(1, brK)); brass(t, hb + 7, sd * 1.6, 0.4 * Math.min(1, brK));
   }
 
-  // Tef / tympanon (menüde yalnızca çok hafif)
+  // Çerçeve davulu + darbuka ritmi (menüde yalnızca çok hafif çerçeve davulu)
   if (menu) {
-    if (s === 0 || s === 8) thud(t, 0.38);
-    if (s === 10) fcym(tt, 0.3);
+    if (s === 0 || s === 8) vDoum(t, 0.38);
+    if (s === 12) vTek(t, 0.2);
+    if (s === 10) vFc(tt, 0.14);
   } else {
-    if (thudK > 0.02) {
-      if (s === 0) thud(t, 1 * thudK);
-      else if (s === 6) thud(t, 0.6 * thudK);
-      else if (s === 10) thud(t, 0.75 * thudK);
-      else if (s === 14 && (curLevel >= 2 || hot > 0.3)) thud(t, 0.5 * thudK);
+    if (fdK > 0.02) {
+      if (s === 0) vDoum(t, 1 * fdK);
+      else if (s === 6) vDoum(t, 0.6 * fdK);
+      else if (s === 10) vDoum(t, 0.75 * fdK);
+      else if (s === 14 && (tier >= 2 || hot > 0.3)) vDoum(t, 0.5 * fdK);
+      if (s === 4 || s === 12) vTek(t, 0.85 * fdK);
+      if (sec.march && useSamp && (s === 8 || s === 2) && fdK > 0.5) { if (s === 8) vDoum(t, 0.45 * fdK); else vTak(tt, 0.4 * fdK); }
     }
-    if (s === 4 || s === 12) { if (slapK > 0.02) slap(t, slapK); if (clapK > 0.02) clap(t, clapK); }
-    if (slapK > 0.02 && bi % 4 === 3 && s >= 13) slap(t, (0.35 + 0.1 * (s - 13)) * slapK);   // ölçü sonu dolgusu
-    if (sec.run && bi === 7 && s >= 8 && slapK > 0.02) slap(t, (0.2 + 0.08 * (s - 8)) * slapK);   // köprü sonu roll
-    if (hot > 0.05 && s % 4 !== 0) { if (s % 2) slap(tt, 0.5 * hot); else thud(t, 0.4 * hot); }   // gerginlik: 16'lık tef roll'u
-    // Parmak zilleri ve kristal ışıltı
+    if (darK > 0.02) {   // darbuka: hayalet vuruşlar (ka / tek) senkop doldurur
+      if (s === 3 || s === 11) vDar(tt, 'ka', 0.5 * darK);
+      else if (s === 7 || s === 15) vDar(tt, 'tek', 0.55 * darK);
+      else if (s === 9 && darK > 0.7) vDar(tt, 'ka', 0.35 * darK);
+    }
+    if ((s === 4 || s === 12) && clapK > 0.02) vClap(t, clapK);
+    if (darK > 0.02 && bi % 4 === 3 && s >= 13) vDar(t, s === 14 ? 'ka' : 'tek', (0.35 + 0.12 * (s - 13)) * darK);   // ölçü sonu dolgusu
+    if (sec.run && bi === 7 && s >= 8 && darK > 0.02) vDar(t, s % 2 ? 'ka' : 'tek', (0.2 + 0.08 * (s - 8)) * darK);   // köprü sonu roll
+    if (ex > 0 && bi % 2 === 1 && s >= 14) vDar(t, s === 14 ? 'slap' : 'tek', 0.5 + 0.4 * ex);   // yüksek seviyelerde sık dolgu
+    if (hot > 0.05 && s % 4 !== 0) { if (s % 2) vDar(tt, 'ka', 0.6 * hot); else vDar(t, 'tek', 0.5 * hot); }   // gerginlik: 16'lık darbuka dolgusu
+    if (tbK > 0.02) {   // tef: sekizlik arka vuruşlar
+      if (s === 2 || s === 10) vTamb(tt, 0.65 * tbK);
+      else if (s === 6 || s === 14) vTamb(tt, 0.45 * tbK);
+      else if (s === 15 && tbK > 0.9 && bi % 2 === 1) vTamb(t, 0.5 * tbK, true);
+    }
+    const shv = Math.max(shK, hot * 0.9);   // shaker: 16'lık akış (Senato+ ya da gerginlikte)
+    if (shv > 0.02) vShk(tt, (s % 4 === 0 ? 0.7 : s % 2 === 0 ? 0.55 : 0.35) * shv);
+    // Parmak zilleri ve psaltery ışıltısı
     if (fcK > 0.02) {
-      if (s === 2 || s === 10) fcym(t, fcK * 0.7);
-      else if ((s === 6 || s === 14) && curLevel >= 1) fcym(t, fcK * 0.4);
-      if (s === 0 && bi % 4 === 0) fcym(t, fcK);
+      if (s === 2 || s === 10) vFc(t, fcK * 0.7);
+      else if ((s === 6 || s === 14) && tier >= 1) vFc(t, fcK * 0.4);
+      if (s === 0 && bi % 4 === 0) vFc(t, fcK);
     }
-    if (crK > 0.02 && (s === 14 || s === 6 || (s === 0 && bi === 0)) && Math.random() < 0.55 + 0.45 * crK) {
+    if (spK > 0.02 && (s === 14 || s === 6 || (s === 0 && bi === 0)) && Math.random() < 0.55 + 0.45 * spK + 0.2 * ex) {
       const base = wrapTo(c.r + key, 79);
-      crotale(tt, base + tri[(bi + s) % tri.length], crK * (s === 0 ? 1 : 0.75));
+      vSpark(tt, base + tri[(bi + s) % tri.length], spK * (s === 0 ? 1 : 0.75));
     }
   }
 
-  // Bas
+  // Bas (konser harbi)
   const root = wrapTo(c.r + key, 40);
-  for (const [bs, iv, len] of (menu ? BASS_MENU : BASS[bi % 2])) if (bs === s) bassNote(tt, root + iv, len * sd * 0.9, menu ? 0.6 : 1);
+  for (const [bs, iv, len] of (menu ? BASS_MENU : BASS[bi % 2])) if (bs === s) vBass(tt, root + iv, len * sd * 0.9, menu ? 0.6 : 1);
 
-  // Zemin (boş beşli drone)
-  if (s === 0) { const pr = wrapTo(c.r + key, 50), k = val('pad', t) * (menu ? 1.8 : 1); [0, 7, 12].forEach((i) => pad(t, pr + i, sd * SPB, k)); }
+  // Zemin: yaylı psaltery (boş beşli)
+  if (s === 0) {
+    const pr = wrapTo(c.r + key, 50), k = val('pad', t) * (menu ? 1.5 : 0.7);
+    if (useSamp) { vPad(t, pr, sd * SPB, k); vPad(t, pr + 7, sd * SPB, k * 0.8); }
+    else [0, 7, 12].forEach((i) => vPad(t, pr + i, sd * SPB, k));
+  }
 
-  // Lider kanca: aulos soru <-> lir cevap (menüde tümü lirde); aulos notaları lirle ikilenir
+  // Lider kanca: blok flüt soru <-> folk harp cevap (menüde: 'a' ölçülerinde yumuşak flüt, 'l' ölçülerinde harp); flüt notaları harple ikilenir
   const lead_ = sec.lead[bi], who = sec.who[bi];
   for (const [ls, m, len] of lead_) {
     if (ls !== s) continue;
-    if (menu) { lyre(tt, m + key, 0.72); continue; }
+    if (menu) {
+      if (who === 'a' && useSamp) { vLead(tt, m + key, len, 0.5, sd); vLyre(tt + 0.003, m + key, 0.3, 1.0); }
+      else vLyre(tt, m + key, 0.72, 1.3);
+      continue;
+    }
     if (fanOn && s < 8) continue;
     if (who === 'a') {
-      aulos(tt, m + key, len * sd * 0.9, auK);
-      lyre(tt + 0.003, m + key, curLevel === 0 ? 0.45 : 0.28);
-      if (sec.dbl && loopN % 2 === 1 && curLevel >= 2) lyre(tt + 0.006, m + key + 12, 0.3);
+      vLead(tt, m + key, len, auK, sd);
+      vLyre(tt + 0.003, m + key, tier === 0 ? 0.45 : 0.28, 0.9);
+      if (sec.dbl && loopN % 2 === 1 && tier >= 2) vLyre(tt + 0.006, m + key + 12, 0.3, 0.9, true);
+      if (ex > 0.01 && len >= 2 && useSamp) vLead(tt + 0.004, m + key + 12, len, 0.4 * ex * auK, sd);   // yüksek seviyeler: oktav ikilemesi
     } else {
-      lyre(tt, m + key, 0.9 * Math.max(lyK, 0.7));
+      vLyre(tt, m + key, 0.9 * Math.max(lyK, 0.7), 1.2);
     }
   }
 
@@ -468,10 +663,14 @@ function scheduleStep(t, s, b) {
   if (menu ? s % 4 === 2 : lyK > 0.02) {
     const base = wrapTo(c.r + key, 57), up = (i) => base + (i < tri.length ? tri[i] : tri[i - tri.length] + 12);
     if (!menu && sec.run) {
-      lyre(tt, up([0, 1, 2, 3, 2, 1][(s + bi) % 6]) + 12 * (s % 8 > 3 ? 1 : 0), 0.4 * lyK * (s % 4 === 0 ? 1 : 0.7));
+      vLyre(tt, up([0, 1, 2, 3, 2, 1][(s + bi) % 6]) + 12 * (s % 8 > 3 ? 1 : 0), 0.4 * lyK * (s % 4 === 0 ? 1 : 0.7), 0.6, true);
     } else if (menu || s % 2 === 0 || Math.random() < hot * 0.5) {
       const near = lead_.some(([ls]) => Math.abs(ls - s) <= 1) && !(fanOn && s < 8);
-      if (!near) lyre(tt, up([0, 1, 2, 3, 2, 1][((s >> 1) + bi) % 6]), (menu ? 0.4 : 0.52) * (menu ? 1 : lyK) * (s % 4 === 2 ? 1 : 0.72));
+      if (!near) {
+        const av = (menu ? 0.4 : 0.52) * (menu ? 1 : lyK) * (s % 4 === 2 ? 1 : 0.72);
+        vLyre(tt, up([0, 1, 2, 3, 2, 1][((s >> 1) + bi) % 6]), av, menu ? 1.3 : 0.9, true);
+        if (ex > 0.01 && s % 4 === 0 && !menu) vLyre(tt + 0.01, up([0, 1, 2, 3, 2, 1][((s >> 1) + bi) % 6]) + 12, 0.3 * ex, 0.6, true);
+      }
     }
   }
 }
@@ -587,14 +786,13 @@ const SFX = {
     sfxTone(o, t + 0.5, 'sine', 1500, 1400, 0.002, 0.06, 0.08);
   },
 };
-
 function stopTimer() { if (timer) { clearInterval(timer); timer = null; } }
 
 function resetPlayback() {
   const now = ctx.currentTime;
   stopTimer();
   paused = false; running = true;
-  level = 0; curLevel = 0; step = 0; bar = 0; loopN = 0; fanOn = false;
+  level = 0; curLevel = 0; tier = 0; ex = 0; step = 0; bar = 0; loopN = 0; fanOn = false; useSamp = sampReady;
   tensTarget = 0; tens = 0; tensT = now;
   mainLp.frequency.cancelScheduledValues(now); mainLp.frequency.setValueAtTime(LP_LO, now);
   for (const bg of [bus.gain, dryBus.gain]) { bg.cancelScheduledValues(now); bg.setValueAtTime(1, now); }
@@ -621,6 +819,7 @@ export const music = {
     try {
       if (!ctx) this.init();
       if (!ctx) return;
+      if (!sampReady && !sampLoading) loadSamples();
       clearTimeout(menuTm); menuTm = null;
       mode = 'game';
       newSession(1, 1.0);
@@ -634,6 +833,7 @@ export const music = {
     try {
       if (!ctx) this.init();
       if (!ctx) return;
+      if (!sampReady && !sampLoading) loadSamples();
       if (running && mode === 'menu') return;
       mode = 'menu';
       newSession(MENU_VOL, running ? 1.0 : 1.6);
@@ -666,7 +866,7 @@ export const music = {
     hidden = !!h;
     try { if (ctx) { if (hidden) ctx.suspend(); else ctx.resume(); } } catch (_) { /* yoksay */ }
   },
-  fadeOut(dur = 1.2) {
+  fadeOut(dur = 1.2) {   // (kaynaklar doğal ömrüyle biter; fade düğümleri 'newSession' ile temizlenir)
     if (!ctx || !running) return;
     running = false; stopTimer();
     try {
@@ -693,7 +893,8 @@ export const music = {
   },
   sfxReady,
   // Bekleyen seviye; bir sonraki ölçü başında çapraz solmayla uygulanır (start öncesi/duraklatılmışken de güvenli)
-  setLevel(i) { const n = Number(i); level = Number.isFinite(n) ? Math.max(0, Math.min(MAX_LEVEL, Math.floor(n))) : 0; },
+  // Her tam sayı >= 0 geçerli (sonsuz mod dahil): katman tablosu 3'te doyar, daha yükseği tempo / ton / ek enerji katar
+  setLevel(i) { const n = Number(i); level = Number.isFinite(n) ? Math.max(0, Math.min(MAX_LVL, Math.floor(n))) : 0; },
   // Tehlike 0..1 (yığın yüksekliği); atak ~1.5 sn, gevşeme ~3 sn. Çalmıyorken yalnızca hedefi saklar.
   setTension(x) {
     const n = Number(x);
@@ -761,4 +962,3 @@ export const music = {
   // Rehber demosu için: yalnızca ses zaten çalışıyorsa ve kapalı değilse (asla sesi başlatmaz)
   isLive() { return sfxReady() && ctx.state === 'running'; },
 };
-
