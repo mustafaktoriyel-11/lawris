@@ -169,6 +169,12 @@ function applyGolden(p) {
   }
 }
 
+// Müzik gerilimi: en yüksek dolu satırın yüksekliğine göre 0..1 (kilitlenme / satır silme / altın etki sonrası)
+function updateTension() {
+  const top = board.topRow(), height = top < 0 ? 0 : ROWS - top;
+  music.setTension(Math.max(0, Math.min(1, (height - 0.45 * ROWS) / (0.4 * ROWS))));
+}
+
 function lockPiece() {
   const wasGold = piece.golden;
   board.lock({ ...piece, golden: false });   // etkisini gösterince söner
@@ -188,6 +194,7 @@ function lockPiece() {
     if (nl > level) { level = nl; music.setLevel(level); aslanSeviye(LEVELS[level]); setLevelColors(level); }
   }
   piece = null;
+  updateTension();
   spawn();
   hud();
 }
@@ -253,6 +260,7 @@ function start() {
   maskotReset();
   music.init();
   music.start();
+  music.setTension(0);
   board.reset();
   score = 0; rows = 0; level = 0; doubleLeft = 0; slowMs = 0;
   setLevelColors(0, true);
@@ -336,7 +344,7 @@ window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('kursu'
 
 function gameOver() {
   state = 'over';
-  music.fadeOut();
+  music.fadeOut(); music.setTension(0);
   if (score > best) {
     best = score;
     try { localStorage.setItem('lawris.best', String(best)); } catch (_) { /* yoksay */ }
@@ -405,7 +413,7 @@ function toMenu() {
   state = 'menu'; piece = null;
   for (const id of ['over', 'pause', 'kursu', 'rehber']) { const el = $(id); if (el) el.hidden = true; }
   board.reset(); setLevelColors(0, true);
-  music.fadeOut(); maskotReset(); kediMenu();
+  music.fadeOut(); music.setTension(0); maskotReset(); kediMenu();
   $('menuBest').textContent = best;
   $('menu').hidden = false;
 }

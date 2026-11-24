@@ -14,37 +14,87 @@ const C = {
 // Akor kökleri (pitch class) - bas hattı için
 const ROOT = { D: 2, A: 9, Bm: 11, Fsm: 6, G: 7, Em: 4, Am: 9, Dm: 2, C: 0, A7: 9, Fs7: 6 };
 const bassMidi = (name) => 38 + ((ROOT[name] - 2) % 12 + 12) % 12;
-// 3 bölüm x 8 ölçü = 24 ölçülük döngü (A / B / A')
+// ---- LAWRIS TEMASI (lider ezgi) ----
+// Biçim: ölçü başına [[midi, sekizlik_süre], ...]; her ölçü 8 sekizlik. midi 0 = es.
+// Re majör: ilk 4 ölçü "soru" (yarım kapanış, Do# üzerinde), son 4 ölçü "cevap" (Re'ye çözülür).
+// Açılış motifi: La -> Re (yükselen dörtlü), noktalı vuruş, sonra basamaklı iniş.
+const G4 = 67, A4 = 69, B4 = 71, Cs5 = 73, D5 = 74, Fs4 = 66, As4 = 70;
+const THEME = [
+  [[A4, 3], [D5, 1], [Cs5, 2], [B4, 2]],   // 1 Re   : açılış motifi
+  [[Cs5, 3], [B4, 1], [A4, 4]],            // 2 La   : iniş
+  [[D5, 3], [B4, 1], [A4, 2], [B4, 2]],    // 3 Si m : sallanma
+  [[A4, 2], [B4, 2], [Cs5, 4]],            // 4 Fa# m: soru, açık bitiş
+  [[B4, 3], [D5, 1], [B4, 2], [G4, 2]],    // 5 Sol  : cevap, motif yeniden
+  [[A4, 3], [D5, 1], [Cs5, 2], [A4, 2]],   // 6 Re   : motif tam dönüş
+  [[B4, 3], [A4, 1], [G4, 2], [B4, 2]],    // 7 Sol  : kapanışa hazırlık
+  [[Cs5, 2], [B4, 1], [Cs5, 1], [D5, 4]],  // 8 La   : duyarlı notadan Re'ye çözülüm
+];
+// İstinaf (Si minör) sürümü: aynı kontur, akorlara göre uyarlanmış (Fa#7 üzerinde La# duyarlı nota)
+const THEME_M = [
+  [[Fs4, 3], [B4, 1], [A4, 2], [Fs4, 2]],  // 1 Si m
+  [[D5, 3], [B4, 1], [G4, 4]],             // 2 Sol
+  [[A4, 3], [D5, 1], [Cs5, 2], [A4, 2]],   // 3 Re
+  [[A4, 2], [B4, 2], [Cs5, 4]],            // 4 La : soru
+  [[B4, 3], [D5, 1], [B4, 2], [Fs4, 2]],   // 5 Si m: cevap
+  [[G4, 3], [B4, 1], [D5, 2], [B4, 2]],    // 6 Sol
+  [[G4, 3], [B4, 1], [A4, 2], [G4, 2]],    // 7 Mi m
+  [[Cs5, 3], [As4, 1], [B4, 4]],           // 8 Fa#7: Si'ye çözülür
+];
+const SCALE_PC = [1, 2, 4, 6, 7, 9, 11];   // Re majör = Si doğal minör gamı
+const upNb = (m) => (SCALE_PC.includes((m + 1) % 12) ? m + 1 : m + 2);
+// A' için: bir oktav yukarı + 3 sekizlik notalara üst komşu süs notası
+const octUp = (th) => th.map((bar) => bar.map(([m, d]) => [m + 12, d]));
+const ornament = (th) => th.map((bar) => bar.flatMap(([m, d]) => (d === 3 ? [[upNb(m), 0.5], [m, 2.5]] : [[m, d]])));
+// Org (3. derece): iskelet - her ölçüde 1. ve 3. vuruştaki notalar yarım nota uzunluğunda (genişletilmiş değerler)
+const stately = (th) => th.map((bar) => {
+  let p = 0, a = 0, b = 0;
+  for (const [m, d] of bar) { if (p === 0) a = m; if (p <= 4 && p + d > 4) b = m; p += d; }
+  return [[a, 4], [b, 4]];
+});
+const THEME_UP = octUp(THEME), THEME_M_UP = octUp(THEME_M);
+
+// 3 bölüm x 8 ölçü + 4 ölçülük köprü ("nefes") = 28 ölçülük döngü (A / B / A' / köprü)
+// lead: ölçü -> nota listesi (tema); lead3: org derecesi sürümü; melody: B'deki seyrek rastgele ezgi
 const SECTIONS = [
-  { // A: Pachelbel benzeri
+  { // A: Pachelbel benzeri + tema
     chords: ['D', 'A', 'Bm', 'Fsm', 'G', 'D', 'G', 'A'],
     pattern: [0, 1, 2, 3, 2, 1, 2, 1],
-    melody: { 0: [[0, 78, 3], [4, 76, 2], [6, 74, 2]], 2: [[0, 74, 2], [2, 73, 2], [4, 71, 4]], 4: [[0, 71, 3], [4, 74, 2], [6, 78, 2]], 6: [[0, 79, 2], [2, 78, 2], [4, 76, 4]] },
+    lead: THEME, lead3: stately(THEME),
   },
-  { // B: la minör renkli, daha hareketli
+  { // B: la minör renkli, daha hareketli (seyrek rastgele ezgi - tema ile tezat)
     chords: ['Bm', 'G', 'D', 'A', 'Bm', 'Em', 'Am', 'A7'],
     pattern: [0, 2, 1, 3, 1, 2, 3, 2],
     melody: { 1: [[0, 79, 2], [2, 78, 2], [4, 74, 4]], 3: [[0, 76, 3], [4, 73, 2], [6, 76, 2]], 5: [[0, 79, 3], [4, 76, 2], [6, 71, 2]], 7: [[0, 76, 2], [2, 73, 2], [4, 69, 4]] },
   },
-  { // A': dönüş, farklı arpej ve kapanış
+  { // A': dönüş; tema bir oktav yukarıda ve süslü
     chords: ['D', 'A', 'Bm', 'Fsm', 'G', 'D', 'Em', 'A'],
     pattern: [0, 2, 3, 2, 1, 2, 3, 1],
-    melody: { 0: [[0, 81, 3], [4, 78, 2], [6, 76, 2]], 1: [[0, 76, 4], [4, 73, 4]], 3: [[0, 78, 2], [2, 76, 2], [4, 73, 4]], 4: [[0, 74, 3], [4, 71, 2], [6, 74, 2]], 6: [[0, 76, 3], [4, 79, 2], [6, 78, 2]], 7: [[0, 73, 3], [4, 74, 4]] },
+    lead: ornament(THEME_UP), lead3: stately(THEME_UP),
+  },
+  { // Köprü: 4 ölçü nefes - pad ağırlıklı, çok seyrek pizzicato; La (dominant) ile döngü başına bağlanır
+    chords: ['G', 'Bm', 'Em', 'A'],
+    pattern: [0, 2, 1, 2, 0, 2, 1, 3],
+    plkMul: 0.3, padMul: 1.5,
+    melody: { 1: [[0, 78, 4]], 3: [[0, 76, 3], [4, 73, 4]] },
   },
 ];
-// İstinaf: akraba minör (Si minör) renkli sürüm - aynı melodi ailesi, aynı gam notaları
+// İstinaf: akraba minör (Si minör) renkli sürüm
 const MINOR = [
   { chords: ['Bm', 'G', 'D', 'A', 'Bm', 'G', 'Em', 'Fs7'], pattern: [0, 2, 1, 3, 2, 3, 1, 2],
-    melody: { 0: SECTIONS[0].melody[0], 2: SECTIONS[0].melody[2], 4: SECTIONS[0].melody[4], 6: SECTIONS[0].melody[6] } },
+    lead: THEME_M },
   { chords: ['Em', 'Bm', 'G', 'D', 'Em', 'G', 'A', 'Fs7'], pattern: [0, 3, 1, 2, 1, 3, 2, 3],
     melody: { 1: SECTIONS[1].melody[1], 3: SECTIONS[1].melody[3], 5: SECTIONS[1].melody[5] } },
-  { chords: ['Bm', 'G', 'D', 'A', 'Em', 'G', 'Em', 'Fs7'], pattern: [0, 2, 3, 1, 2, 3, 2, 1],
-    melody: { 0: SECTIONS[2].melody[0], 3: SECTIONS[2].melody[3], 4: SECTIONS[2].melody[4], 6: SECTIONS[2].melody[6] } },
+  { chords: ['Bm', 'G', 'D', 'A', 'Bm', 'G', 'Em', 'Fs7'], pattern: [0, 2, 3, 1, 2, 3, 2, 1],
+    lead: ornament(THEME_M_UP) },
+  { chords: ['G', 'Em', 'Bm', 'Fs7'], pattern: [0, 2, 1, 2, 0, 2, 1, 3], plkMul: 0.3, padMul: 1.5,
+    melody: { 1: [[0, 79, 4]], 3: [[0, 78, 3], [4, 73, 4]] } },
 ];
-const TOTAL_BARS = SECTIONS.length * 8;
+const SEC_START = [];
+let TOTAL_BARS = 0;
+for (const s of SECTIONS) { SEC_START.push(TOTAL_BARS); TOTAL_BARS += s.chords.length; }
 const XF = 2.4;          // seviye geçişi çapraz solma süresi (sn); en kısa ölçüden (~2.42 sn) kısa
 const MAX_LEVEL = 3;
-const MAX_OSC = 40;      // aynı anda canlı kısa ömürlü osilatör sınırı (mobil CPU)
+const MAX_OSC = 48;      // aynı anda canlı kısa ömürlü osilatör sınırı (mobil CPU)
 // Mahkeme derecesine göre katman hedefleri
 const LV = [
   { bass: 0, bassx: 0, str: 0,    org: 0, pad: 1,   plk: 1,   mel: 1,   send: 0.35, fb: 0.30, dlf: 1800, tempo: 1 },
@@ -61,7 +111,12 @@ let level = 0;       // istenen (bekleyen) seviye - setLevel yazar
 let curLevel = 0;    // çalan seviye - yalnızca ölçü başında güncellenir
 let live = 0;        // canlı kısa ömürlü osilatör sayısı
 let pendingFade = null;
-let bassBus = null, sendG = null, fbG = null, dlyLp = null;
+let bassBus = null, sendG = null, fbG = null, dlyLp = null, mainLp = null;
+// Tehlike (0..1): hedef + yumuşatılmış değer (ctx.currentTime ile; duraklatılınca donar)
+let tensTarget = 0, tens = 0, tensT = 0;
+const T_UP = 0.65, T_DOWN = 1.3;   // zaman sabitleri (sn): ~1.5 sn'de yükselir, ~3 sn'de gevşer
+const LP_LO = 3800, LP_HI = 5200;  // ana alçak geçiren: sakin -> gergin
+const TRIM = 0.1;                  // gergin müzikte genel seviye payı (tepe seviyeyi benzer tutar)
 const R = {};        // katman rampaları: ad -> {v0, v1, t0, t1}
 const layers = { str: null, org: null };   // kalıcı osilatör katmanları (tembel oluşur)
 let muted = false, running = false, paused = false;
@@ -72,7 +127,7 @@ function build() {
   if (!AC) return false;
   try { ctx = new AC({ latencyHint: 'playback' }); } catch (_) { ctx = new AC(); }   // büyük tampon: cızırtıya karşı
   master = ctx.createGain(); master.gain.value = muted ? 0 : 0.12;
-  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3800; lp.Q.value = 0.4;
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = LP_LO; lp.Q.value = 0.4; mainLp = lp;
   // sınırlayıcı: müzik + efekt üst üste binince kırpılma (cızırtı) olmasın
   const lim = ctx.createDynamicsCompressor();
   lim.threshold.value = -6; lim.knee.value = 6; lim.ratio.value = 12; lim.attack.value = 0.003; lim.release.value = 0.2;
@@ -98,7 +153,8 @@ function build() {
 // Kısa ömürlü osilatör: sayaçlı, bitince düğümleri serbest bırakır
 function osc(type, f, t0, t1, dest) {
   const o = ctx.createOscillator(); o.type = type; o.frequency.value = f;
-  o.connect(dest); live++;
+  if (dest) o.connect(dest);
+  live++;
   o.onended = () => { live--; try { o.disconnect(); } catch (_) { /* yoksay */ } };
   o.start(t0); o.stop(t1);
   return o;
@@ -129,6 +185,40 @@ function pad(t, midi, dur, k) {
     if (i) o.addEventListener('ended', () => { try { g.disconnect(); } catch (_) { /* yoksay */ } });
   });
   g.connect(fade);
+}
+
+// Lider ses (Lawris teması): yumuşak sinüs + üçgen karışımı, geç başlayan hafif vibrato
+function lead(t, midi, dur, vel) {
+  if (vel < 0.02 || live > MAX_OSC - 4) return;
+  const f = hz(midi), g = ctx.createGain(), end = t + dur;
+  const peak = 0.19 * vel, rel = 0.18;
+  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(peak, t + 0.035);
+  g.gain.linearRampToValueAtTime(peak * 0.72, t + Math.max(0.08, dur * 0.6));
+  g.gain.setValueAtTime(peak * 0.72, Math.max(t + 0.1, end - 0.03)); g.gain.linearRampToValueAtTime(0.0001, end + rel);
+  const gs = ctx.createGain(); gs.gain.value = 0.65;
+  const gt = ctx.createGain(); gt.gain.value = 0.35;
+  const o1 = osc('sine', f, t, end + rel + 0.05, gs), o2 = osc('triangle', f, t, end + rel + 0.05, gt);
+  gs.connect(g); gt.connect(g); g.connect(fade);
+  if (dur > 0.45) {   // vibrato: 5.2 Hz, ~6 sent, yarım saniyede açılır
+    const l = osc('sine', 5.2, t, end + rel + 0.05, null), lg = ctx.createGain();
+    lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(6, t + Math.min(0.5, dur * 0.6));
+    l.connect(lg); lg.connect(o1.detune); lg.connect(o2.detune);
+    l.addEventListener('ended', () => { try { lg.disconnect(); } catch (_) { /* yoksay */ } });
+  }
+  o2.addEventListener('ended', () => { try { g.disconnect(); gs.disconnect(); gt.disconnect(); } catch (_) { /* yoksay */ } });
+}
+
+// Gerginlikte: çok hafif, yüksek tremololu yay sesi ("kalp atışı" hissi)
+function trem(t, midi, dur, k) {
+  if (k < 0.02 || live > MAX_OSC - 6) return;
+  const g = ctx.createGain(), tg = ctx.createGain(), f = hz(midi), peak = 0.03 * k;
+  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(peak, t + 0.7);
+  g.gain.setValueAtTime(peak, t + dur - 0.1); g.gain.linearRampToValueAtTime(0.0001, t + dur + 0.9);
+  tg.gain.value = 0.55;
+  const o = osc('triangle', f, t, t + dur + 1, tg), l = osc('sine', 6.5, t, t + dur + 1, null), lg = ctx.createGain();
+  lg.gain.value = 0.45; l.connect(lg); lg.connect(tg.gain);
+  tg.connect(g); g.connect(fade);
+  o.addEventListener('ended', () => { try { g.disconnect(); tg.disconnect(); lg.disconnect(); } catch (_) { /* yoksay */ } });
 }
 
 // Bas: sinüs + üçgen, çok alçak seviye (bassBus alçak geçiren)
@@ -234,8 +324,10 @@ function applyLevel(t) {
 function scheduleStep(t, s, b) {
   if (s === 0) applyLevel(t);
   const sets = curLevel === 2 ? MINOR : SECTIONS;
-  const sec = sets[Math.floor(b / 8)], bi = b % 8;
+  let si = sets.length - 1; while (SEC_START[si] > b) si--;
+  const sec = sets[si], bi = b - SEC_START[si];
   const chordName = sec.chords[bi], chord = C[chordName], beat = 60 / (BASE_BPM * tempoK()) / 2;
+  const tn = tens, hot = Math.max(0, Math.min(1, (tn - 0.4) / 0.6));
   if (s === 0) {
     // kalıcı katmanlar: oluştur / akor değiştir / hedefe ramp
     const T = LV[curLevel];
@@ -253,7 +345,12 @@ function scheduleStep(t, s, b) {
   const accent = s % 4 === 0 ? 1 : s % 2 === 0 ? 0.85 : 0.7;
   const idx = sec.pattern[s];
   // Pizzicato/klavsen: seyrekleştirme (Yargıtay'da birkaç nota) - ana vuruşlar hep çalar
-  if (s % 4 === 0 || Math.random() < plk * 0.8) pluck(t + rnd(0.008), chord[idx], accent * (0.85 + Math.random() * 0.3) * (0.55 + 0.45 * plk));
+  const pm = sec.plkMul || 1;   // köprüde seyrek
+  if (s === 0 || (s % 4 === 0 && pm === 1) || Math.random() < plk * 0.8 * pm) pluck(t + rnd(0.008), chord[idx], accent * (0.85 + Math.random() * 0.3) * (0.55 + 0.45 * plk));
+  // Gerginlik: yüksek tehlikede arpejde fazladan ara nota
+  if (tn > 0.6 && s % 2 === 0 && pm === 1 && Math.random() < Math.min(1, (tn - 0.6) / 0.3) * 0.75) pluck(t + beat * 0.5 + rnd(0.006), chord[sec.pattern[(s + 5) % 8]], 0.38);
+  // Gerginlik: her vuruşta alçak nabız (0.4 üstünde belirir); 1. ve 3. vuruşta bas katmanı zaten çalıyorsa atla
+  if (hot > 0.02 && s % 2 === 0 && !((s === 0 || s === 4) && val('bass', t) > 0.02)) bassNote(t, bassMidi(chordName), beat * 1.6, 0.6 * hot);
   // İstinaf: daha hareketli arpej (ara 16'lık notalar)
   if (curLevel === 2 && s % 2 === 1 && Math.random() < 0.5) pluck(t + beat * 0.5 + rnd(0.006), chord[sec.pattern[(s + 3) % 8]], 0.4);
   // Bas: 1. ve 3. vuruşta kök; Yargıtay'da oktav + beşli katlanır
@@ -265,22 +362,50 @@ function scheduleStep(t, s, b) {
   }
   if (s === 0) {
     const barDur = beat * 8, pk = val('pad', t);
-    pad(t, chord[1], barDur, pk); pad(t, chord[2], barDur, pk); pad(t, chord[0] - 12, barDur, pk);
-    const notes = sec.melody[bi];
-    if (notes && Math.random() > 0.15) {
-      for (const [pos, m, len] of notes) {
-        const mt = t + pos * beat + rnd(0.012);
-        pluck(mt, m, (0.9 + Math.random() * 0.2) * mel);
-        if (len >= 4) pluck(mt + beat * 0.02, m + 12, 0.18 * mel);
+    const pmul = sec.padMul || 1, pk2 = pk * pmul;
+    pad(t, chord[1], barDur, pk2); pad(t, chord[2], barDur, pk2); pad(t, chord[0] - 12, barDur, pk2);
+    if (tn > 0.75) trem(t, chord[3] + 12, barDur, (tn - 0.75) / 0.25);
+    // Tema: A ve A' bölümlerinde sabit lider ezgi (3. derecede genişletilmiş değerler)
+    const th = curLevel === 3 && sec.lead3 ? sec.lead3 : sec.lead;
+    if (th) {
+      let pos = 0;
+      for (const [m, d] of th[bi]) {
+        if (m > 0) lead(t + pos * beat, m, d * beat * 0.96, mel * (pos === 0 ? 1 : 0.9));
+        pos += d;
+      }
+    } else {
+      const notes = sec.melody && sec.melody[bi];
+      if (notes && Math.random() > 0.15) {
+        for (const [pos, m, len] of notes) {
+          const mt = t + pos * beat + rnd(0.012);
+          pluck(mt, m, (0.9 + Math.random() * 0.2) * mel);
+          if (len >= 4) pluck(mt + beat * 0.02, m + 12, 0.18 * mel);
+        }
       }
     }
   }
 }
 
-const tempoK = () => LV[Math.min(MAX_LEVEL, curLevel)].tempo;
+const tempoK = () => LV[Math.min(MAX_LEVEL, curLevel)].tempo * (1 + 0.08 * tens);   // tehlike: +%0..8 tempo (yumuşak)
+
+// Yumuşatılmış tehlike değerini now'a kadar ilerlet (üstel yaklaşım)
+function tensStep(now) {
+  const dt = Math.max(0, now - tensT); tensT = now;
+  tens += (tensTarget - tens) * (1 - Math.exp(-dt / (tensTarget > tens ? T_UP : T_DOWN)));
+}
+// Ses parametrelerini hedefe yumuşakça yönlendir (atlama yok: mevcut değerden başlar)
+function tensAudio(now) {
+  if (!ctx || !mainLp) return;
+  const tau = tensTarget > tens ? T_UP : T_DOWN;
+  mainLp.frequency.cancelScheduledValues(now); mainLp.frequency.setValueAtTime(LP_LO + (LP_HI - LP_LO) * tens, now);
+  mainLp.frequency.setTargetAtTime(LP_LO + (LP_HI - LP_LO) * tensTarget, now, tau);
+  bus.gain.cancelScheduledValues(now); bus.gain.setValueAtTime(1 - TRIM * tens, now);
+  bus.gain.setTargetAtTime(1 - TRIM * tensTarget, now, tau);
+}
 
 function tick() {
   if (!ctx || !running) return;
+  tensStep(ctx.currentTime);
   while (nextT < ctx.currentTime + LOOKAHEAD) {
     scheduleStep(Math.max(nextT, ctx.currentTime + 0.03), step, bar);   // geç kalan nota hemen değil, kısa payla başlasın (tık sesi olmasın)
     nextT += 60 / (BASE_BPM * tempoK()) / 2;
@@ -389,6 +514,9 @@ export const music = {
       stopTimer();
       paused = false; running = true;
       level = 0; curLevel = 0; step = 0; bar = 0; pendingFade = null;
+      tensTarget = 0; tens = 0; tensT = ctx.currentTime;
+      mainLp.frequency.cancelScheduledValues(ctx.currentTime); mainLp.frequency.setValueAtTime(LP_LO, ctx.currentTime);
+      bus.gain.cancelScheduledValues(ctx.currentTime); bus.gain.setValueAtTime(1, ctx.currentTime);
       killLayers(); resetRamps(0);
       const now = ctx.currentTime;
       for (const [n, p] of [['send', sendG.gain], ['fb', fbG.gain], ['dlf', dlyLp.frequency]]) { p.cancelScheduledValues(now); p.setValueAtTime(LV[0][n], now); }
@@ -421,6 +549,12 @@ export const music = {
   },
   // Bekleyen seviye; bir sonraki ölçü başında çapraz solmayla uygulanır (start öncesi/duraklatılmışken de güvenli)
   setLevel(i) { const n = Number(i); level = Number.isFinite(n) ? Math.max(0, Math.min(MAX_LEVEL, Math.floor(n))) : 0; },
+  // Tehlike 0..1 (yığın yüksekliği); atak ~1.5 sn, gevşeme ~3 sn. Çalmıyorken yalnızca hedefi saklar.
+  setTension(x) {
+    const n = Number(x);
+    tensTarget = Number.isFinite(n) ? Math.max(0, Math.min(1, n)) : 0;
+    try { if (ctx && running) { const now = ctx.currentTime; tensStep(now); tensAudio(now); } } catch (_) { /* yoksay */ }
+  },
   isMuted() { return muted; },
   setMuted(m) {
     muted = !!m;
