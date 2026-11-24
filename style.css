@@ -674,3 +674,10 @@ html.ui-mix.rails #app #hud #muteBtn { grid-row: 6; }
 html.ui-mix.rails #app #hud #sfxBtn { grid-row: 7; }
 html.ui-mix.rails #app .snd svg { width: 20px; height: 20px; }
 html.ui-mix.rails #app #hud .box:is(#holdBox, #nextBox) { height: auto; min-height: 0; padding-top: 10px; padding-bottom: 10px; }
+/* Menü bağlantıları her zeminde okunsun (uzun telefonlarda tapınak çatısına denk gelebiliyor) */
+html.ui-mix #menu .menu-links {
+  background: rgba(255, 250, 238, .86); border: 1px solid rgba(184,134,43,.55); border-radius: 999px;
+  padding: 6px 16px; box-shadow: 0 4px 14px rgba(60,30,10,.18);
+  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); position: relative; z-index: 3;
+}
+html.ui-mix #menu .menu-links .alt { text-shadow: none; border-bottom-color: transparent; }
