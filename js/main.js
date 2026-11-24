@@ -65,6 +65,7 @@ function flash(text) {
 function hud() {
   $('score').textContent = score;
   $('best').textContent = best;
+  $('menuBest').textContent = best;
   $('level').textContent = LEVELS[level];
   $('status').textContent = (doubleLeft > 0 ? 'x2 puan (' + doubleLeft + ') ' : '') + (slowMs > 0 ? 'yavaş ' + Math.ceil(slowMs / 1000) + 'sn' : '');
 }
@@ -254,6 +255,7 @@ window.addEventListener('orientationchange', () => setTimeout(layout, 150));
 
 initInput(act, canvas, () => renderer.cellCss);
 $('best').textContent = best;
+$('menuBest').textContent = best;
 kediMenu();
 layout();
 requestAnimationFrame((t) => { last = t; frame(t); });
