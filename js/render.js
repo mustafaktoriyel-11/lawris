@@ -12,7 +12,14 @@ const REDUCED = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-
 const SWEEP_CYCLE = 1.8, SWEEP_DUR = 1.3, FLASH_MS = 400;
 const PERSIST = 0.55;       // renkli sürümün kalıcı opaklığı (açığa çıkan bölgede)
 const FEATHER = 1.2;       // kalıcı bölgenin üst kenar yumuşatması (hücre)
-const SWEEP_MS = 1150, SHIM_MS = 700, BAND_FEATHER = 1.5;
+const SWEEP_MS = 900, SHIM_MS = 700, BAND_FEATHER = 1.5;
+// Oynanabilirlik katmanı: renkli sürüm alt satırlarda karartılır (yığın bölgesi); parçaların etrafında yumuşak koyu hale + gölge
+const VEIL = ['rgb(8,22,52)', 'rgb(4,28,38)', 'rgb(52,16,8)', 'rgb(4,8,34)'], VEIL_A = 0.4, VEIL_FROM = 0.3;
+const HALO_A = 0.5, HALO_FLASH = 0.35;
+const flashEnv = (f, now) => {
+  const tt = now - f.t0, k = tt / f.dur; if (k < 0 || k >= 1) return 0;
+  return f.amp * (f.shim ? (k < 0.45 ? 1 : 1 - smooth((k - 0.45) / 0.55)) : Math.min(smooth(tt / 100), 1 - smooth((tt - 330) / Math.max(1, f.dur - 330))));
+};
 const easeOut = (x) => 1 - Math.pow(1 - x, 3);
 const smooth = (x) => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
 const ease = (x) => (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
@@ -101,9 +108,9 @@ export class Renderer {
       const t = this.bctx;
       for (const f of fl) {
         const k = (now - f.t0) / f.dur; if (k < 0 || k >= 1) continue;
-        const fe = f.fe * s, y0 = f.y0 * s - fe, y1 = (f.y1 + 1) * s + fe, hf = 1.6 * s; const tt = now - f.t0, sweepK = f.shim ? k : Math.min(1, tt / 520), front = easeOut(sweepK) * (bw + hf * 1.5);
+        const fe = f.fe * s, y0 = f.y0 * s - fe, y1 = (f.y1 + 1) * s + fe, hf = 1.6 * s; const tt = now - f.t0, sweepK = f.shim ? k : Math.min(1, tt / 420), front = easeOut(sweepK) * (bw + hf * 1.5);
         // tam renk: ~120ms yumuşak giriş, ~350ms tam opak bekleme, sonra yumuşak çıkış
-        const env = f.shim ? (k < 0.45 ? 1 : 1 - smooth((k - 0.45) / 0.55)) : Math.min(smooth(tt / 120), 1 - smooth((tt - 470) / Math.max(1, f.dur - 470)));
+        const env = flashEnv({ ...f, amp: 1 }, now);
         const shape = () => {   // dikey bant (yumuşak üst/alt)
           t.globalCompositeOperation = 'source-over'; t.globalAlpha = 1; t.clearRect(0, 0, bw, bh);
           if (fe > 0) { const g = t.createLinearGradient(0, y0, 0, y1), q = fe / (y1 - y0); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(q, '#000'); g.addColorStop(1 - q, '#000'); g.addColorStop(1, 'rgba(0,0,0,0)'); t.fillStyle = g; } else t.fillStyle = '#000';
@@ -118,7 +125,14 @@ export class Renderer {
       m.globalAlpha = 1; m.globalCompositeOperation = 'source-over';
       const cc = ent.cv.getContext('2d');
       cc.globalCompositeOperation = 'source-over'; cc.clearRect(0, 0, bw, bh); cc.drawImage(col, 0, 0);
-      cc.globalCompositeOperation = 'destination-in'; cc.drawImage(this.mask, 0, 0); cc.globalCompositeOperation = 'source-over';
+      cc.globalCompositeOperation = 'destination-in'; cc.drawImage(this.mask, 0, 0);
+      { // alt satırlarda koyu örtü: yığın bölgesinde renkli freskonun parlaklığı/doygunluğu düşer (üst kısım tam renkli kalır)
+        cc.globalCompositeOperation = 'source-atop';
+        const vg = cc.createLinearGradient(0, bh * VEIL_FROM, 0, bh), vc = VEIL[lv] || VEIL[0];
+        vg.addColorStop(0, vc.replace('rgb', 'rgba').replace(')', ',0)')); vg.addColorStop(1, vc.replace('rgb', 'rgba').replace(')', ',' + VEIL_A + ')'));
+        cc.fillStyle = vg; cc.fillRect(0, 0, bw, bh);
+      }
+      cc.globalCompositeOperation = 'source-over';
       ent.key = fl.length ? '' : key;
     }
     c.globalAlpha = alpha; c.drawImage(ent.cv, this.bx, this.by);
@@ -134,6 +148,33 @@ export class Renderer {
       }
     }
     c.globalAlpha = 1;
+  }
+
+  // Kilitli hücrelerin silüetinden halo + gölge katmanları (tahta değişince bir kez kurulur)
+  _shadowLayers(board, s) {
+    let h = s | 0, n = 0;
+    for (let r = 0; r < ROWS; r++) for (let q = 0; q < COLS; q++) { const cl = board.grid[r][q]; if (cl) { n++; h = (Math.imul(h, 31) + cl.id * 7 + q * 3 + r * 5 + cl.lx * 11 + cl.ly * 13 + (cl.type.charCodeAt(0) | 0)) | 0; } }
+    const bw = COLS * s, bh = ROWS * s;
+    if (!n) return null;
+    let L = this._sh;
+    if (L && L.h === h && L.bw === bw) return L;
+    if (!L || L.bw !== bw || L.bh !== bh) {
+      const mk = () => Object.assign(document.createElement('canvas'), { width: bw, height: bh });
+      L = this._sh = { halo: mk(), drop: mk(), bw, bh, h: 0 };
+    }
+    L.h = h;
+    const OFF = 3 * bw + 200, pen = (cv, blur, dx, dy, col) => {
+      const x = cv.getContext('2d'); x.clearRect(0, 0, bw, bh);
+      x.shadowColor = col; x.shadowBlur = blur; x.shadowOffsetX = OFF + dx; x.shadowOffsetY = dy;
+      for (let r = 0; r < ROWS; r++) for (let q = 0; q < COLS; q++) {
+        const cl = board.grid[r][q]; if (!cl) continue;
+        if (cl.type === 'plain') x.fillRect(q * s - OFF, r * s, s, s);
+        else x.drawImage(getSprite(cl.type, cl.rot, cl.golden, s), cl.lx * s, cl.ly * s, s, s, q * s - OFF, r * s, s, s);
+      }
+    };
+    pen(L.halo, s * 0.7, 0, s * 0.08, 'rgba(6,10,28,0.85)');
+    pen(L.drop, s * 0.14, s * 0.03, s * 0.07, 'rgba(0,0,0,0.6)');
+    return L;
   }
 
   resize(wCss, hCss) {
@@ -167,12 +208,19 @@ export class Renderer {
       if (f.e < 1 && f.a !== f.b) this.paintLevel(c, f.a, 1 - f.e, nowT);
       this.paintLevel(c, f.b, f.a !== f.b ? f.e : 1, nowT);
       c.restore();
+      // yığının etrafında yumuşak koyu hale (satır silme ışığında biraz güçlenir) + sıkı gölge: siluetler her zeminde okunur
+      let fe = 0; for (const fl of this.flashes) fe = Math.max(fe, flashEnv(fl, nowT));
+      const sh = this._shadowLayers(g.board, s);
+      if (sh) { c.globalAlpha = Math.min(1, HALO_A + HALO_FLASH * fe); c.drawImage(sh.halo, this.bx, this.by); c.globalAlpha = 1; c.drawImage(sh.drop, this.bx, this.by); }
     }
     // ızgara
-    c.strokeStyle = TH.grid; c.lineWidth = 1; c.beginPath();
-    for (let x = 0; x <= COLS; x++) { c.moveTo(this.bx + x * s + 0.5, this.by); c.lineTo(this.bx + x * s + 0.5, this.by + ROWS * s); }
-    for (let y = 0; y <= ROWS; y++) { c.moveTo(this.bx, this.by + y * s + 0.5); c.lineTo(this.bx + COLS * s, this.by + y * s + 0.5); }
-    c.stroke();
+    // iki tonlu çizgi: koyu çizgi + yanında ince açık çizgi + tema rengi; hem açık hem koyu fresko üzerinde görünür
+    for (const [col, off] of [[TH.grid, 0.5], ['rgba(255,255,255,0.14)', 0.5], ['rgba(6,12,38,0.30)', 1.5]]) {
+      c.strokeStyle = col; c.lineWidth = 1; c.beginPath();
+      for (let x = 0; x <= COLS; x++) { c.moveTo(this.bx + x * s + off, this.by); c.lineTo(this.bx + x * s + off, this.by + ROWS * s); }
+      for (let y = 0; y <= ROWS; y++) { c.moveTo(this.bx, this.by + y * s + off); c.lineTo(this.bx + COLS * s, this.by + y * s + off); }
+      c.stroke();
+    }
     // kilitli hücreler
     for (let r = 0; r < ROWS; r++) for (let q = 0; q < COLS; q++) {
       const cell = g.board.grid[r][q];
@@ -182,11 +230,9 @@ export class Renderer {
     const p = g.piece;
     if (p) {
       const sz = sizeOf(p.type, p.rot);
-      if (g.ghostY > p.y) {
-        c.strokeStyle = 'rgba(243,235,211,0.28)'; c.lineWidth = Math.max(1, s * 0.06);
-        c.strokeRect(this.bx + p.x * s + 1, this.by + g.ghostY * s + 1, sz.w * s - 2, sz.h * s - 2);
-      }
+      if (g.ghostY > p.y) this.drawGhost(c, p, g.ghostY, s);
       const sp = getSprite(p.type, p.rot, p.golden, s);
+      c.save(); c.shadowColor = 'rgba(0,0,0,0.6)'; c.shadowBlur = s * 0.2; c.shadowOffsetY = s * 0.06; c.drawImage(sp, this.bx + p.x * s, this.by + p.y * s); c.restore();   // etrafa koyu gölge
       if (p.golden) goldFx(c, sp, this.bx + p.x * s, this.by + p.y * s, cellsOf(p.type, p.rot), s, performance.now() / 1000, 0.35);
       else c.drawImage(sp, this.bx + p.x * s, this.by + p.y * s);
     }
@@ -202,6 +248,38 @@ export class Renderer {
   }
 
   // Satır silme / altın etki ışığı: ortak ışık şeridi + parçaya özgü imza (fx.js)
+  // Hayalet: parçanın gerçek hücreleri (yarı saydam dolgu + birleşik şeklin dış hattı)
+  ghostColor(type) {
+    this._gc = this._gc || {};
+    if (this._gc[type]) return this._gc[type];
+    let col = '243,235,211';
+    try {
+      const sp = getSprite(type, 0, false, 32), k = document.createElement('canvas'); k.width = k.height = 1;
+      const x = k.getContext('2d'); x.drawImage(sp, 0, 0, 1, 1);
+      const d = x.getImageData(0, 0, 1, 1).data;
+      if (d[3] > 20) col = d[0] + ',' + d[1] + ',' + d[2];
+    } catch (_) { /* varsayılan açık renk */ }
+    return (this._gc[type] = col);
+  }
+  drawGhost(c, p, gy, s) {
+    const cells = cellsOf(p.type, p.rot), has = new Set(cells.map((q) => q[0] + ',' + q[1]));
+    const ox = this.bx + p.x * s, oy = this.by + gy * s;
+    c.save();
+    c.fillStyle = 'rgba(' + this.ghostColor(p.type) + ',0.22)';
+    for (const [cx, cy] of cells) c.fillRect(ox + cx * s, oy + cy * s, s, s);
+    c.beginPath();
+    for (const [cx, cy] of cells) {
+      const x0 = ox + cx * s, y0 = oy + cy * s, x1 = x0 + s, y1 = y0 + s;
+      if (!has.has(cx + ',' + (cy - 1))) { c.moveTo(x0, y0); c.lineTo(x1, y0); }
+      if (!has.has(cx + ',' + (cy + 1))) { c.moveTo(x0, y1); c.lineTo(x1, y1); }
+      if (!has.has((cx - 1) + ',' + cy)) { c.moveTo(x0, y0); c.lineTo(x0, y1); }
+      if (!has.has((cx + 1) + ',' + cy)) { c.moveTo(x1, y0); c.lineTo(x1, y1); }
+    }
+    c.lineCap = 'round';
+    c.strokeStyle = 'rgba(0,0,0,0.35)'; c.lineWidth = 3.5; c.stroke();   // koyu alt çizgi: açık zeminde de seçilir
+    c.strokeStyle = 'rgba(243,235,211,0.92)'; c.lineWidth = 1.5; c.stroke();
+    c.restore();
+  }
   drawBursts(c, list) {
     const now = performance.now(), geo = { bx: this.bx, by: this.by, cols: COLS, rows: ROWS, s: this.s };
     for (let i = list.length - 1; i >= 0; i--) {

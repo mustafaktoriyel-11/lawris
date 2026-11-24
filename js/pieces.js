@@ -42,15 +42,15 @@ const C = {
   ink: '#F3EBD3', steel: '#888780', steelD: '#5F5E5A',
 };
 const PAL = {
-  tokmak: { main: '#3B2C2A', dark: '#16100F', acc: '#E0B23A' },
+  tokmak: { main: '#4E3A35', dark: '#1A1211', acc: '#E0B23A' },
   terazi: { main: '#A9B0BA', dark: '#5C6470', acc: '#7A5E10', pivot: C.gold },
   sutun: { main: C.marble, dark: C.marbleD, acc: C.marbleD },
   // Roma yasa levhasi: sicak travertin / kumtasi, bronz perçinler
   kanun: { main: '#CDBB94', dark: '#8E7A55', acc: '#B8862B', accD: '#6E4E12' },
-  paragraf: { main: '#33805F', dark: '#1A4A35', acc: C.gold },
-  kilic: { main: '#6C7A94', dark: '#323A4C', acc: '#F1F3F5', hilt: C.gold },
+  paragraf: { main: '#3A9168', dark: '#1A4A35', acc: C.gold },
+  kilic: { main: '#5877AB', dark: '#2A3550', acc: '#F1F3F5', hilt: C.gold },
   // porfir moru: mavi, turkuaz, kiremit ve lacivert zeminlere karsi kontrast
-  kalem: { main: '#7A3E8E', dark: '#3E1B4E', acc: '#F4ECD6', ring: '#D9A93A' },
+  kalem: { main: '#8D49A4', dark: '#3E1B4E', acc: '#F4ECD6', ring: '#D9A93A' },
 };
 // Deneme: ?islem=pirinc ile normal parçaların işlemeleri antik pirinç olur (parlak altın yalnızca altın parçalarda)
 const ISLEM = (() => { try { return new URLSearchParams(location.search).get('islem'); } catch (_) { return null; } })();
@@ -373,6 +373,24 @@ function rotateCanvas(src) {
   c.translate(src.height, 0); c.rotate(Math.PI / 2); c.drawImage(src, 0, 0);
   return cv;
 }
+// Kenar bandı: sprite alfa'sının iç kenarında t px kalınlıkta koyu (ve isteğe bağlı açık) çizgi; her zeminde silüet seçilir
+function rimBand(src, t, col) {
+  const w = src.width, h = src.height, pad = Math.ceil(t) + 1, W = w + 2 * pad, H = h + 2 * pad;
+  const inv = mk(W, H), ic = inv.getContext('2d');     // ters alfa (sprite dışı = dolu)
+  ic.fillStyle = '#000'; ic.fillRect(0, 0, W, H); ic.globalCompositeOperation = 'destination-out'; ic.drawImage(src, pad, pad);
+  const band = mk(w, h), bc = band.getContext('2d');   // ters alfayı t kadar genişlet, sprite ile kes -> iç kenar bandı
+  const N = 12; for (let i = 0; i < N; i++) { const a = (i / N) * Math.PI * 2; bc.drawImage(inv, Math.cos(a) * t - pad, Math.sin(a) * t - pad); }
+  bc.globalCompositeOperation = 'destination-in'; bc.drawImage(src, 0, 0);
+  bc.globalCompositeOperation = 'source-in'; bc.fillStyle = col; bc.fillRect(0, 0, w, h);
+  return band;
+}
+function finish(cv, s, light) {
+  const c = cv.getContext('2d'), t = Math.max(1, s * 0.05);
+  if (light) { c.drawImage(rimBand(cv, t * 2, 'rgba(255,240,200,0.55)'), 0, 0); }
+  c.drawImage(rimBand(cv, t, 'rgba(6,8,22,0.8)'), 0, 0);
+  return cv;
+}
+const LIGHTRIM = new Set(['tokmak', 'kalem', 'paragraf', 'kilic']);   // koyu/orta tonlu parçalara ince açık iç kenar
 const cache = new Map();
 // type/rot/golden için s piksel hücre boyutunda tüm parça görüntüsü
 export function getSprite(type, rot, golden, s) {
@@ -382,11 +400,11 @@ export function getSprite(type, rot, golden, s) {
   if (UPRIGHT.has(type)) {
     const sz = sizeOf(type, rot);
     cv = mk(sz.w * s, sz.h * s);
-    DRAW[type](cv.getContext('2d'), s, golden ? GOLDEN : PAL[type], cellsOf(type, rot));
+    DRAW[type](cv.getContext('2d'), s, golden ? GOLDEN : PAL[type], cellsOf(type, rot)); finish(cv, s, golden || LIGHTRIM.has(type));
   } else if ((rot & 3) === 0) {
     const sz = sizeOf(type, 0);
     cv = mk(sz.w * s, sz.h * s);
-    DRAW[type](cv.getContext('2d'), s, golden ? GOLDEN : PAL[type], cellsOf(type, 0));
+    DRAW[type](cv.getContext('2d'), s, golden ? GOLDEN : PAL[type], cellsOf(type, 0)); finish(cv, s, golden || LIGHTRIM.has(type));
   } else {
     cv = rotateCanvas(getSprite(type, (rot & 3) - 1, golden, s));
   }
