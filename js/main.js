@@ -17,8 +17,9 @@ const LEVEL_COUNT = 4;   // mahkeme adları i18n'de: court.N.short / court.N.ful
 const REDUCED_MOTION = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const levelName = (i) => t('court.' + i + '.short');
 const LINE_SCORE = [0, 100, 300, 500, 800, 1200, 1800];
-const GOLD_CHANCE = 0.08;
-const LOCK_DELAY = 500;   // yere değdikten sonra kayma/döndürme süresi (ms)
+const GOLD_CHANCE = 0.10;
+const GOLD_GUARANTEE = 12;   // en çok 12 parçada bir altın parça garanti
+const LOCK_DELAY = 700;   // yere değdikten sonra kayma/döndürme süresi (ms)
 const MAX_RESETS = 15;    // aynı yükseklikte süreyi en fazla kaç kez yenileyebilir
 const $ = (id) => document.getElementById(id);
 
@@ -53,10 +54,21 @@ let doubleLeft = 0, slowMs = 0, acc = 0, last = 0;
 
 best = skor.enIyi();
 
+// 7'li torba: her torbada her parça türü bir kez (Kılıç her ikinci torbada); kıtlık/taşkın olmaz
+let bag = [], bagN = 0, sinceGold = 0;
+function nextType() {
+  if (!bag.length) {
+    bag = TYPES.filter((t) => t !== 'kilic');
+    if (bagN++ % 2 === 0) bag.push('kilic');
+    for (let i = bag.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [bag[i], bag[j]] = [bag[j], bag[i]]; }
+  }
+  return bag.pop();
+}
 function newPiece() {
-  let r = Math.random() * TYPES.reduce((a, t) => a + WEIGHTS[t], 0), type = TYPES[0];
-  for (const t of TYPES) { r -= WEIGHTS[t]; if (r < 0) { type = t; break; } }
-  return { type, rot: 0, x: 0, y: 0, golden: Math.random() < GOLD_CHANCE, id: 0 };
+  const type = nextType();
+  const golden = ++sinceGold >= GOLD_GUARANTEE || Math.random() < GOLD_CHANCE;
+  if (golden) sinceGold = 0;
+  return { type, rot: 0, x: 0, y: 0, golden, id: 0 };
 }
 function announce(p) {
   if (p && p.golden && !announced.has(p)) { announced.add(p); music.chime(); }
@@ -92,7 +104,7 @@ function spawn() {
 }
 
 const gravityMs = () => {
-  let ms = Math.max(110, 800 * Math.pow(0.95, Math.floor(rows / 3)));
+  let ms = Math.max(140, 1000 * Math.pow(0.96, Math.floor(rows / 4)));
   if (slowMs > 0) ms *= 1.8;
   return ms;
 };
