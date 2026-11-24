@@ -369,11 +369,11 @@ html[class*="ui-"] #rehber h2 { font-weight: 400; font-size: 1.35rem; margin: 0;
 .rh-demo canvas { flex: 0 0 auto; display: block; border: 1px solid var(--g2, #C9A227); border-radius: 3px; box-shadow: 0 0 10px rgba(240,196,106,.18); background: #14091a; }
 .rh-cap { display: flex; flex-direction: column; gap: 3px; flex: 1 1 0; min-width: 0; min-height: 4.2em; justify-content: center; font-size: .82rem; line-height: 1.3; }
 .rh-cap b { font: 400 1.05rem Georgia, serif; font-variant: small-caps; letter-spacing: .12em; color: var(--g1, #f0d98a); }
-.rh-gold { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
-.rh-gold button { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0; padding: 2px 2px 3px; background: rgba(8,2,3,.3); border: 1px solid rgba(240,217,138,.2); border-radius: 8px; color: var(--g1, #f0d98a); font: inherit; font-size: .75rem; line-height: 1.15; cursor: pointer; }
+.rh-gold { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.rh-gold button { width: 100%; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 8px; padding: 6px 8px; background: rgba(8,2,3,.3); border: 1px solid rgba(240,217,138,.2); border-radius: 10px; color: var(--g1, #f0d98a); font: inherit; font-size: .95rem; line-height: 1.15; cursor: pointer; }
 .rh-gold button.on { border-color: var(--g2, #C9A227); background: rgba(240,196,106,.14); box-shadow: 0 0 6px rgba(240,196,106,.35); }
 .rh-gold button:focus-visible { outline: 2px solid var(--g2, #C9A227); outline-offset: 1px; }
-.rh-gold canvas { width: 2.125rem; height: 1.75rem; display: block; pointer-events: none; }
+.rh-gold canvas { width: 3.25rem; height: 2.75rem; display: block; pointer-events: none; }
 .rh-courts { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 2px 0; }
 .rh-courts li { font-size: .85rem; padding: 5px 9px; border: 1px solid var(--g2, #C9A227); border-radius: 999px; color: var(--g1, #f0d98a); }
 .rh-courts li { position: relative; }
@@ -417,7 +417,7 @@ html[class*="ui-"] #pad button.hld i { font-size: 1.3rem; }
   .rh-pieces { gap: 5px; }
   .rh-pieces figure { padding: 3px 2px 2px; }
   .rh-pieces canvas { height: 50px; }
-  .rh-gold canvas { height: 26px; }
+  .rh-gold canvas { height: 40px; }
   .rh-keys li { padding: 6px; }
 }
 @media (max-height: 760px) { .rh-card p { font-size: .8rem; line-height: 1.3; } }
@@ -461,7 +461,7 @@ html[class*="ui-"] #pad button.hld i { font-size: 1.3rem; }
   html.ui-mix #rehber .rh-hero .bubble { max-width: 260px; }
   html.ui-mix .rh-card p { font-size: .92rem; }
   html.ui-mix .rh-keys li, html.ui-mix .rh-courts li, html.ui-mix .rh-pieces figcaption { font-size: .92rem; }
-  html.ui-mix .rh-gold button { font-size: .8rem; }
+  html.ui-mix .rh-gold button { font-size: .95rem; }
   html.ui-mix .kursu-list li { padding: 7px 4px; }
   html.ui-mix .kursu-list .rk, html.ui-mix .kursu-list .nm, html.ui-mix .kursu-list .pn { font-size: 1.02rem; }
   html.ui-mix .kursu-list .mt { font-size: .72rem; }

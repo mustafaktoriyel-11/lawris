@@ -17,9 +17,9 @@ const LEVEL_COUNT = 4;   // mahkeme adları i18n'de: court.N.short / court.N.ful
 const REDUCED_MOTION = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const levelName = (i) => t('court.' + i + '.short');
 const LINE_SCORE = [0, 100, 300, 500, 800, 1200, 1800];
-const GOLD_CHANCE = 0.18;
-const GOLD_BIAS = 2;         // Kalem/Tokmak (satır silen etkiler) altın olmaya 2 kat meyilli
-const GOLD_GUARANTEE = 6;    // en çok 6 parçada bir altın parça garanti
+const GOLD_TYPES = ['sutun', 'kanun'];   // yalnız Sütun ve Kanun altın olabilir
+const GOLD_CHANCE = 0.4;     // bu iki türden gelen parçanın altın olma şansı
+const GOLD_GUARANTEE = 6;    // 6 parçadır altın yoksa sıradaki Sütun/Kanun altın olur
 const LOCK_DELAY = 700;   // yere değdikten sonra kayma/döndürme süresi (ms)
 const MAX_RESETS = 15;    // aynı yükseklikte süreyi en fazla kaç kez yenileyebilir
 const $ = (id) => document.getElementById(id);
@@ -51,7 +51,7 @@ let visLevel = 0, levelTimer = 0;
 const syncProg = (instant) => renderer.setProgress(visLevel, Math.min(8, Math.max(0, rows - visLevel * 8)), instant);
 function resetReveal() { clearTimeout(levelTimer); levelTimer = 0; renderer.resetReveal(); visLevel = level; syncProg(true); }
 const announced = new WeakSet();
-let doubleLeft = 0, slowMs = 0, acc = 0, last = 0;
+let slowMs = 0, acc = 0, last = 0;
 
 best = skor.enIyi();
 
@@ -68,8 +68,8 @@ function nextType() {
 }
 function newPiece() {
   const type = nextType();
-  const bias = type === 'kalem' || type === 'tokmak' ? GOLD_BIAS : 1;
-  const golden = ++sinceGold >= GOLD_GUARANTEE || Math.random() < GOLD_CHANCE * bias;
+  sinceGold++;
+  const golden = GOLD_TYPES.includes(type) && (sinceGold >= GOLD_GUARANTEE || Math.random() < GOLD_CHANCE);
   if (golden) sinceGold = 0;
   return { type, rot: 0, x: 0, y: 0, golden, id: 0 };
 }
@@ -129,8 +129,8 @@ function hud() {
   $('best').textContent = best;
   $('menuBest').textContent = best;
   $('level').textContent = levelName(level);
-  $('status').textContent = (doubleLeft > 0 ? t('hud.x2', { n: doubleLeft }) : '') + (slowMs > 0 ? t('hud.slow', { n: Math.ceil(slowMs / 1000) }) : '');
-  $('level').parentElement.classList.toggle('st', doubleLeft > 0 || slowMs > 0);   // dar ekranda süre yerine durum görünür
+  $('status').textContent = (slowMs > 0 ? t('hud.slow', { n: Math.ceil(slowMs / 1000) }) : '');
+  $('level').parentElement.classList.toggle('st', slowMs > 0);   // dar ekranda süre yerine durum görünür
 }
 
 function ghostY() {
@@ -139,65 +139,22 @@ function ghostY() {
   return y;
 }
 
-// Altın Kanun: puanın yanında "x2" rozeti (DOM; hareket azaltılmışsa gösterilmez)
-function x2Badge() {
-  if (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const host = $('score').parentElement, el = document.createElement('span');
-  el.className = 'x2pop'; el.textContent = '\u00D72'; el.setAttribute('aria-hidden', 'true');
-  host.appendChild(el);
-  el.addEventListener('animationend', () => el.remove());
-  setTimeout(() => el.remove(), 1500);
-}
-
 function applyGolden(p) {
   const cells = cellsOf(p.type, p.rot);
   music.sfx(p.type);
-  switch (p.type) {
-    case 'tokmak': {
-      const ys = new Set(cells.map((c) => p.y + c[1]));
-      { const rs = [...ys].filter((y) => y >= 0 && y < ROWS); burst({ rows: rs, gold: true, kind: 'tokmak' }); board.removeRows(rs); } score += 150;
-      toast(t('toast.tokmak'), true);
-      break;
-    }
-    case 'sutun': {
-      const cols = new Map();
-      for (const [cx, cy] of cells) cols.set(p.x + cx, Math.max(cols.get(p.x + cx) ?? -1, p.y + cy));
-      for (const [x, y] of cols) board.fillPlain(x, y + 1);
-      burst({ cols: [...cols.keys()], from: Math.min(...cols.values()) + 1, gold: true, kind: 'sutun' });
-      toast(t('toast.sutun'), true);
-      break;
-    }
-    case 'terazi':
-      score += 250; slowMs = 10000;
-      toast(t('toast.terazi'), true);
-      break;
-    case 'kanun':
-      doubleLeft = 3; x2Badge();
-      toast(t('toast.kanun'), true);
-      break;
-    case 'paragraf': {
-      const tr0 = board.topRow();
-      if (tr0 >= 0) { burst({ rows: [tr0], gold: true, kind: 'paragraf' }); board.removeRows([tr0]); }
-      toast(t('toast.paragraf'), true);
-      break;
-    }
-    case 'kalem': {
-      const y = board.fullestRow();
-      if (y >= 0) { burst({ rows: [y], gold: true, kind: 'kalem' }); board.fillRowPlain(y); }
-      score += 100;
-      toast(t('toast.kalem'), true);
-      break;
-    }
-    case 'kilic': {
-      // son iki hücre bıçaktır (döndürmede sıra korunur)
-      const ys = cells.slice(4, 6).map((c) => p.y + c[1]);
-      const set = new Set(ys);
-      const below = Math.max(...ys) + 1;
-      if (below < ROWS) set.add(below);
-      { const rs = [...set].filter((y) => y >= 0 && y < ROWS); burst({ rows: rs, gold: true, kind: 'kilic' }); board.removeRows(rs); } score += 150;
-      toast(t('toast.kilic'), true);
-      break;
-    }
+  if (p.type === 'sutun') {
+    const cols = new Map();
+    for (const [cx, cy] of cells) cols.set(p.x + cx, Math.max(cols.get(p.x + cx) ?? -1, p.y + cy));
+    for (const [x, y] of cols) board.fillPlain(x, y + 1);
+    burst({ cols: [...cols.keys()], from: Math.min(...cols.values()) + 1, gold: true, kind: 'sutun' });
+    toast(t('toast.sutun'), true);
+  } else if (p.type === 'kanun') {
+    // Kanun hükmü: en alttaki 2 dolu satırı siler, +100 puan
+    const rs = [];
+    for (let y = ROWS - 1; y >= 0 && rs.length < 2; y--) if (board.grid[y].some(Boolean)) rs.push(y);
+    if (rs.length) { burst({ rows: rs, gold: true, kind: 'kanun' }); board.removeRows(rs); }
+    score += 100;
+    toast(t('toast.kanun'), true);
   }
 }
 
@@ -218,7 +175,6 @@ function lockPiece(hard) {
     board.removeRows(full);
     const n = full.length;
     let pts = (LINE_SCORE[Math.min(n, LINE_SCORE.length - 1)]) * (level + 1);
-    if (doubleLeft > 0) { pts *= 2; doubleLeft--; }
     score += pts; rows += n;
     flash(t('flash.verdict'));
     if (n >= 2) aslanHukum(n);
@@ -306,7 +262,7 @@ function start() {
   music.start();
   music.setTension(0);
   board.reset();
-  score = 0; rows = 0; level = DEBUG_LV; doubleLeft = 0; slowMs = 0;
+  score = 0; rows = 0; level = DEBUG_LV; slowMs = 0;
   if (level) rows = level * 8;
   setLevelColors(level, true); resetReveal();
   queue = []; held = null; holdUsed = false; piece = null;

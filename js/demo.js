@@ -1,4 +1,4 @@
-// Lex Stack - rehber "Altın parçalar" kartındaki canlı mini gösterim (7x6 tahta, 7 altın parça döngüsü)
+// Lex Stack - rehber "Altın parçalar" kartındaki canlı mini gösterim (7x6 tahta, Sütun ve Kanun döngüsü)
 import { cellsOf, sizeOf, getSprite, COLORS as C } from './pieces.js';
 import { THEME as TH } from './theme.js';
 import { goldFx } from './render.js';
@@ -6,19 +6,13 @@ import { music } from './music.js';
 import { drawBurst, BURST_MS, shakeX, drawCalm } from './fx.js';
 
 const COLS = 7, ROWS = 6, CELL = 18, SCENE_MS = 2700, DROP_MS = 520, FX_AT = 600;
-const ORDER = ['sutun', 'tokmak', 'kanun', 'terazi', 'paragraf', 'kilic', 'kalem'];
+const ORDER = ['sutun', 'kanun'];
 const COL = { g: '#2F5D50', r: '#7A1F2B', w: '#7A4E2D', s: '#5F6B80' };
 // rot: parça dönüşü; x,y: iniş konumu (sol-üst); st: önceden kurulmuş yığın
 const SCENES = {
   sutun: { rot: 1, x: 1, y: 2, st: ['.......', '.......', '.......', '.s...s.', 'gs...sg', 'gs.r.sg'] },
-  tokmak: { rot: 0, x: 2, y: 3, st: ['.......', '.......', 'ww.....', 'ss...ss', 'ggg.ggg', 'rrr.rrr'] },
-  kanun: { rot: 0, x: 2, y: 3, st: ['.......', '.......', '.......', '.......', 'g.....w', 'ggrr.gg'] },
-  terazi: { rot: 0, x: 2, y: 4, st: ['.......', '.......', '.......', '.......', 'g.....w', 'gg...gg'] },
-  paragraf: { rot: 0, x: 2, y: 3, st: ['.......', '.......', 'ww.....', 'gg...gg', 'gg..rgg', 'ggr.rgg'] },
-  kilic: { rot: 0, x: 2, y: 2, st: ['.......', '.......', '.......', 'ww...ww', 'ggg.ggg', 'rrr.rrr'] },
-  kalem: { rot: 0, x: 2, y: 3, st: ['.......', '.......', '.......', '.......', 'g.....w', 'gg.g.gg'] },
+  kanun: { rot: 0, x: 2, y: 2, st: ['.......', '.......', '.......', 'w.....s', 'ggr.rgg', 'sgrrrgs'] },
 };
-const PCOL = { sutun: '#E8E4DA', tokmak: '#3B2C2A', kanun: '#CDBB94', terazi: '#A9B0BA', paragraf: '#33805F', kilic: '#6C7A94', kalem: '#7A3E8E' };
 const ease2 = (x) => x * x;
 
 const buildGrid = (st) => st.map((row) => [...row].map((ch) => (COL[ch] ? { flat: COL[ch] } : null)));
@@ -72,34 +66,17 @@ export function createDemo(canvas, nameEl, textEl) {
     if (music.isLive()) music.sfx(type, 0.5);
     cells.forEach(([cx, cy], i) => { const [x, y] = abs[i]; if (y >= 0 && y < ROWS) grid[y][x] = { type, rot: sc.rot, lx: cx, ly: cy }; });
     switch (type) {
-      case 'tokmak': {
-        const rs = [...new Set(abs.map((a) => a[1]))].filter((y) => y >= 0 && y < ROWS);
-        burst({ rows: rs, kind: 'tokmak' }, now); scene.grid = removeRows(grid, rs); break;
-      }
       case 'sutun': {
         const cols = new Map();
         for (const [x, y] of abs) cols.set(x, Math.max(cols.get(x) ?? -1, y));
         for (const [x, y] of cols) for (let yy = y + 1; yy < ROWS; yy++) if (!grid[yy][x]) grid[yy][x] = plain();
         burst({ cols: [...cols.keys()], from: Math.min(...cols.values()) + 1, kind: 'sutun' }, now); break;
       }
-      case 'kanun': popT0 = now; popTxt = '×2'; break;
-      case 'terazi': calmT0 = now; popT0 = now; popTxt = '+250'; break;
-      case 'paragraf': {
-        const top = grid.findIndex((r) => r.some(Boolean));
-        if (top >= 0) { burst({ rows: [top], kind: 'paragraf' }, now); scene.grid = removeRows(grid, [top]); }
-        break;
-      }
-      case 'kilic': {
-        const ys = abs.slice(4, 6).map((a) => a[1]), set = new Set(ys), below = Math.max(...ys) + 1;
-        if (below < ROWS) set.add(below);
-        const rs = [...set].filter((y) => y >= 0 && y < ROWS);
-        burst({ rows: rs, kind: 'kilic' }, now); scene.grid = removeRows(grid, rs); break;
-      }
-      case 'kalem': {
-        let best = -1, bc = 0;
-        grid.forEach((r, y) => { const n = r.filter(Boolean).length; if (n > 0 && n >= bc) { bc = n; best = y; } });
-        if (best >= 0) { for (let x = 0; x < COLS; x++) if (!grid[best][x]) grid[best][x] = plain(); burst({ rows: [best], kind: 'kalem' }, now); scene.inkRow = best; scene.clearAt = now + 520; }
-        break;
+      case 'kanun': {
+        // Kanun hükmü: en alttaki 2 dolu satır silinir
+        const rs = [];
+        for (let y = ROWS - 1; y >= 0 && rs.length < 2; y--) if (grid[y].some(Boolean)) rs.push(y);
+        burst({ rows: rs, kind: 'kanun' }, now); scene.grid = removeRows(grid, rs); popT0 = now; popTxt = '+100'; break;
       }
     }
   }
@@ -134,7 +111,6 @@ export function createDemo(canvas, nameEl, textEl) {
     for (let y = 0; y <= ROWS; y++) { c.moveTo(0, y * s + 0.5); c.lineTo(COLS * s, y * s + 0.5); }
     c.stroke();
     if (!scene.done && el >= FX_AT) { scene.done = true; apply(t); }
-    if (scene.clearAt && t >= scene.clearAt) { scene.grid = removeRows(scene.grid, [scene.inkRow]); burst({ rows: [scene.inkRow] }, t); scene.clearAt = 0; bursts[bursts.length - 1].gold = false; }
     scene.grid.forEach((row, y) => row.forEach((cell, x) => { if (cell) drawCell(cell, x, y); }));
     // düşen altın parça
     if (!scene.done) {

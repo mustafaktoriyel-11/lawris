@@ -189,7 +189,22 @@ function sigSutun(c, b, g, age) {
   c.restore();
 }
 
-const SIG = { tokmak: sigTokmak, kilic: sigKilic, kalem: sigKalem, paragraf: sigParagraf, sutun: sigSutun };
+// Kanun hükmü: satırlar boyunca soldan sağa süpüren altın mühür çizgisi (kenarda parlak bir hat)
+function sigKanun(c, b, g, age) {
+  const s = g.s, W = g.cols * s, p = clamp01(age / 520), e = outQ(p), fade = 1 - p * p;
+  c.save(); clipBoard(c, g);
+  c.shadowColor = 'rgba(255,214,110,0.95)'; c.shadowBlur = s * 0.6;
+  for (const y of b.rows) {
+    const y0 = g.by + y * s, x = g.bx + e * W;
+    const gr = c.createLinearGradient(g.bx, 0, x, 0);
+    gr.addColorStop(0, 'rgba(255,214,110,0)'); gr.addColorStop(1, `rgba(255,238,175,${(0.55 * fade).toFixed(3)})`);
+    c.fillStyle = gr; c.fillRect(g.bx, y0, x - g.bx, s);
+    c.fillStyle = `rgba(255,253,244,${fade.toFixed(3)})`; c.fillRect(x - s * 0.08, y0 - s * 0.1, s * 0.16, s * 1.2);
+  }
+  c.restore();
+}
+
+const SIG = { kanun: sigKanun, tokmak: sigTokmak, kilic: sigKilic, kalem: sigKalem, paragraf: sigParagraf, sutun: sigSutun };
 
 // Ortak ışık şeridi + (hareket azaltılmamışsa) parçaya özgü imza
 export function drawBurst(c, b, g, age) {
