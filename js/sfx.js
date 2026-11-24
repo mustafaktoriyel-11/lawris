@@ -95,6 +95,30 @@ function shimmer(A, o, t, midis, step, v) {
   A.noiseTo(o, t, 'highpass', 2500, 9000, 0.7, 0.08, midis.length * step + 0.22, v * 0.5);
 }
 
+// Çan/lir tınısı: sinüs temel + üçgen + 2. ve çalgı-dışı (inharmonik) üst ses, hızlı atak, pan'lı
+function bell(A, o, t, midi, v, dec = 0.45, pan = 0) {
+  const c = A.ctx, f = A.hz(midi);
+  let out = o;
+  if (pan && c.createStereoPanner) { out = c.createStereoPanner(); out.pan.value = Math.max(-1, Math.min(1, pan)); out.connect(o); setTimeout(() => { try { out.disconnect(); } catch (_) { /* yoksay */ } }, (dec + 0.4) * 1000 + (t - c.currentTime) * 1000); }
+  A.tone(out, t, 'sine', f, f, 0.003, dec, v);
+  A.tone(out, t, 'triangle', f * 2, f * 2, 0.002, dec * 0.5, v * 0.3);
+  A.tone(out, t, 'sine', f * 2.76, f * 2.76, 0.002, dec * 0.25, v * 0.12);
+  A.tone(out, t, 'sine', f * 4.1, f * 4.1, 0.002, dec * 0.12, v * 0.05);
+}
+// Parmak zili/krotal: yüksek, kısa, inharmonik sinüsler
+function crotale(A, o, t, midi, v, pan = 0) {
+  const c = A.ctx, f = A.hz(midi);
+  let out = o;
+  if (pan && c.createStereoPanner) { out = c.createStereoPanner(); out.pan.value = pan; out.connect(o); setTimeout(() => { try { out.disconnect(); } catch (_) { /* yoksay */ } }, 900 + (t - c.currentTime) * 1000); }
+  A.tone(out, t, 'sine', f, f, 0.001, 0.4, v);
+  A.tone(out, t, 'sine', f * 2.4, f * 2.4, 0.001, 0.22, v * 0.5);
+  A.tone(out, t, 'sine', f * 3.9, f * 3.9, 0.001, 0.12, v * 0.25);
+}
+// Işıltı süpürmesi: yüksek geçiren gürültü (hf Hz üstü)
+function sparkle(A, o, t, dur, hf, v) { A.noiseTo(o, t, 'highpass', hf, hf * 2.4, 0.7, Math.min(0.05, dur * 0.3), dur, v); }
+// Altta küçük tok vuruş (>=120 Hz, baskın değil)
+function thump(A, o, t, v) { A.tone(o, t, 'sine', 190, 135, 0.003, 0.11, v); }
+
 // Parçaya göre yerleşme (tok) ayarı: [gövde Hz üst/alt, süre, gövde seviyesi, orta band Hz, orta Q, tık Hz, tık seviyesi]
 const LOCK = {
   default:  [86, 46, 0.17, 0.9, 650, 1.0, 2800, 0.5],
@@ -162,32 +186,48 @@ export const sfx = {
       thud(A, o, t + d * 0.9, type, true);
     }, { prio: true });
   },
-  // Satır silme: sayıya göre kademeli; seviye ile hafifçe yükselir
+  // Satır silme: sayıya göre kademeli (1: ışıltılı çınlama, 2: daha yüksek+ikinci ses, 3: arp+akor çiçeği, 4+: fanfar); seviye ile hafifçe yükselir
   lineClear(n, lvl = 0) {
     const sh = Math.max(0, Math.min(3, lvl)), r = 62 + sh;     // Re + mahkeme başına yarım perde
     const br = 1 + sh * 0.12;
     play('clear', 1.8, (A, o, t) => {
-      const maj = (b, ex = []) => [b, b + 4, b + 7, ...ex];
-      gavel(A, o, t, 1);
       if (n === 1) {
-        stab(A, o, t, maj(r), 0.34, 0.45, br);
+        thump(A, o, t, 0.2);
+        [0, 4, 7].forEach((x, i) => bell(A, o, t + i * 0.05, r + 12 + x, 0.36, 0.45, (i - 1) * 0.25));
+        sparkle(A, o, t, 0.25, 3000, 0.22);
       } else if (n === 2) {
-        stab(A, o, t, maj(r, [r + 12]), 0.34, 0.5, br);
-        shimmer(A, o, t + 0.07, [r + 19, r + 24, r + 28, r + 31], 0.055, 0.26);
+        thump(A, o, t, 0.2);
+        [0, 4, 7, 12].forEach((x, i) => {
+          bell(A, o, t + i * 0.055, r + 12 + x, 0.36, 0.55, (i - 1.5) * 0.25);
+          bell(A, o, t + i * 0.055 + 0.012, r + 19 + x, 0.16, 0.5, (1.5 - i) * 0.2);   // beşli üstü ikinci ses
+        });
+        sparkle(A, o, t, 0.34, 3000, 0.3);
+        crotale(A, o, t + 0.17, r + 36, 0.07, 0.3);
       } else if (n === 3) {
-        stab(A, o, t, maj(r - 12, [r, r + 4, r + 7, r + 12]), 0.3, 0.7, br);
-        shimmer(A, o, t + 0.07, [r + 19, r + 24, r + 28, r + 31, r + 36], 0.05, 0.26);
-        choir(A, o, t + 0.04, [r, r + 7, r + 12, r + 16], 1.0, 0.2);
+        thump(A, o, t, 0.2);
+        [0, 4, 7, 12].forEach((x, i) => bell(A, o, t + i * 0.06, r + 12 + x, 0.27, 0.6, (i - 1.5) * 0.4));
+        const tb = t + 0.24;                                       // akor çiçeği
+        [12, 19, 24, 28].forEach((x, i) => {
+          bell(A, o, tb, r + x, 0.17, 0.9, (i - 1.5) * 0.45);
+          A.tone(o, tb, 'triangle', A.hz(r + x), A.hz(r + x), 0.03, 0.8, 0.06);
+        });
+        sparkle(A, o, t, 0.5, 3200, 0.3);
+        crotale(A, o, t + 0.18, r + 31, 0.08, -0.4); crotale(A, o, t + 0.26, r + 36, 0.08, 0.4); crotale(A, o, tb + 0.06, r + 40, 0.07, 0);
+        sparkle(A, o, tb, 0.6, 5500, 0.16);
       } else {
-        timp(A, o, t, 73, 0.95, 0.9);
-        stab(A, o, t, maj(r - 12, [r, r + 4, r + 7, r + 12]), 0.3, 0.8, br);
-        // pirinç mini fanfar: açılış - yükseliş - uzun akor
-        brass(A, o, t, r, 0.2, 0.2, br); brass(A, o, t, r + 7, 0.2, 0.17, br);
-        brass(A, o, t + 0.2, r + 4, 0.2, 0.2, br); brass(A, o, t + 0.2, r + 12, 0.2, 0.17, br);
-        [0, 7, 12, 16, 19].forEach((x) => brass(A, o, t + 0.4, r + x, 1.0, 0.17, br));
-        timp(A, o, t + 0.4, 87, 0.8, 0.9);
-        choir(A, o, t + 0.1, [r, r + 7, r + 12, r + 16], 1.4, 0.24);
-        shimmer(A, o, t + 0.42, [r + 24, r + 28, r + 31, r + 36], 0.06, 0.28);
+        thump(A, o, t, 0.24);
+        // cornu tarzı kısa pirinç: iki kısa vuruş + uzun akor (hızlı kabarma)
+        brass(A, o, t, r, 0.16, 0.13, br); brass(A, o, t, r + 7, 0.16, 0.1, br);
+        brass(A, o, t + 0.17, r + 4, 0.16, 0.13, br); brass(A, o, t + 0.17, r + 12, 0.16, 0.1, br);
+        [0, 7, 12, 16].forEach((x) => brass(A, o, t + 0.34, r + x, 0.75, 0.12, br));
+        // parlak yükselen arp üstte
+        [0, 4, 7, 12, 16, 19].forEach((x, i) => bell(A, o, t + 0.02 + i * 0.055, r + 12 + x, 0.26, 0.6, (i - 2.5) * 0.3));
+        const tb = t + 0.36;
+        [12, 19, 24, 28, 31].forEach((x, i) => bell(A, o, tb, r + x, 0.14, 1.0, (i - 2) * 0.4));
+        crotale(A, o, t + 0.34, r + 36, 0.09, -0.4); crotale(A, o, t + 0.42, r + 40, 0.09, 0.4); crotale(A, o, t + 0.5, r + 43, 0.08, 0);
+        sparkle(A, o, t, 0.4, 3200, 0.28);
+        sparkle(A, o, tb, 0.8, 5000, 0.24);                        // zil ışıltısı
+        thump(A, o, tb, 0.2);
       }
     }, { prio: true });
     if (n >= 3) music.duck(0.5, 0.3); else if (n === 2) music.duck(0.6, 0.15);
