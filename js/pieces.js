@@ -157,13 +157,23 @@ function dKanun(c, s, P) {
   c.font = 'bold ' + fs + 'px Georgia, "Times New Roman", serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
   c.fillStyle = 'rgba(255,250,232,0.85)'; c.fillText('LEX', cx, 0.86 * s + Math.max(1, s * 0.035));
   c.fillStyle = D; c.fillText('LEX', cx, 0.86 * s);
-  // oyma satirlar
-  c.lineCap = 'round';
-  for (const [yy, a, b] of [[1.2, 0.46, 1.54], [1.4, 0.46, 1.4], [1.6, 0.46, 1.5]]) {
-    c.strokeStyle = 'rgba(255,250,232,0.7)'; c.lineWidth = Math.max(1, s * 0.05);
-    c.beginPath(); c.moveTo(a * s, yy * s + s * 0.03); c.lineTo(b * s, yy * s + s * 0.03); c.stroke();
-    c.strokeStyle = D; c.lineWidth = Math.max(1, s * 0.045);
-    c.beginPath(); c.moveTo(a * s, yy * s); c.lineTo(b * s, yy * s); c.stroke();
+  // Latince düstur: DVRA LEX / SED LEX ("Kanun serttir ama kanundur"). Çok küçük boyutta (önizleme) oyma satırlar kalır.
+  if (s >= 40) {
+    const sat = ['DVRA LEX', 'SED LEX'], ys = [1.27, 1.55];
+    let f2 = s * 0.22; c.font = 'bold ' + f2 + 'px Georgia, "Times New Roman", serif';
+    const w = Math.max(...sat.map((t) => c.measureText(t).width)); if (w > s * 1.12) { f2 *= s * 1.12 / w; c.font = 'bold ' + f2 + 'px Georgia, "Times New Roman", serif'; }
+    sat.forEach((t, i) => {
+      c.fillStyle = 'rgba(255,250,232,0.8)'; c.fillText(t, cx, ys[i] * s + Math.max(1, s * 0.022));
+      c.fillStyle = D; c.fillText(t, cx, ys[i] * s);
+    });
+  } else {
+    c.lineCap = 'round';
+    for (const [yy, a, b] of [[1.2, 0.46, 1.54], [1.4, 0.46, 1.4], [1.6, 0.46, 1.5]]) {
+      c.strokeStyle = 'rgba(255,250,232,0.7)'; c.lineWidth = Math.max(1, s * 0.05);
+      c.beginPath(); c.moveTo(a * s, yy * s + s * 0.03); c.lineTo(b * s, yy * s + s * 0.03); c.stroke();
+      c.strokeStyle = D; c.lineWidth = Math.max(1, s * 0.045);
+      c.beginPath(); c.moveTo(a * s, yy * s); c.lineTo(b * s, yy * s); c.stroke();
+    }
   }
   c.lineCap = 'butt';
   // bronz perçinler
