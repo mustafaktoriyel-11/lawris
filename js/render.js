@@ -12,7 +12,7 @@ const REDUCED = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-
 const SWEEP_CYCLE = 1.8, SWEEP_DUR = 1.3, FLASH_MS = 400;
 const PERSIST = 0.4;       // renkli sürümün kalıcı opaklığı (açığa çıkan bölgede)
 const FEATHER = 1.2;       // kalıcı bölgenin üst kenar yumuşatması (hücre)
-const SWEEP_MS = 550, SHIM_MS = 700, BAND_FEATHER = 1.5;
+const SWEEP_MS = 950, SHIM_MS = 700, BAND_FEATHER = 1.5;
 const easeOut = (x) => 1 - Math.pow(1 - x, 3);
 const smooth = (x) => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
 const ease = (x) => (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
@@ -59,8 +59,9 @@ export class Renderer {
   // Satır silme: temizlenen satır bandında altın ışık süpürmesi (row0..row1 dahil, tahta satır indeksi)
   flashRows(row0, row1) {
     if (REDUCED.matches) return;
-    const a = Math.max(0, Math.min(row0, row1)), b = Math.min(ROWS - 1, Math.max(row0, row1));
-    this.flashes.push({ lv: levelFade().b, y0: a, y1: b, fe: BAND_FEATHER, dur: SWEEP_MS, t0: performance.now(), amp: 0.9 });
+    // Kullanıcı isteği: ışık bütün tahtadan geçer, yapı tümüyle renkli görünür (silinen satır sayısı kadar biraz daha uzun)
+    const n = Math.abs(row1 - row0) + 1;
+    this.flashes.push({ lv: levelFade().b, y0: 0, y1: ROWS - 1, fe: 0, dur: SWEEP_MS + 120 * Math.min(3, n - 1), t0: performance.now(), amp: 0.95 });
     if (this.flashes.length > 6) this.flashes.shift();
   }
   // Seviye tamamlanınca kısa tüm-sahne parıltısı
