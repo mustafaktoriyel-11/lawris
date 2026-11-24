@@ -327,3 +327,4 @@ html.ui-mix #menu, html.ui-2 #menu {
 }
 html.ui-mix #menu .deco-2, html.ui-2 #menu .deco-2 { display: none; }
 html.ui-mix #menu h1, html.ui-2 #menu h1 { text-shadow: 0 0 18px rgba(240,196,106,.35), 0 2px 6px rgba(0,0,0,.6); }
+body:has(#kursu:not([hidden])) #menu .menu-hero { visibility: hidden; }
