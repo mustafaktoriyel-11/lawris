@@ -91,7 +91,8 @@ export class Renderer {
     const s = this.s, bw = COLS * s, bh = ROWS * s;
     const mut = this.bdrop[lv] || (this.bdrop[lv] = makeBackdrop(lv, bw, bh, false));
     c.globalAlpha = alpha; c.drawImage(mut, this.bx, this.by); c.globalAlpha = 1;
-    const p = (this.prog[lv] || 0) / 8, fl = this.flashes.filter((f) => f.lv === lv);
+    // Kullanıcı kararı: arka plan adım adım açılmaz; yalnız satır silinince anlık parlama (p = 0)
+    const p = 0, fl = this.flashes.filter((f) => f.lv === lv);
     if (p <= 0.002 && !fl.length) return;
     this._canvases(bw, bh);
     const key = bw + 'x' + bh + '|' + p.toFixed(4);

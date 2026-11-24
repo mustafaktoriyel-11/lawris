@@ -1,5 +1,5 @@
 // Lex Stack - service worker: önce ağ (her zaman güncel), ağ yoksa önbellek (çevrimdışı)
-const CACHE = 'lexstack-v26';
+const CACHE = 'lexstack-v27';
 const CORE = ['./', 'index.html', 'style.css', 'manifest.webmanifest', 'privacy.html', 'privacy-en.html',
   'js/main.js', 'js/board.js', 'js/pieces.js', 'js/render.js', 'js/input.js', 'js/theme.js',
   'js/music.js', 'js/sfx.js', 'js/maskot.js', 'js/menuyigin.js', 'js/skor.js', 'js/rehber.js', 'js/fx.js', 'js/roma.js', 'js/demo.js', 'js/i18n.js', 'img/acilis-tapinak.webp', 'icons/icon.svg'];
