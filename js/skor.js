@@ -1,4 +1,4 @@
-// Juristack - cihazda saklanan isimli skor listesi (localStorage; hiçbir yere gönderilmez)
+// Lex Stack - cihazda saklanan isimli skor listesi (localStorage; hiçbir yere gönderilmez)
 import { t, fmtDate, isDefaultName } from './i18n.js';
 const KEY = 'lawris.skorlar', BEST = 'lawris.best', AD = 'lawris.ad';
 export const MAX = 10;

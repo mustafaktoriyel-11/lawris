@@ -1,6 +1,6 @@
 {
-  "name": "Juristack",
-  "short_name": "Juristack",
+  "name": "Lex Stack",
+  "short_name": "Lex Stack",
   "description": "Hukuk temalı düşen blok bulmaca oyunu / A legal-themed falling-block puzzle game",
   "start_url": "./index.html",
   "scope": "./",

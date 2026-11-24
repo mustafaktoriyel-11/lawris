@@ -1,4 +1,4 @@
-// Juristack - altın etkilerin parçaya özgü imzaları (render.js ve rehber demosu ortak kullanır)
+// Lex Stack - altın etkilerin parçaya özgü imzaları (render.js ve rehber demosu ortak kullanır)
 // g = { bx, by, cols, rows, s }: tahta sol-üst köşesi, sütun/satır sayısı, hücre boyutu (px)
 const REDUCED = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
 export const BURST_MS = 800;      // en uzun etki ömrü (kalem imzası); ışık şeridi STRIP_MS sürer

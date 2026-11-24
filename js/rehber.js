@@ -1,4 +1,4 @@
-// Juristack - "Nasıl oynanır" rehberi (4 kaydırmalı kart)
+// Lex Stack - "Nasıl oynanır" rehberi (4 kaydırmalı kart)
 import { getSprite, sizeOf } from './pieces.js';
 import { createDemo } from './demo.js';
 import { t, onLang } from './i18n.js';

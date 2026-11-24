@@ -587,6 +587,6 @@ html[class*="ui-"] #menu > .menu-snd { position: absolute; z-index: 3; top: calc
 .lang-sw button:focus-visible { outline: 2px solid #f0c46a; outline-offset: 1px; }
 .menu-snd { align-items: center; }
 #pause .lang-sw { align-self: center; margin-top: 6px; }
-/* Juristack: 9 harfli logo dar ekranlara sığsın */
+/* Lex Stack: logo dar ekranlara sığsın */
 html.ui-mix #menu h1, html.ui-2 #menu h1 { font-size: clamp(1.55rem, 8.4vw, 2.6rem); letter-spacing: .2em; padding-left: .2em; white-space: nowrap; }
 .overlay h1 { white-space: nowrap; }

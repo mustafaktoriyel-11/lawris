@@ -1,4 +1,4 @@
-// Juristack - çizim
+// Lex Stack - çizim
 import { COLS, ROWS } from './board.js';
 import { THEME as TH } from './theme.js';
 import { getSprite, hasCell, sizeOf, cellsOf, COLORS as C } from './pieces.js';
@@ -153,7 +153,7 @@ export class Renderer {
     if (TH.band) { c.fillStyle = TH.band; c.fillRect(0, 1.62 * s, W, 0.06 * s); }
     c.fillStyle = C.gold; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
     { // alınlık yazısı: üçgene sığacak şekilde boyutlanır
-      const txt = 'J U R I S T A C K'; let fs = Math.round(s * 0.56);
+      const txt = 'L E X   S T A C K'; let fs = Math.round(s * 0.56);
       c.font = 'bold ' + fs + 'px Georgia, serif';
       const maxW = W * 0.46; const w = c.measureText(txt).width;
       if (w > maxW) { fs = Math.floor(fs * maxW / w); c.font = 'bold ' + fs + 'px Georgia, serif'; }

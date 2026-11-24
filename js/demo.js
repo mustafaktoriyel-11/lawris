@@ -1,4 +1,4 @@
-// Juristack - rehber "Altın parçalar" kartındaki canlı mini gösterim (7x6 tahta, 7 altın parça döngüsü)
+// Lex Stack - rehber "Altın parçalar" kartındaki canlı mini gösterim (7x6 tahta, 7 altın parça döngüsü)
 import { cellsOf, sizeOf, getSprite, COLORS as C } from './pieces.js';
 import { THEME as TH } from './theme.js';
 import { goldFx } from './render.js';
