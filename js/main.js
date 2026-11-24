@@ -20,6 +20,8 @@ const canvas = $('board');
 const renderer = new Renderer(canvas);
 const prevCv = $('next');
 
+let playMs = 0, sureSn = -1;
+const fmtSure = (ms) => { const s = Math.floor(ms / 1000), m = Math.floor(s / 60); return (m < 10 ? '0' : '') + m + ':' + String(s % 60).padStart(2, '0'); };
 let state = 'menu'; // menu | play | pause | over
 let piece = null, next = null;
 let score = 0, rows = 0, level = 0, best = 0;
@@ -181,6 +183,7 @@ const act = {
 
 function start() {
   sonKayit = null;
+  playMs = 0; sureSn = -1; $('sure').textContent = '00:00';
   maskotReset();
   music.init();
   music.start();
@@ -275,6 +278,7 @@ function gameOver() {
   kayitHazirla();
   $('final').textContent = score;
   $('finalBest').textContent = best;
+  $('finalSure').textContent = fmtSure(playMs);
   $('over').hidden = false;
   maskotReset();
   kediOver();
@@ -285,6 +289,9 @@ function frame(t) {
   const dt = Math.min(100, t - last); last = t;
   tickColors(dt);
   if (state === 'play' && piece) {
+    playMs += dt;
+    const sn = Math.floor(playMs / 1000);
+    if (sn !== sureSn) { sureSn = sn; $('sure').textContent = fmtSure(playMs); }
     if (slowMs > 0) { slowMs = Math.max(0, slowMs - dt); }
     if (grounded()) {
       acc = 0; lockMs += dt;

@@ -99,7 +99,7 @@
 <div id="app">
   <header id="hud">
     <div class="box"><span class="lbl">İçtihat puanı</span><b id="score">0</b><span class="sub">En iyi: <span id="best">0</span></span></div>
-    <div class="box"><span class="lbl">Mahkeme</span><b id="level">Sulh</b><span class="sub" id="status"></span></div>
+    <div class="box"><span class="lbl">Mahkeme</span><b id="level">Sulh</b><span class="sub"><span id="sure">00:00</span> <span id="status"></span></span></div>
     <div class="box" id="nextBox"><span class="lbl">Sıradaki dava</span><canvas id="next" width="64" height="64"></canvas></div>
     <button id="pauseBtn" aria-label="Duraklat">II</button>
     <button id="muteBtn" aria-label="Müziği kapat" aria-pressed="true">♪</button>
@@ -141,6 +141,7 @@
       <h2>Dava düştü</h2>
       <p>İçtihat puanı: <b id="final">0</b></p>
       <p>En iyi: <b id="finalBest">0</b></p>
+      <p class="sure-son">Duruşma süresi: <b id="finalSure">00:00</b></p>
       <form id="kayit" class="kayit" hidden autocomplete="off">
         <label for="adIn">Şeref kürsüsüne adını yaz</label>
         <div class="kayit-satir"><input id="adIn" type="text" maxlength="16" placeholder="Takma ad" enterkeyhint="done" autocomplete="off" autocapitalize="words" spellcheck="false"><button type="submit" class="mini">Kaydet</button></div>
