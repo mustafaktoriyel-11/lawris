@@ -479,16 +479,22 @@ onLang(() => {
   if (!r.hidden && r.dataset.sira) r.textContent = t('kayit.saved', { n: r.dataset.sira });
   kediMenu(); if (!$('over').hidden) kediOver(true);
 });
-// İlk kullanıcı hareketi: ses bağlamını aç; menüdeysek menü müziğini başlat (tarayıcılar otomatik çalmayı engeller)
-let gestured = false;
+// Müziği mümkün olan en erken anda başlat:
+//  - Önce sayfa açılır açılmaz denenir (yüklü uygulama / Android sarmalayıcı / sık ziyaret edilen sitede tarayıcı izin verir).
+//  - İzin yoksa ilk dokunuşta başlar. Mobilde "kullanıcı etkinleşmesi" sayılan olaylar touchend/pointerup/click/keydown'dır
+//    (touchstart ve pointerdown sayılmaz); ses bağlamı gerçekten çalışana kadar dinlemeye devam edilir.
+const GESTURE_EVENTS = ['touchend', 'pointerup', 'click', 'keydown', 'pointerdown', 'touchstart'];
+function sesCalisiyor() { try { const k = music.core(); const c = k && (k.ctx || k); return !!(c && c.state === 'running'); } catch (_) { return false; } }
 function firstGesture() {
-  if (gestured) return;
-  gestured = true;
-  ['pointerdown', 'keydown', 'touchstart'].forEach((ev) => window.removeEventListener(ev, firstGesture, true));
   music.init();
   if (state === 'menu') music.startMenu();
+  setTimeout(() => {
+    if (sesCalisiyor()) GESTURE_EVENTS.forEach((ev) => window.removeEventListener(ev, firstGesture, true));
+  }, 60);
 }
-['pointerdown', 'keydown', 'touchstart'].forEach((ev) => window.addEventListener(ev, firstGesture, true));
+GESTURE_EVENTS.forEach((ev) => window.addEventListener(ev, firstGesture, true));
+// Açılışta otomatik deneme
+setTimeout(() => { try { music.init(); setTimeout(() => { if (sesCalisiyor() && state === 'menu') music.startMenu(); }, 80); } catch (_) { /* yoksay */ } }, 0);
 // Arayüz tıkı: tek belge dinleyicisi (yakalama evresi; oyun içi hareket düğmeleri kendi sesini çalar)
 document.addEventListener('click', (e) => {
   const el = e.target.closest && e.target.closest('button, [role="button"], .chip');

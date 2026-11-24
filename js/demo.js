@@ -14,11 +14,11 @@ const SCENES = {
   tokmak: { rot: 0, x: 2, y: 3, st: ['.......', '.......', 'ww.....', 'ss...ss', 'ggg.ggg', 'rrr.rrr'] },
   kanun: { rot: 0, x: 2, y: 3, st: ['.......', '.......', '.......', '.......', 'g.....w', 'ggrr.gg'] },
   terazi: { rot: 0, x: 2, y: 4, st: ['.......', '.......', '.......', '.......', 'g.....w', 'gg...gg'] },
-  paragraf: { rot: 0, x: 2, y: 3, st: ['.......', '.......', 'ww.....', 'gg...gg', 'ggr.rgg', 'ggr..gg'] },
+  paragraf: { rot: 0, x: 2, y: 3, st: ['.......', '.......', 'ww.....', 'gg...gg', 'gg..rgg', 'ggr.rgg'] },
   kilic: { rot: 0, x: 2, y: 2, st: ['.......', '.......', '.......', 'ww...ww', 'ggg.ggg', 'rrr.rrr'] },
   kalem: { rot: 0, x: 2, y: 3, st: ['.......', '.......', '.......', '.......', 'g.....w', 'gg.g.gg'] },
 };
-const PCOL = { sutun: '#E8E4DA', tokmak: '#9A6433', kanun: '#CDBB94', terazi: '#A9B0BA', paragraf: '#33805F', kilic: '#6C7A94', kalem: '#7A3E8E' };
+const PCOL = { sutun: '#E8E4DA', tokmak: '#3B2C2A', kanun: '#CDBB94', terazi: '#A9B0BA', paragraf: '#33805F', kilic: '#6C7A94', kalem: '#7A3E8E' };
 const ease2 = (x) => x * x;
 
 const buildGrid = (st) => st.map((row) => [...row].map((ch) => (COL[ch] ? { flat: COL[ch] } : null)));

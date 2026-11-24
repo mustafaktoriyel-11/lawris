@@ -9,7 +9,7 @@ const BASE = {
   tokmak: [[0, 0], [1, 0], [2, 0], [1, 1], [1, 2]],
   kanun: [[0, 0], [1, 0], [0, 1], [1, 1]],
   terazi: [[0, 0], [1, 0], [2, 0], [0, 1], [2, 1]],
-  paragraf: [[0, 0], [1, 0], [1, 1], [1, 2], [2, 2]],
+  paragraf: [[1, 0], [2, 0], [0, 1], [1, 1]],   // 4'lü S (§ biçimine uygun)
   // son iki hücre bıçaktır (dönmede sıra korunur)
   kilic: [[1, 0], [0, 1], [1, 1], [2, 1], [1, 2], [1, 3]],
   kalem: [[0, 0], [0, 1], [0, 2]],
@@ -217,14 +217,24 @@ function nb(cells, x, y) { return cells.filter((q) => Math.abs(q[0] - x) + Math.
 // Döndürülmüş hücrelerden dik (yerçekimine göre) çizim
 function dParagraf(c, s, P, cells) {
   unionPlate(c, s, cells, P);
-  // ortadaki hücre: iki komşusu karşılıklı
-  const m = cells.find(([x, y]) => {
-    const n = nb(cells, x, y);
-    return n.length === 2 && n[0][0] + n[1][0] === 2 * x && n[0][1] + n[1][1] === 2 * y;
-  });
-  c.fillStyle = P.acc; c.font = 'bold ' + Math.round(s * 1.05) + 'px Georgia, serif';
-  c.textAlign = 'center'; c.textBaseline = 'middle';
-  c.fillText('§', (m[0] + 0.5) * s, (m[1] + 0.55) * s);
+  // § işareti şeklin ağırlık merkezindeki iki hücreye (dikey ya da yatay ikili) sığdırılır; asla taşmaz
+  const cx = cells.reduce((t, q) => t + q[0] + 0.5, 0) / cells.length, cy = cells.reduce((t, q) => t + q[1] + 0.5, 0) / cells.length;
+  // § uzun bir işaret: ağırlık merkezine en yakın DİKEY ikiliye yerleşir (yoksa merkezdeki ikiliye)
+  const dikey = cells.filter(([x, y]) => cells.some((q) => q[0] === x && q[1] === y + 1)).map(([x, y]) => [[x, y], [x, y + 1]]);
+  dikey.sort((a, b) => Math.hypot(a[0][0] + 0.5 - cx, a[0][1] + 1 - cy) - Math.hypot(b[0][0] + 0.5 - cx, b[0][1] + 1 - cy));
+  const kut = dikey.length ? dikey[0] : cells.filter(([x, y]) => cx >= x - 1e-6 && cx <= x + 1 + 1e-6 && cy >= y - 1e-6 && cy <= y + 1 + 1e-6);
+  const x0 = Math.min(...kut.map((q) => q[0])), y0 = Math.min(...kut.map((q) => q[1]));
+  const bw = (Math.max(...kut.map((q) => q[0])) + 1 - x0) * s, bh = (Math.max(...kut.map((q) => q[1])) + 1 - y0) * s;
+  const pay = 0.2 * s;   // plaka kenarı + nefes payı
+  let fs = s * 1.6;
+  c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+  c.font = 'bold ' + fs + 'px Georgia, serif';
+  let m = c.measureText('§'), gw = m.actualBoundingBoxLeft + m.actualBoundingBoxRight, gh = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
+  const k = Math.min(1, (bw - 2 * pay) / gw, (bh - 2 * pay) / gh);
+  fs *= k; c.font = 'bold ' + fs + 'px Georgia, serif';
+  m = c.measureText('§'); gw = m.actualBoundingBoxLeft + m.actualBoundingBoxRight; gh = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
+  const tx = x0 * s + bw / 2 - gw / 2 + m.actualBoundingBoxLeft, ty = y0 * s + bh / 2 - gh / 2 + m.actualBoundingBoxAscent;
+  c.fillStyle = P.acc; c.fillText('§', tx, ty);
 }
 function dTerazi(c, s, P, cells) {
   // Iustitia terazisi: sade gumus levha, ince kiris, altin mafsal ve kefe kenarlari
