@@ -14,6 +14,7 @@ import './menuyigin.js';
 
 const DEBUG_LV = (() => { try { const v = +new URLSearchParams(location.search).get('seviye'); return v >= 1 && v <= 3 ? v | 0 : 0; } catch (_) { return 0; } })();
 const LEVEL_COUNT = 4;   // mahkeme adları i18n'de: court.N.short / court.N.full
+const REDUCED_MOTION = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const levelName = (i) => t('court.' + i + '.short');
 const LINE_SCORE = [0, 100, 300, 500, 800, 1200, 1800];
 const GOLD_CHANCE = 0.08;
@@ -36,7 +37,17 @@ let score = 0, rows = 0, level = 0, best = 0;
 let lockMs = 0, resets = 0, lowestY = 0;
 let flashInfo = null, pvMs = 0;
 const bursts = [];
-const burst = (o) => { bursts.push({ ...o, t0: performance.now() }); if (bursts.length > 8) bursts.shift(); };
+const burst = (o) => {
+  bursts.push({ ...o, t0: performance.now() }); if (bursts.length > 8) bursts.shift();
+  // arka plan: temizlenen satırlarda altın ışık süpürmesi (kalem satırı silmez)
+  if (o.kind === 'kalem') return;
+  if (o.rows && o.rows.length) renderer.flashRows(Math.min(...o.rows), Math.max(...o.rows));
+  else if (o.cols) renderer.flashRows(Math.max(0, o.from | 0), ROWS - 1);
+};
+// Roma'yı yeniden inşa: görsel seviye (seviye atlama parıltısı sürerken eski seviyede kalır) ve seviye içi ilerleme
+let visLevel = 0, levelTimer = 0;
+const syncProg = (instant) => renderer.setProgress(visLevel, Math.min(8, Math.max(0, rows - visLevel * 8)), instant);
+function resetReveal() { clearTimeout(levelTimer); levelTimer = 0; renderer.resetReveal(); visLevel = level; syncProg(true); }
 const announced = new WeakSet();
 let doubleLeft = 0, slowMs = 0, acc = 0, last = 0;
 
@@ -198,7 +209,13 @@ function lockPiece(hard) {
     if (n >= 2) aslanHukum(n);
     sfx.lineClear(n, level);
     const nl = Math.min(LEVEL_COUNT - 1, Math.floor(rows / 8));
-    if (nl > level) { level = nl; music.setLevel(level); aslanSeviye(level); setLevelColors(level); sfx.levelUp(level, 0.45); }
+    if (nl > level) {
+      level = nl; music.setLevel(level); aslanSeviye(level); sfx.levelUp(level, 0.45);
+      // 8. satır: eski mekân tamamen renklenir, kısa parıltı, ardından yeni mekâna geçiş
+      const old = visLevel; renderer.setProgress(old, 8); renderer.shimmer();
+      clearTimeout(levelTimer);
+      levelTimer = setTimeout(() => { levelTimer = 0; visLevel = level; setLevelColors(level); syncProg(true); }, REDUCED_MOTION ? 0 : 700);
+    } else syncProg();
   }
   piece = null;
   updateTension();
@@ -276,7 +293,7 @@ function start() {
   board.reset();
   score = 0; rows = 0; level = DEBUG_LV; doubleLeft = 0; slowMs = 0;
   if (level) rows = level * 8;
-  setLevelColors(level, true);
+  setLevelColors(level, true); resetReveal();
   queue = []; held = null; holdUsed = false; piece = null;
   for (const id of ['menu', 'over', 'pause', 'rehber']) $(id).hidden = true;
   state = 'play';
@@ -428,7 +445,7 @@ $('again').addEventListener('click', start);
 function toMenu() {
   state = 'menu'; piece = null;
   for (const id of ['over', 'pause', 'kursu', 'rehber']) { const el = $(id); if (el) el.hidden = true; }
-  board.reset(); setLevelColors(0, true);
+  board.reset(); setLevelColors(0, true); level = 0; rows = 0; resetReveal();
   music.startMenu(); music.setTension(0); maskotReset(); kediMenu();
   $('menuBest').textContent = best;
   $('menu').hidden = false;
@@ -492,7 +509,7 @@ $('menuBest').textContent = best;
 kediMenu();
 layout();
 requestAnimationFrame((t) => { last = t; frame(t); });
-window.__lawris = { board, act, applyGolden, lockPiece, get state() { return state; }, get piece() { return piece; }, get held() { return held; }, get queue() { return queue; }, get holdUsed() { return holdUsed; }, get score() { return score; }, setLevel(n) { level = n; setLevelColors(n); } };
+window.__lawris = { board, act, applyGolden, lockPiece, get state() { return state; }, get piece() { return piece; }, get held() { return held; }, get queue() { return queue; }, get holdUsed() { return holdUsed; }, get score() { return score; }, setLevel(n) { level = n; rows = n * 8; setLevelColors(n); resetReveal(); }, setProgress(n) { rows = level * 8 + n; renderer.setProgress(visLevel, n, true); }, renderer, burst };
 
 // Çevrimdışı çalışma ve her açılışta güncel sürüm
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

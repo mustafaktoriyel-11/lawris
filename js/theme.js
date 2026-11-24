@@ -11,10 +11,10 @@ document.documentElement.style.setProperty('--panel', THEME.panel);
 
 // Mahkeme seviyesine göre zemin renkleri (yalnızca varsayılan temada)
 const LEVEL_COLORS = [
-  { bg: '#1A0D0C', grid: '#2D1815' }, // Forum: terracotta alacakaranlık
-  { bg: '#16130C', grid: '#292317' }, // Bazilika: traverten
-  { bg: '#0E1115', grid: '#1D232B' }, // Senato (Curia): mermer grisi
-  { bg: '#180A1D', grid: '#2B1531' }, // Pantheon: imparatorluk moru
+  { bg: '#2C5E92', grid: '#3A6EA4' }, // Forum: sabah
+  { bg: '#1C6B7C', grid: '#277E90' }, // Bazilika: öğle
+  { bg: '#8A3C27', grid: '#9D4B33' }, // Senato (Curia): gün batımı
+  { bg: '#1E2659', grid: '#2B346E' }, // Pantheon: gece
 ];
 const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
 const mix = (a, b, t) => '#' + hex(a).map((v, i) => Math.round(v + (hex(b)[i] - v) * t).toString(16).padStart(2, '0')).join('');

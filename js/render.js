@@ -10,6 +10,11 @@ const BOTTOM = 0.5;  // kaide
 const COLW = 1;      // sütun genişliği (hücre)
 const REDUCED = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
 const SWEEP_CYCLE = 1.8, SWEEP_DUR = 1.3, FLASH_MS = 400;
+const PERSIST = 0.4;       // renkli sürümün kalıcı opaklığı (açığa çıkan bölgede)
+const FEATHER = 1.2;       // kalıcı bölgenin üst kenar yumuşatması (hücre)
+const SWEEP_MS = 550, SHIM_MS = 700, BAND_FEATHER = 1.5;
+const easeOut = (x) => 1 - Math.pow(1 - x, 3);
+const smooth = (x) => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
 const ease = (x) => (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
 
 // Altın parça: sprite çevresinde nabızlı ışıltı + hücre maskesine kırpılmış çapraz parıltı süpürmesi
@@ -43,6 +48,90 @@ export class Renderer {
   constructor(canvas) {
     this.cv = canvas; this.ctx = canvas.getContext('2d');
     this.s = 20; this.dpr = 1; this.calm = 0; this.calmT = 0;
+    this.prog = {}; this.progT = {}; this.flashes = []; this.lastT = 0;   // Roma'yı yeniden inşa: seviye başına gösterilen/hedef ilerleme (0..8 satır)
+  }
+
+  // Seviye içi ilerleme (0..8 satır): renkli sürüm aşağıdan yukarı açılır
+  setProgress(lv, n, instant) {
+    this.progT[lv] = Math.max(0, Math.min(8, n));
+    if (instant || REDUCED.matches || this.prog[lv] === undefined) this.prog[lv] = this.progT[lv];
+  }
+  // Satır silme: temizlenen satır bandında altın ışık süpürmesi (row0..row1 dahil, tahta satır indeksi)
+  flashRows(row0, row1) {
+    if (REDUCED.matches) return;
+    const a = Math.max(0, Math.min(row0, row1)), b = Math.min(ROWS - 1, Math.max(row0, row1));
+    this.flashes.push({ lv: levelFade().b, y0: a, y1: b, fe: BAND_FEATHER, dur: SWEEP_MS, t0: performance.now(), amp: 0.9 });
+    if (this.flashes.length > 6) this.flashes.shift();
+  }
+  // Seviye tamamlanınca kısa tüm-sahne parıltısı
+  shimmer() {
+    if (REDUCED.matches) return;
+    this.flashes.push({ lv: levelFade().b, y0: 0, y1: ROWS - 1, fe: 0, dur: SHIM_MS, t0: performance.now(), amp: 0.8, shim: true });
+  }
+  resetReveal() { this.prog = {}; this.progT = {}; this.flashes.length = 0; }
+
+  _canvases(bw, bh) {
+    if (!this.mask || this.mask.width !== bw || this.mask.height !== bh) {
+      const mk = () => { const cv = document.createElement('canvas'); cv.width = bw; cv.height = bh; return cv; };
+      this.mask = mk(); this.band = mk(); this.mctx = this.mask.getContext('2d'); this.bctx = this.band.getContext('2d'); this.comp = {};
+    }
+  }
+  // Bir seviyenin arka planı: sönük sürüm + aşağıdan yukarı açılan / ışık süpürmesiyle açılan renkli sürüm
+  paintLevel(c, lv, alpha, now) {
+    const s = this.s, bw = COLS * s, bh = ROWS * s;
+    const mut = this.bdrop[lv] || (this.bdrop[lv] = makeBackdrop(lv, bw, bh, false));
+    c.globalAlpha = alpha; c.drawImage(mut, this.bx, this.by); c.globalAlpha = 1;
+    const p = (this.prog[lv] || 0) / 8, fl = this.flashes.filter((f) => f.lv === lv);
+    if (p <= 0.002 && !fl.length) return;
+    this._canvases(bw, bh);
+    const key = bw + 'x' + bh + '|' + p.toFixed(4);
+    let ent = this.comp[lv];
+    if (!ent) ent = this.comp[lv] = { cv: Object.assign(document.createElement('canvas'), { width: bw, height: bh }), key: '' };
+    const streaks = [];
+    if (fl.length || ent.key !== key) {
+      const col = this.bdrop[lv + 'c'] || (this.bdrop[lv + 'c'] = makeBackdrop(lv, bw, bh, true));
+      const m = this.mctx; m.globalCompositeOperation = 'source-over'; m.globalAlpha = 1; m.clearRect(0, 0, bw, bh);
+      if (p > 0.002) {   // kalıcı bölge: alt p kadarı, yumuşak üst kenar
+        const yTop = bh * (1 - p), fh = FEATHER * s, g = m.createLinearGradient(0, yTop - fh / 2, 0, yTop + fh / 2);
+        g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,' + PERSIST + ')');
+        m.fillStyle = g; m.fillRect(0, Math.max(0, yTop - fh / 2), bw, bh);
+      }
+      m.globalCompositeOperation = 'lighter';
+      const t = this.bctx;
+      for (const f of fl) {
+        const k = (now - f.t0) / f.dur; if (k < 0 || k >= 1) continue;
+        const fe = f.fe * s, y0 = f.y0 * s - fe, y1 = (f.y1 + 1) * s + fe, hf = 1.6 * s, front = easeOut(k) * (bw + hf * 1.5);
+        const env = k < 0.45 ? 1 : 1 - smooth((k - 0.45) / 0.55);
+        const shape = () => {   // dikey bant (yumuşak üst/alt)
+          t.globalCompositeOperation = 'source-over'; t.globalAlpha = 1; t.clearRect(0, 0, bw, bh);
+          if (fe > 0) { const g = t.createLinearGradient(0, y0, 0, y1), q = fe / (y1 - y0); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(q, '#000'); g.addColorStop(1 - q, '#000'); g.addColorStop(1, 'rgba(0,0,0,0)'); t.fillStyle = g; } else t.fillStyle = '#000';
+          t.fillRect(0, y0, bw, y1 - y0);
+          t.globalCompositeOperation = 'destination-in';
+        };
+        shape();   // 0..front arası açığa çıkar (ön kenar yumuşak)
+        { const g = t.createLinearGradient(front - hf, 0, front, 0); g.addColorStop(0, '#000'); g.addColorStop(1, 'rgba(0,0,0,0)'); t.fillStyle = g; t.fillRect(0, 0, bw, bh); }
+        m.globalAlpha = f.amp * env; m.drawImage(this.band, 0, 0);
+        streaks.push([f, k, front, hf, shape]);
+      }
+      m.globalAlpha = 1; m.globalCompositeOperation = 'source-over';
+      const cc = ent.cv.getContext('2d');
+      cc.globalCompositeOperation = 'source-over'; cc.clearRect(0, 0, bw, bh); cc.drawImage(col, 0, 0);
+      cc.globalCompositeOperation = 'destination-in'; cc.drawImage(this.mask, 0, 0); cc.globalCompositeOperation = 'source-over';
+      ent.key = fl.length ? '' : key;
+    }
+    c.globalAlpha = alpha; c.drawImage(ent.cv, this.bx, this.by);
+    // altın ışık şeridi (ön kenarda) ve seviye parıltısında hafif altın örtü
+    if (streaks.length) {
+      const t = this.bctx;
+      for (const [f, k, front, hf, shape] of streaks) {
+        shape();
+        const g = t.createLinearGradient(front - hf, 0, front + 0.3 * s, 0); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.75, '#000'); g.addColorStop(1, 'rgba(0,0,0,0)'); t.fillStyle = g; t.fillRect(0, 0, bw, bh);
+        t.globalCompositeOperation = 'source-in'; t.fillStyle = 'rgb(255,214,108)'; t.fillRect(0, 0, bw, bh);
+        c.globalCompositeOperation = 'lighter'; c.globalAlpha = alpha * 0.5 * (1 - k * 0.7); c.drawImage(this.band, this.bx, this.by); c.globalCompositeOperation = 'source-over';
+        if (f.shim) { c.globalAlpha = alpha * 0.14 * Math.sin(Math.PI * k); c.fillStyle = '#FFE6A0'; c.fillRect(this.bx, this.by, bw, bh); }
+      }
+    }
+    c.globalAlpha = 1;
   }
 
   resize(wCss, hCss) {
@@ -54,7 +143,7 @@ export class Renderer {
     this.cv.style.width = this.cv.width / this.dpr + 'px';
     this.cv.style.height = this.cv.height / this.dpr + 'px';
     this.bx = this.s * COLW; this.by = this.s * TOP;
-    this.bdrop = {};   // arka plan önbelleği (seviye başına), boyut değişince yeniden kurulur
+    this.bdrop = {}; this.comp = {}; this.mask = null;   // arka plan önbelleği (seviye başına), boyut değişince yeniden kurulur
   }
   get cellCss() { return this.s / this.dpr; }
 
@@ -64,13 +153,17 @@ export class Renderer {
     const nowT = performance.now(), sx = g.bursts && g.bursts.length ? shakeX(g.bursts, nowT, s) : 0;
     c.save(); if (sx) c.translate(sx, 0);
     this.drawFrame(c, s, W, H);
-    // Roma mekân arka planı (ızgaranın arkasında; seviye geçişinde çapraz solma)
+    // Roma mekân arka planı (ızgaranın arkasında; seviye geçişinde çapraz solma; renkli sürüm ilerlemeye göre açılır)
     {
-      const f = levelFade(), bw = COLS * s, bh = ROWS * s;
-      const get = (lv) => (this.bdrop[lv] || (this.bdrop[lv] = makeBackdrop(lv, bw, bh)));
+      const f = levelFade(), bw = COLS * s, bh = ROWS * s, dt = this.lastT ? Math.min(100, nowT - this.lastT) : 0; this.lastT = nowT;
+      for (const k in this.progT) {   // gösterilen ilerleme hedefe yumuşakça yaklaşır
+        const d = this.progT[k] - (this.prog[k] || 0);
+        this.prog[k] = Math.abs(d) < 0.004 ? this.progT[k] : (this.prog[k] || 0) + d * (1 - Math.exp(-dt / 260));
+      }
+      for (let i = this.flashes.length - 1; i >= 0; i--) if (nowT - this.flashes[i].t0 >= this.flashes[i].dur) this.flashes.splice(i, 1);
       c.save(); c.beginPath(); c.rect(this.bx, this.by, bw, bh); c.clip();
-      if (f.e < 1 && f.a !== f.b) { c.globalAlpha = 1 - f.e; c.drawImage(get(f.a), this.bx, this.by); }
-      c.globalAlpha = f.a !== f.b ? f.e : 1; c.drawImage(get(f.b), this.bx, this.by);
+      if (f.e < 1 && f.a !== f.b) this.paintLevel(c, f.a, 1 - f.e, nowT);
+      this.paintLevel(c, f.b, f.a !== f.b ? f.e : 1, nowT);
       c.restore();
     }
     // ızgara

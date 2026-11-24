@@ -45,18 +45,19 @@ const PAL = {
   tokmak: { main: '#9A6433', dark: '#4E2F18', acc: C.gold },
   terazi: { main: '#A9B0BA', dark: '#5C6470', acc: '#7A5E10', pivot: C.gold },
   sutun: { main: C.marble, dark: C.marbleD, acc: C.marbleD },
-  kanun: { main: THEME.kanun ? THEME.kanun.main : C.bordo, dark: THEME.kanun ? THEME.kanun.dark : C.bordoD, acc: C.gold, accD: C.goldD },
+  // Roma yasa levhasi: sicak travertin / kumtasi, bronz perçinler
+  kanun: { main: '#CDBB94', dark: '#8E7A55', acc: '#B8862B', accD: '#6E4E12' },
   paragraf: { main: '#33805F', dark: '#1A4A35', acc: C.gold },
   kilic: { main: '#6C7A94', dark: '#323A4C', acc: '#F1F3F5', hilt: C.gold },
-  // vermilyon lak: dört zemin rengine karşı kontrast >= 4.2:1
-  kalem: { main: '#D9573A', dark: '#6B2010', acc: '#F6E3A1', ring: '#F2C94C' },
+  // porfir moru: mavi, turkuaz, kiremit ve lacivert zeminlere karsi kontrast
+  kalem: { main: '#7A3E8E', dark: '#3E1B4E', acc: '#F4ECD6', ring: '#D9A93A' },
 };
 // Deneme: ?islem=pirinc ile normal parçaların işlemeleri antik pirinç olur (parlak altın yalnızca altın parçalarda)
 const ISLEM = (() => { try { return new URLSearchParams(location.search).get('islem'); } catch (_) { return null; } })();
 if (ISLEM === 'pirinc') {
   const B = '#C2A26A', BD = '#6E5A33';
   PAL.tokmak.acc = '#D2B47E'; PAL.kanun.acc = B; PAL.kanun.accD = BD; PAL.paragraf.acc = B;
-  PAL.terazi.acc = BD; PAL.terazi.pivot = B; PAL.kilic.hilt = B; PAL.kalem.acc = '#DCC89E'; PAL.kalem.ring = B;
+  PAL.terazi.acc = BD; PAL.terazi.pivot = B; PAL.kilic.hilt = B; PAL.kalem.ring = B;
 }
 const GOLDEN = { main: C.gold, dark: C.goldD, acc: C.ink, accD: '#A89C74', grip: C.goldD, gripD: '#5E4A0C', gem: C.bordo };
 
@@ -117,19 +118,40 @@ function dSutun(c, s, P) {
   c.fillRect(0.06 * s, 4.68 * s, 0.88 * s, 0.14 * s); c.strokeRect(0.06 * s, 4.68 * s, 0.88 * s, 0.14 * s);
   c.fillRect(0.03 * s, 4.82 * s, 0.94 * s, 0.15 * s); c.strokeRect(0.03 * s, 4.82 * s, 0.94 * s, 0.15 * s);
 }
-// Kanun: 2x2 kitap, her zaman dik çizilir
+// Kanun: 2x2 Roma yasa levhasi (On Iki Levha), her zaman dik cizilir
 function dKanun(c, s, P) {
-  // Levha: 2x2 kanun cildi, kapakta "LAW"
-  const cells = BASE.kanun, A = P.acc, D = P.dark;
+  const cells = BASE.kanun, gold = P === GOLDEN;
+  const A = gold ? '#FFF1B8' : P.acc, AD = gold ? P.dark : P.accD, D = P.dark;
   unionPlate(c, s, cells, P);
-  c.fillStyle = D; c.globalAlpha = 0.55; c.fillRect(0.1 * s, 0.1 * s, 0.32 * s, 1.8 * s); c.globalAlpha = 1;
-  c.fillStyle = A; c.fillRect(0.1 * s, 0.3 * s, 0.32 * s, 0.07 * s); c.fillRect(0.1 * s, 1.63 * s, 0.32 * s, 0.07 * s);
-  c.save(); c.globalAlpha = 0.5; c.strokeStyle = A; c.lineWidth = Math.max(1, s * 0.03);
-  rr(c, 0.52 * s, 0.16 * s, 1.32 * s, 1.68 * s, 0.06 * s); c.stroke(); c.restore();
-  const cx = 1.18 * s;
-  c.fillStyle = A; c.fillRect(cx - 0.42 * s, 0.62 * s, 0.84 * s, 0.05 * s); c.fillRect(cx - 0.42 * s, 1.33 * s, 0.84 * s, 0.05 * s);
-  c.font = 'bold ' + Math.round(s * 0.5) + 'px Georgia, serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
-  c.fillText('LAW', cx, 1.02 * s);
+  const lw = Math.max(1, s * 0.035);
+  // kemerli ic levha
+  const x0 = 0.2 * s, x1 = 1.8 * s, y0 = 0.2 * s, y1 = 1.8 * s, r = 0.5 * s;
+  c.beginPath();
+  c.moveTo(x0, y1); c.lineTo(x0, y0 + r); c.quadraticCurveTo(x0, y0, x0 + r, y0);
+  c.lineTo(x1 - r, y0); c.quadraticCurveTo(x1, y0, x1, y0 + r); c.lineTo(x1, y1); c.closePath();
+  c.fillStyle = 'rgba(255,248,225,0.30)'; c.fill();
+  c.strokeStyle = D; c.lineWidth = lw; c.stroke();
+  c.save(); c.clip(); c.fillStyle = 'rgba(0,0,0,0.12)'; c.fillRect(x0, y0, 1.6 * s, 0.05 * s); c.restore();
+  // oyma LEX: acik alt kenar + koyu ic
+  const cx = s, fs = Math.round(s * 0.52);
+  c.font = 'bold ' + fs + 'px Georgia, "Times New Roman", serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillStyle = 'rgba(255,250,232,0.85)'; c.fillText('LEX', cx, 0.86 * s + Math.max(1, s * 0.035));
+  c.fillStyle = D; c.fillText('LEX', cx, 0.86 * s);
+  // oyma satirlar
+  c.lineCap = 'round';
+  for (const [yy, a, b] of [[1.2, 0.46, 1.54], [1.4, 0.46, 1.4], [1.6, 0.46, 1.5]]) {
+    c.strokeStyle = 'rgba(255,250,232,0.7)'; c.lineWidth = Math.max(1, s * 0.05);
+    c.beginPath(); c.moveTo(a * s, yy * s + s * 0.03); c.lineTo(b * s, yy * s + s * 0.03); c.stroke();
+    c.strokeStyle = D; c.lineWidth = Math.max(1, s * 0.045);
+    c.beginPath(); c.moveTo(a * s, yy * s); c.lineTo(b * s, yy * s); c.stroke();
+  }
+  c.lineCap = 'butt';
+  // bronz perçinler
+  for (const [px, py] of [[0.2, 0.2], [1.8, 0.2], [0.2, 1.8], [1.8, 1.8]]) {
+    c.beginPath(); c.arc(px * s, py * s, s * 0.085, 0, Math.PI * 2); c.fillStyle = A; c.fill();
+    c.strokeStyle = AD; c.lineWidth = Math.max(1, s * 0.03); c.stroke();
+    c.beginPath(); c.arc(px * s - s * 0.025, py * s - s * 0.025, s * 0.025, 0, Math.PI * 2); c.fillStyle = 'rgba(255,255,255,0.75)'; c.fill();
+  }
 }
 function canlandir(hex) {
   let r = parseInt(hex.slice(1, 3), 16) / 255, g = parseInt(hex.slice(3, 5), 16) / 255, b = parseInt(hex.slice(5, 7), 16) / 255;
@@ -185,54 +207,48 @@ function dParagraf(c, s, P, cells) {
   c.fillText('§', (m[0] + 0.5) * s, (m[1] + 0.55) * s);
 }
 function dTerazi(c, s, P, cells) {
-  // Kabartma levha: hücreleri tam dolduran plaka + üstüne işlenmiş dik terazi
+  // Iustitia terazisi: sade gumus levha, ince kiris, altin mafsal ve kefe kenarlari
   unionPlate(c, s, cells, P);
+  const gold = P === GOLDEN;
   const ctr = (q) => [(q[0] + 0.5) * s, (q[1] + 0.5) * s];
   const arms = cells.filter(([x, y]) => nb(cells, x, y).length === 1);
   const bar = cells.filter((q) => !arms.includes(q));
   const mid = bar.find(([x, y]) => !arms.some((a) => Math.abs(a[0] - x) + Math.abs(a[1] - y) === 1));
   const ends = bar.filter((q) => q !== mid);
   const endOf = (a) => ends.find((q) => Math.abs(q[0] - a[0]) + Math.abs(q[1] - a[1]) === 1);
-  const E = P.acc, G = P.pivot || P.acc;
+  const E = gold ? '#FFF1B8' : '#39414F';          // kiris, zincir, kefe govdesi
+  const G = gold ? '#7A5E10' : '#D9A93A';          // altin: mafsal ve kefe kenari
+  const GD = gold ? '#4A3A08' : '#7A5810';
   const [mx, my] = ctr(mid);
   c.lineCap = 'round'; c.lineJoin = 'round';
-  // iç çerçeve (kabartma hissi)
-  c.save(); c.globalAlpha = 0.35; c.strokeStyle = E; c.lineWidth = Math.max(1, s * 0.03);
-  for (const [x, y] of cells) {
-    const has = (dx, dy) => cells.some((q) => q[0] === x + dx && q[1] === y + dy), i = 0.16 * s;
-    c.beginPath();
-    if (!has(0, -1)) { c.moveTo(x * s + (has(-1, 0) ? 0 : i), y * s + i); c.lineTo((x + 1) * s - (has(1, 0) ? 0 : i), y * s + i); }
-    if (!has(0, 1)) { c.moveTo(x * s + (has(-1, 0) ? 0 : i), (y + 1) * s - i); c.lineTo((x + 1) * s - (has(1, 0) ? 0 : i), (y + 1) * s - i); }
-    if (!has(-1, 0)) { c.moveTo(x * s + i, y * s + (has(0, -1) ? 0 : i)); c.lineTo(x * s + i, (y + 1) * s - (has(0, 1) ? 0 : i)); }
-    if (!has(1, 0)) { c.moveTo((x + 1) * s - i, y * s + (has(0, -1) ? 0 : i)); c.lineTo((x + 1) * s - i, (y + 1) * s - (has(0, 1) ? 0 : i)); }
-    c.stroke();
-  }
-  c.restore();
-  // kiriş
   const [e0x, e0y] = ctr(ends[0]), [e1x, e1y] = ctr(ends[1]);
-  // kiriş: ortada kalın, uçlara doğru incelen zarif kol
+  // kiris: ortada kalin, uclara incelen
   c.fillStyle = E;
-  { const dx = e1x - e0x, dy = e1y - e0y, L = Math.hypot(dx, dy), nx = -dy / L, ny = dx / L, w0 = s * 0.1, w1 = s * 0.04;
+  { const dx = e1x - e0x, dy = e1y - e0y, L = Math.hypot(dx, dy), nx = -dy / L, ny = dx / L, w0 = s * 0.085, w1 = s * 0.035;
     c.beginPath();
     c.moveTo(e0x + nx * w1, e0y + ny * w1); c.lineTo(mx + nx * w0, my + ny * w0); c.lineTo(e1x + nx * w1, e1y + ny * w1);
     c.lineTo(e1x - nx * w1, e1y - ny * w1); c.lineTo(mx - nx * w0, my - ny * w0); c.lineTo(e0x - nx * w1, e0y - ny * w1); c.closePath(); c.fill(); }
-  for (const [ex, ey] of [[e0x, e0y], [e1x, e1y]]) { c.beginPath(); c.arc(ex, ey, s * 0.08, 0, Math.PI * 2); c.fill(); }
-  // kefeler (her zaman aşağı sarkar)
+  for (const [ex, ey] of [[e0x, e0y], [e1x, e1y]]) { c.beginPath(); c.arc(ex, ey, s * 0.07, 0, Math.PI * 2); c.fill(); }
+  // zincirler ve kefeler (her zaman asagi sarkar)
   for (const a of arms) {
     const [bx, by] = ctr(endOf(a));
-    const hx = (a[0] + 0.5) * s, hy = (a[1] + 0.14) * s, ry = (a[1] + 0.56) * s, w = 0.34 * s;
-    c.lineWidth = s * 0.06; c.strokeStyle = E;
-    if (Math.abs(bx - hx) > 1 || Math.abs(by - hy) > 0.35 * s) { c.beginPath(); c.moveTo(bx, by); c.lineTo(hx, hy); c.stroke(); }
-    c.lineWidth = Math.max(1, s * 0.035);
+    const hx = (a[0] + 0.5) * s, hy = (a[1] + 0.1) * s, ry = (a[1] + 0.6) * s, w = 0.36 * s;
+    c.strokeStyle = E; c.lineWidth = Math.max(1, s * 0.05);
+    if (Math.abs(bx - hx) > 1 || Math.abs(by - hy) > 0.2 * s) { c.beginPath(); c.moveTo(bx, by); c.lineTo(hx, hy); c.stroke(); }
+    c.lineWidth = Math.max(1, s * 0.03);
     c.beginPath(); c.moveTo(hx, hy); c.lineTo(hx - w, ry); c.moveTo(hx, hy); c.lineTo(hx + w, ry); c.stroke();
-    c.beginPath(); c.moveTo(hx - w - 0.05 * s, ry); c.quadraticCurveTo(hx, ry + 0.5 * s, hx + w + 0.05 * s, ry); c.closePath();
+    // sig kase
+    c.beginPath(); c.moveTo(hx - w - 0.04 * s, ry); c.quadraticCurveTo(hx, ry + 0.5 * s, hx + w + 0.04 * s, ry); c.closePath();
     c.fillStyle = E; c.fill();
-    c.beginPath(); c.arc(hx, hy, s * 0.05, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = G; c.lineWidth = Math.max(1.2, s * 0.06);
+    c.beginPath(); c.moveTo(hx - w - 0.04 * s, ry); c.lineTo(hx + w + 0.04 * s, ry); c.stroke();
   }
-  // orta mafsal ve tepelik
-  c.beginPath(); c.arc(mx, my, s * 0.2, 0, Math.PI * 2); c.fillStyle = G; c.fill();
-  c.strokeStyle = P.dark; c.lineWidth = Math.max(1, s * 0.04); c.stroke();
-  c.beginPath(); c.arc(mx, my, s * 0.07, 0, Math.PI * 2); c.fillStyle = P.dark; c.fill();
+  // mafsal: altin yuvarlak, ustunde kucuk topuz
+  c.beginPath(); c.moveTo(mx - s * 0.07, my - s * 0.16); c.lineTo(mx, my - s * 0.34); c.lineTo(mx + s * 0.07, my - s * 0.16); c.closePath();
+  c.fillStyle = G; c.fill();
+  c.beginPath(); c.arc(mx, my, s * 0.17, 0, Math.PI * 2); c.fillStyle = G; c.fill();
+  c.strokeStyle = GD; c.lineWidth = Math.max(1, s * 0.04); c.stroke();
+  c.beginPath(); c.arc(mx, my, s * 0.06, 0, Math.PI * 2); c.fillStyle = GD; c.fill();
   c.lineCap = 'butt'; c.lineJoin = 'miter';
 }
 function dKilic(c, s, P) {
@@ -273,50 +289,49 @@ function dKilic(c, s, P) {
   c.lineCap = 'butt'; c.lineJoin = 'miter';
 }
 function dKalem(c, s, P) {
-  // Levha: 1x3 plaka + üstüne işlenmiş klasik dolma kalem (siyah lake gövde, altın aksam, ucu aşağıda)
-  const cells = BASE.kalem, E = P.acc, R = P.ring || E;
-  const K = P === GOLDEN ? '#5E4A0C' : '#17120F', KH = P === GOLDEN ? '#8C6F12' : '#3A302A';
+  // Levha: 1x3 porfir plaka + ustune islenmis tuy kalem (krem tuy, koyu kalem govdesi, altin uc; ucu asagida)
+  const cells = BASE.kalem, gold = P === GOLDEN;
+  const V = gold ? '#FFF1B8' : P.acc, VD = gold ? '#8C6F12' : '#B9A98A', K = gold ? '#5E4A0C' : '#2A1630', R = P.ring || P.acc;
   unionPlate(c, s, cells, P);
-  const cx = 0.5 * s, lw = Math.max(1, s * 0.03), w = 0.22 * s;
+  const cx = 0.5 * s, lw = Math.max(1, s * 0.03);
   c.lineJoin = 'round'; c.lineCap = 'round';
-  c.save(); c.globalAlpha = 0.35; c.strokeStyle = E; c.lineWidth = Math.max(1, s * 0.03);
+  c.save(); c.globalAlpha = 0.3; c.strokeStyle = V; c.lineWidth = lw;
   c.strokeRect(0.14 * s, 0.14 * s, 0.72 * s, 2.72 * s); c.restore();
-  // kapak: kubbeli üst
+  // tuy: sivri uclu yaprak biçimli, hafif egri
+  const top = 0.2 * s, bot = 2.12 * s, hw = 0.3 * s;
   c.beginPath();
-  c.moveTo(cx - w, 1.02 * s); c.lineTo(cx - w, 0.42 * s);
-  c.bezierCurveTo(cx - w, 0.2 * s, cx + w, 0.2 * s, cx + w, 0.42 * s);
-  c.lineTo(cx + w, 1.02 * s); c.closePath(); c.fillStyle = K; c.fill();
-  c.fillStyle = KH; c.fillRect(cx - w * 0.55, 0.4 * s, w * 0.28, 0.56 * s); // parlaklık
-  // kapak tepesi altın halka
-  c.fillStyle = R; rr(c, cx - w * 0.7, 0.24 * s, w * 1.4, 0.06 * s, 0.03 * s); c.fill();
-  // kapak bileziği: kalın + ince
-  rr(c, cx - w - 0.02 * s, 0.9 * s, 2 * w + 0.04 * s, 0.1 * s, 0.03 * s); c.fill();
-  c.fillRect(cx - w, 0.84 * s, 2 * w, 0.025 * s);
-  // klips: kapaktan sarkan altın dil, ucu bilyeli
-  c.beginPath(); c.moveTo(cx + w * 0.15, 0.3 * s); c.lineTo(cx + w * 0.55, 0.3 * s); c.lineTo(cx + w * 0.5, 0.86 * s); c.lineTo(cx + w * 0.2, 0.86 * s); c.closePath(); c.fill();
-  c.beginPath(); c.arc(cx + w * 0.35, 0.9 * s, 0.045 * s, 0, Math.PI * 2); c.fill();
-  // gövde: hafif incelen puro biçimi
+  c.moveTo(cx + 0.05 * s, top);
+  c.bezierCurveTo(cx + hw * 1.5, top + 0.35 * s, cx + hw * 1.1, bot - 0.5 * s, cx, bot);
+  c.bezierCurveTo(cx - hw * 1.0, bot - 0.5 * s, cx - hw * 1.4, top + 0.45 * s, cx + 0.05 * s, top);
+  c.closePath(); c.fillStyle = V; c.fill(); c.strokeStyle = VD; c.lineWidth = lw; c.stroke();
+  // yelpaze bicimli tuy kilcallari
+  c.save(); c.clip();
+  c.strokeStyle = VD; c.lineWidth = Math.max(1, s * 0.022); c.globalAlpha = 0.9;
+  for (let t = 0.12; t < 0.98; t += 0.1) {
+    const yy = top + t * (bot - top), len = hw * 1.7 * Math.sin(Math.PI * Math.min(1, t * 1.05)) + 0.1 * s;
+    c.beginPath(); c.moveTo(cx, yy + 0.08 * s); c.lineTo(cx - len, yy - 0.16 * s);
+    c.moveTo(cx, yy + 0.08 * s); c.lineTo(cx + len, yy - 0.16 * s); c.stroke();
+  }
+  c.restore();
+  // govde ustundeki yarik (tuyun iki yarisi arasinda kopuk)
+  c.fillStyle = 'rgba(255,255,255,0.35)'; c.beginPath(); c.ellipse(cx - 0.12 * s, 0.75 * s, 0.035 * s, 0.35 * s, 0.1, 0, Math.PI * 2); c.fill();
+  // govde (rakis): tuyun icinden uca dogru
+  c.strokeStyle = K; c.lineWidth = Math.max(1.4, s * 0.06);
+  c.beginPath(); c.moveTo(cx + 0.05 * s, top - 0.02 * s); c.quadraticCurveTo(cx + 0.02 * s, 1.2 * s, cx, 2.34 * s); c.stroke();
+  // koyu kalem govdesi
+  c.lineWidth = Math.max(2, s * 0.11);
+  c.beginPath(); c.moveTo(cx, bot - 0.06 * s); c.lineTo(cx, 2.34 * s); c.stroke();
+  // altin uc
   c.beginPath();
-  c.moveTo(cx - w, 1.0 * s); c.lineTo(cx + w, 1.0 * s); c.lineTo(cx + w * 0.86, 1.98 * s); c.lineTo(cx - w * 0.86, 1.98 * s); c.closePath();
-  c.fillStyle = K; c.fill(); c.fillStyle = KH; c.fillRect(cx - w * 0.55, 1.04 * s, w * 0.26, 0.9 * s);
-  // gövde altı altın bilezik
-  c.fillStyle = R; rr(c, cx - w * 0.95, 1.96 * s, w * 1.9, 0.07 * s, 0.03 * s); c.fill();
-  // tutuş bölümü
-  c.beginPath(); c.moveTo(cx - w * 0.8, 2.03 * s); c.lineTo(cx + w * 0.8, 2.03 * s); c.lineTo(cx + w * 0.6, 2.24 * s); c.lineTo(cx - w * 0.6, 2.24 * s); c.closePath();
-  c.fillStyle = K; c.fill();
-  // uç: geniş omuzlu altın uç, yarık ve kalp biçimli nefes deliği
-  c.beginPath();
-  c.moveTo(cx - w * 0.78, 2.22 * s); c.lineTo(cx + w * 0.78, 2.22 * s);
-  c.bezierCurveTo(cx + w * 0.95, 2.45 * s, cx + w * 0.35, 2.66 * s, cx, 2.86 * s);
-  c.bezierCurveTo(cx - w * 0.35, 2.66 * s, cx - w * 0.95, 2.45 * s, cx - w * 0.78, 2.22 * s); c.closePath();
+  c.moveTo(cx - 0.11 * s, 2.3 * s); c.lineTo(cx + 0.11 * s, 2.3 * s);
+  c.bezierCurveTo(cx + 0.15 * s, 2.5 * s, cx + 0.06 * s, 2.7 * s, cx, 2.88 * s);
+  c.bezierCurveTo(cx - 0.06 * s, 2.7 * s, cx - 0.15 * s, 2.5 * s, cx - 0.11 * s, 2.3 * s); c.closePath();
   c.fillStyle = R; c.fill(); c.strokeStyle = K; c.lineWidth = lw; c.stroke();
-  c.globalAlpha = 0.35; c.fillStyle = '#FFF6D6'; c.beginPath(); c.moveTo(cx - w * 0.55, 2.26 * s); c.lineTo(cx - w * 0.1, 2.26 * s); c.lineTo(cx - w * 0.08, 2.6 * s); c.closePath(); c.fill(); c.globalAlpha = 1;
-  c.strokeStyle = K; c.lineWidth = Math.max(1, s * 0.028);
-  c.beginPath(); c.moveTo(cx, 2.48 * s); c.lineTo(cx, 2.84 * s); c.stroke();
-  c.beginPath(); c.arc(cx, 2.43 * s, 0.045 * s, 0, Math.PI * 2); c.fillStyle = K; c.fill();
+  c.beginPath(); c.moveTo(cx, 2.5 * s); c.lineTo(cx, 2.84 * s); c.stroke();
+  c.beginPath(); c.arc(cx, 2.46 * s, 0.03 * s, 0, Math.PI * 2); c.fillStyle = K; c.fill();
   c.lineCap = 'butt'; c.lineJoin = 'miter';
 }
-const UPRIGHT = new Set(['terazi', 'paragraf', 'kanun']);
+const UPRIGHT = new Set(['paragraf', 'kanun']);
 const DRAW = { tokmak: dTokmak, terazi: dTerazi, sutun: dSutun, kanun: dKanun, paragraf: dParagraf, kilic: dKilic, kalem: dKalem };
 
 function mk(w, h) {
@@ -341,7 +356,7 @@ export function getSprite(type, rot, golden, s) {
   } else if ((rot & 3) === 0) {
     const sz = sizeOf(type, 0);
     cv = mk(sz.w * s, sz.h * s);
-    DRAW[type](cv.getContext('2d'), s, golden ? GOLDEN : PAL[type]);
+    DRAW[type](cv.getContext('2d'), s, golden ? GOLDEN : PAL[type], cellsOf(type, 0));
   } else {
     cv = rotateCanvas(getSprite(type, (rot & 3) - 1, golden, s));
   }
