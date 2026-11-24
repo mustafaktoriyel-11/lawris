@@ -1,5 +1,5 @@
 // Lawris - service worker: önce ağ (her zaman güncel), ağ yoksa önbellek (çevrimdışı)
-const CACHE = 'lawris-v5';
+const CACHE = 'lawris-v6';
 const CORE = ['./', 'index.html', 'style.css', 'manifest.webmanifest', 'privacy.html',
   'js/main.js', 'js/board.js', 'js/pieces.js', 'js/render.js', 'js/input.js', 'js/theme.js',
   'js/music.js', 'js/maskot.js', 'js/skor.js', 'js/rehber.js', 'js/fx.js', 'js/demo.js', 'img/acilis-adliye.webp', 'icons/icon.svg'];
