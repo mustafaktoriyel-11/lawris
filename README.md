@@ -80,3 +80,12 @@ The game opens in Turkish or English depending on the browser language (anything
 Arka plan müziği, `audio/` klasöründeki gerçek çalgı kayıtlarını (folk harp, konser harbi, blok flüt, psaltery, çerçeve davulu, darbuka, tef, shaker, parmak zilleri) uyarlamalı bir diziciyle çalar; örnekler yüklenene kadar eski prosedürel sesler devrede kalır. Örnekler [Versilian Community Sample Library](https://github.com/sgossner/VCSL) kütüphanesinden alınmıştır (CC0 1.0, kamu malı; atıf zorunlu değildir, teşekkürle belirtilir). Ayrıntı: `audio/LICENSE.txt`.
 
 Background music is played by an adaptive sequencer using the real instrument recordings in `audio/` (folk harp, concert harp, recorders, psaltery, frame drum, darbuka, tambourine, shaker, finger cymbals); the old synthesized voices stay as a fallback until the samples are decoded. Samples come from the [Versilian Community Sample Library](https://github.com/sgossner/VCSL) (CC0 1.0 public domain; attribution not required, credited with thanks). See `audio/LICENSE.txt`.
+
+## Android derleme
+
+Android uygulaması Capacitor ile paketlenir; derleme GitHub Actions'ta yapılır (`.github/workflows/android.yml`). Yerelde bir şey kurmanız gerekmez.
+
+- **Test APK'sı:** commit mesajına `[apk]` yazın (ör. `git commit -m "yeni ses [apk]"`) ya da Actions sekmesinden "Android APK" iş akışını elle başlatın (her gece de otomatik derlenir). Bitince **Releases › Android test sürümü** (`android-test`) altında `lex-stack-test.apk` çıkar; telefona indirip kurun. Sabit test imzası kullanıldığı için yeni sürüm eskisinin üzerine kurulur.
+- **Play Store (AAB):** bir kez yükleme anahtarı üretin: `keytool -genkeypair -v -keystore lexstack-upload.jks -alias lexstack -keyalg RSA -keysize 2048 -validity 10000`. Ardından Settings › Secrets and variables › Actions bölümüne şu 4 gizli değeri ekleyin: `LS_UPLOAD_KEYSTORE_B64` (`base64 -w0 lexstack-upload.jks` çıktısı), `LS_UPLOAD_STORE_PASSWORD`, `LS_UPLOAD_KEY_ALIAS`, `LS_UPLOAD_KEY_PASSWORD`. Her derlemede imzalı `lex-stack.aab` iş akışı çıktısında (Artifacts › `lex-stack-aab-play`) saklanır; Play Console'a bu dosyayı yükleyin. Gizli değerler yoksa AAB geçici anahtarla imzalanır (`lex-stack-aab-deneme`) ve Play'e yüklenemez.
+- **Sürüm:** `versionName` kök dizindeki `VERSION` dosyasından, `versionCode` iş akışı çalışma numarasından gelir.
+- Gerekli depo ayarı: Settings › Actions › General › Workflow permissions › **Read and write permissions**.

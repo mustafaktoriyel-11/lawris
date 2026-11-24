@@ -1,0 +1,13 @@
+{
+  "name": "lex-stack",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lex Stack Android kabuğu (Capacitor). Web dosyaları depo kökünde; derleme GitHub Actions'ta.",
+  "dependencies": {
+    "@capacitor/android": "latest",
+    "@capacitor/cli": "latest",
+    "@capacitor/core": "latest",
+    "@capacitor/app": "latest",
+    "@capacitor/splash-screen": "latest"
+  }
+}

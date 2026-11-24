@@ -1,0 +1,179 @@
+# Lex Stack – Android test APK'sı ve Play paketi (AAB)
+# Commit mesajında [apk] varsa, elle başlatılınca ya da her gece derlenir;
+# APK "android-test" sürümüne lex-stack-test.apk olarak konur, AAB derleme çıktısı (artifact) olarak saklanır.
+name: Android APK
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '23 1 * * *'   # her gece 04:23 (Türkiye)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    if: github.event_name != 'push' || contains(github.event.head_commit.message, '[apk]')
+    runs-on: ubuntu-latest
+    env:
+      # Play yükleme anahtarı (GitHub > Settings > Secrets and variables > Actions). Yoksa AAB geçici deneme anahtarıyla imzalanır.
+      LS_JKS_B64: ${{ secrets.LS_UPLOAD_KEYSTORE_B64 }}
+      LS_KS_SIFRE: ${{ secrets.LS_UPLOAD_STORE_PASSWORD }}
+      LS_KEY_ALIAS: ${{ secrets.LS_UPLOAD_KEY_ALIAS }}
+      LS_KEY_SIFRE: ${{ secrets.LS_UPLOAD_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      # Gradle bağımlılıkları önbellekte: her derlemede Maven'dan yeniden indirilmez
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+
+      - name: Web dosyalarını www/ klasörüne topla
+        run: |
+          mkdir www
+          rsync -a ./ www/ \
+            --exclude .git --exclude .github --exclude .gitignore --exclude .nojekyll --exclude www --exclude node_modules --exclude android \
+            --exclude package.json --exclude package-lock.json --exclude capacitor.config.json \
+            --exclude android-ayar --exclude assets --exclude README.md --exclude VERSION --exclude '*.py' --exclude magaza
+          ls -la www | head -50
+
+      - name: Capacitor kur
+        run: |
+          npm install --no-audit --no-fund
+          npx cap --version
+          npx cap add android
+          npx cap sync android
+
+      - name: Uygulama ikonu ve açılış ekranı
+        run: |
+          pip install --quiet pillow
+          mkdir -p assets
+          cp android-ayar/icon-1024.png assets/icon-only.png
+          python3 - <<'PY'
+          from PIL import Image
+          for ad in ('splash.png', 'splash-dark.png'):
+              # ikon yok: düz bordo zemin, ardından web'deki açılış gelir
+              Image.new('RGB', (2732, 2732), (0x5E, 0x1A, 0x1F)).save('assets/' + ad)
+          PY
+          npx --yes @capacitor/assets generate --android \
+            --iconBackgroundColor '#5E1A1F' --iconBackgroundColorDark '#5E1A1F' \
+            --splashBackgroundColor '#5E1A1F' --splashBackgroundColorDark '#5E1A1F'
+          # Android 8+ uyarlanabilir ikon: zemin + ön katman (432 px, 108 dp).
+          # PNG'ler android-ayar/res/drawable-nodpi/ içinde; aşağıdaki adımda res'e kopyalanır.
+          R=android/app/src/main/res
+          mkdir -p $R/mipmap-anydpi-v26
+          for f in ic_launcher ic_launcher_round; do
+            printf '%s\n' '<?xml version="1.0" encoding="utf-8"?>' \
+              '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">' \
+              '  <background android:drawable="@drawable/ls_ikon_zemin"/>' \
+              '  <foreground android:drawable="@drawable/ls_ikon_on"/>' \
+              '</adaptive-icon>' > $R/mipmap-anydpi-v26/$f.xml
+          done
+          cat $R/mipmap-anydpi-v26/ic_launcher.xml
+
+      - name: Açılış ekranı (ikonsuz, web açılışıyla aynı zemin)
+        run: |
+          S=android/app/src/main/res/values/styles.xml
+          grep -n "NoActionBarLaunch" -A4 $S
+          sed -i 's#\(<style name="AppTheme.NoActionBarLaunch"[^>]*>\)#\1\n        <item name="windowSplashScreenBackground">\#5E1A1F</item>\n        <item name="windowSplashScreenAnimatedIcon">@drawable/ls_bos</item>#' $S
+          grep -n "NoActionBarLaunch" -A6 $S
+
+      - name: Manifest ayarları (dikey ekran, açılış davranışı)
+        run: |
+          M=android/app/src/main/AndroidManifest.xml
+          # telefonda dikey oyun daha rahat: ekran yönü dikeye kilitli; her açılışta oyun kendi ana ekranından başlasın
+          sed -i 's#android:name=".MainActivity"#android:name=".MainActivity" android:screenOrientation="portrait" android:clearTaskOnLaunch="true"#' $M
+          grep -n "screenOrientation" $M
+          tail -4 $M
+
+      - name: Yerel Java kodu (MainActivity) ve kaynaklar
+        run: |
+          D=$(dirname "$(find android/app/src/main/java -name MainActivity.java)")
+          cp android-ayar/java/*.java "$D"/
+          cp -r android-ayar/res/. android/app/src/main/res/
+          ls "$D" android/app/src/main/res/drawable
+
+      - name: Sürüm numarası ve imza ayarı (build.gradle)
+        run: |
+          SURUM=$(tr -d '[:space:]' < VERSION)
+          [ -n "$SURUM" ] || SURUM=$(node -p "require('./package.json').version")
+          echo "LS_SURUM_KODU=$GITHUB_RUN_NUMBER" >> $GITHUB_ENV
+          echo "LS_SURUM_ADI=$SURUM" >> $GITHUB_ENV
+          cat >> android/app/build.gradle <<'GRADLE'
+
+          // ---- Lex Stack: sürüm numarası ve Play yükleme imzası (CI ortam değişkenlerinden) ----
+          android {
+              defaultConfig {
+                  versionCode Integer.parseInt(System.getenv('LS_SURUM_KODU') ?: '1')
+                  versionName System.getenv('LS_SURUM_ADI') ?: '1.0'
+              }
+              signingConfigs {
+                  lsYukleme {
+                      storeFile file('yukleme.jks')
+                      storePassword System.getenv('LS_KS_SIFRE')
+                      keyAlias System.getenv('LS_KEY_ALIAS')
+                      keyPassword System.getenv('LS_KEY_SIFRE')
+                  }
+              }
+              buildTypes { release { signingConfig signingConfigs.lsYukleme } }
+          }
+          GRADLE
+          tail -20 android/app/build.gradle
+
+      - name: APK derle
+        working-directory: android
+        run: |
+          # sabit test imzası: yeni sürüm eskisinin üzerine kurulabilsin (yalnız test içindir, Play imzası değildir)
+          mkdir -p ~/.android && cp ../android-ayar/test-imza.keystore ~/.android/debug.keystore
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon || { echo 'Bağımlılık indirme hatası, 60 sn sonra yeniden deneniyor'; sleep 60; ./gradlew assembleDebug --no-daemon; }
+          cp app/build/outputs/apk/debug/app-debug.apk ../lex-stack-test.apk
+
+      - name: Yayın paketi (AAB, Play için)
+        working-directory: android
+        run: |
+          if [ -n "$LS_JKS_B64" ]; then
+            echo "$LS_JKS_B64" | base64 -d > app/yukleme.jks; echo "IMZA=play" >> $GITHUB_ENV
+          else
+            # deneme: gizli anahtar yok -> geçici anahtar (Play'e YÜKLENEMEZ, yalnız düzenek testi)
+            export LS_KS_SIFRE=deneme123 LS_KEY_ALIAS=deneme LS_KEY_SIFRE=deneme123
+            echo "LS_KS_SIFRE=deneme123" >> $GITHUB_ENV; echo "LS_KEY_ALIAS=deneme" >> $GITHUB_ENV; echo "LS_KEY_SIFRE=deneme123" >> $GITHUB_ENV
+            keytool -genkeypair -keystore app/yukleme.jks -storepass deneme123 -keypass deneme123 -alias deneme -keyalg RSA -keysize 2048 -validity 30 -dname "CN=Deneme" >/dev/null
+            echo "IMZA=deneme" >> $GITHUB_ENV
+          fi
+          ./gradlew bundleRelease --no-daemon
+          cp app/build/outputs/bundle/release/app-release.aab ../lex-stack.aab
+          ls -la ../lex-stack.aab
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lex-stack-aab-${{ env.IMZA }}
+          path: lex-stack.aab
+          retention-days: 30
+
+      - name: Sürüme koy (android-test)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-test
+          name: Android test sürümü
+          prerelease: true
+          body: |
+            Telefona kurmak için lex-stack-test.apk dosyasını indir.
+            Derleme: ${{ github.sha }}
+          files: lex-stack-test.apk

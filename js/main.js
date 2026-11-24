@@ -557,6 +557,7 @@ requestAnimationFrame((t) => { last = t; frame(t); });
 window.__lawris = { board, act, applyGolden, lockPiece, get state() { return state; }, get piece() { return piece; }, get held() { return held; }, get queue() { return queue; }, get holdUsed() { return holdUsed; }, get score() { return score; }, setLevel(n) { level = n; rows = n * PLACE_ROWS; prevStage = stageIdx(rows); setLevelColors(n); resetReveal(); music.setLevel(n); hud(); }, setRows(r) { rows = r; level = levelOf(r); prevStage = stageIdx(r); setLevelColors(level); resetReveal(); hud(); }, setProgress(n) { rows = level * PLACE_ROWS + n; renderer.setProgress(visLevel % PLACES, n, true); }, gravityMs, baseMs, stageOf, renderer, burst };
 
 // Çevrimdışı çalışma ve her açılışta güncel sürüm
-if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+// Android uygulamasında (Capacitor) dosyalar zaten telefonda: service worker gerekmez
+if ('serviceWorker' in navigator && !window.Capacitor && (location.protocol === 'https:' || location.hostname === 'localhost')) {
   window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
 }
