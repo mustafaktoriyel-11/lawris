@@ -321,14 +321,7 @@ function toMenu() {
   $('menu').hidden = false;
 }
 $('overMenu').addEventListener('click', toMenu);
-// Duraklatmadan çıkarken oyun kaybolacağı için ikinci dokunuşla onay
-let menuOnayT = 0;
-$('pauseMenu').addEventListener('click', () => {
-  const b = $('pauseMenu');
-  if (b.dataset.onay === '1') { clearTimeout(menuOnayT); b.dataset.onay = ''; b.textContent = 'Ana menü'; toMenu(); return; }
-  b.dataset.onay = '1'; b.textContent = 'Dava kapanacak, emin misin? Tekrar dokun';
-  menuOnayT = setTimeout(() => { b.dataset.onay = ''; b.textContent = 'Ana menü'; }, 3500);
-});
+$('pauseMenu').addEventListener('click', toMenu);
 $('resume').addEventListener('click', () => act.pause());
 $('pauseBtn').addEventListener('click', () => act.pause());
 function showMute() {
