@@ -66,7 +66,7 @@ export function kediSoyle(text, ms = 2200) {
 }
 export function kediMenu() {
   const b = $('menuBubble');
-  if (b) b.textContent = 'Hoş geldin! Davaları istifle, satırları hükme bağla.';
+  if (b) b.textContent = 'Duruşma açılıyor! Kürsü seni bekliyor.';
 }
 export function kediOver() {
   const b = $('overBubble');
