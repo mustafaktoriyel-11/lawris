@@ -17,8 +17,9 @@ const LEVEL_COUNT = 4;   // mahkeme adları i18n'de: court.N.short / court.N.ful
 const REDUCED_MOTION = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const levelName = (i) => t('court.' + i + '.short');
 const LINE_SCORE = [0, 100, 300, 500, 800, 1200, 1800];
-const GOLD_CHANCE = 0.10;
-const GOLD_GUARANTEE = 12;   // en çok 12 parçada bir altın parça garanti
+const GOLD_CHANCE = 0.18;
+const GOLD_BIAS = 2;         // Kalem/Tokmak (satır silen etkiler) altın olmaya 2 kat meyilli
+const GOLD_GUARANTEE = 6;    // en çok 6 parçada bir altın parça garanti
 const LOCK_DELAY = 700;   // yere değdikten sonra kayma/döndürme süresi (ms)
 const MAX_RESETS = 15;    // aynı yükseklikte süreyi en fazla kaç kez yenileyebilir
 const $ = (id) => document.getElementById(id);
@@ -54,19 +55,21 @@ let doubleLeft = 0, slowMs = 0, acc = 0, last = 0;
 
 best = skor.enIyi();
 
-// 7'li torba: her torbada her parça türü bir kez (Kılıç her ikinci torbada); kıtlık/taşkın olmaz
+// Torba: her torbada her tür bir kez, Kalem (3'lü) iki kez, Kılıç her üçüncü torbada; kıtlık/taşkın olmaz
 let bag = [], bagN = 0, sinceGold = 0;
 function nextType() {
   if (!bag.length) {
     bag = TYPES.filter((t) => t !== 'kilic');
-    if (bagN++ % 2 === 0) bag.push('kilic');
+    bag.push('kalem');
+    if (bagN++ % 3 === 0) bag.push('kilic');
     for (let i = bag.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [bag[i], bag[j]] = [bag[j], bag[i]]; }
   }
   return bag.pop();
 }
 function newPiece() {
   const type = nextType();
-  const golden = ++sinceGold >= GOLD_GUARANTEE || Math.random() < GOLD_CHANCE;
+  const bias = type === 'kalem' || type === 'tokmak' ? GOLD_BIAS : 1;
+  const golden = ++sinceGold >= GOLD_GUARANTEE || Math.random() < GOLD_CHANCE * bias;
   if (golden) sinceGold = 0;
   return { type, rot: 0, x: 0, y: 0, golden, id: 0 };
 }

@@ -1,7 +1,7 @@
 // Lex Stack - tahta modeli
 import { cellsOf } from './pieces.js';
 
-export const COLS = 11;
+export const COLS = 9;
 export const ROWS = 18;
 let uid = 1;
 export const nextId = () => uid++;

@@ -531,7 +531,7 @@ const DRAWC = [forumC, basilikaC, curiaC, pantheonC];
 const STRENGTH = [1, 0.8, 0.9, 0.8];   // sönük sürümde seviye başına genel şiddet
 export function makeBackdrop(level, w, h, col) {
   const lv = Math.max(0, Math.min(3, level));
-  const cv = mk(w, h), out = cv.getContext('2d'), u = cv.width / 11;
+  const cv = mk(w, h), out = cv.getContext('2d'), u = cv.height / 18;   // dikey düzen 18 satıra göre; yatay yerleşim w oranlarıyla
   const tmp = mk(w, h), tc = tmp.getContext('2d');
   if (col) DRAWC[lv](tc, tmp.width, tmp.height, u); else DRAW[lv](tc, tmp.width, tmp.height, u, false);
   // üst kısmı sönükleştir: parçalar yukarıdan inerken zemine temiz okunur

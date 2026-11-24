@@ -4,7 +4,7 @@
 
 **▶ Oyna: https://mustafaktoriyel-11.github.io/lawris/**
 
-Lex Stack, hukuk temalı, düşen bloklu bir bulmaca oyunudur. Tahta 11 sütun x 18 satırdır ve parçalar 3-6 hücreli evrensel hukuk sembolleridir: Sütun, Tokmak, Kanun, Terazi, Paragraf, Kılıç ve Kalem (Kılıç diğerlerinin yarı olasılığıyla gelir). Düz HTML, CSS ve JavaScript (Canvas 2D) ile yazılmıştır; paket veya ağ bağımlılığı yoktur.
+Lex Stack, hukuk temalı, düşen bloklu bir bulmaca oyunudur. Tahta 9 sütun x 18 satırdır ve parçalar 3-6 hücreli evrensel hukuk sembolleridir: Sütun, Tokmak, Kanun, Terazi, Paragraf, Kılıç ve Kalem (Kalem iki kat, Kılıç üç torbada bir gelir). Düz HTML, CSS ve JavaScript (Canvas 2D) ile yazılmıştır; paket veya ağ bağımlılığı yoktur.
 
 ## Nasıl oynanır
 
@@ -48,7 +48,7 @@ Oyun tarayıcı diline göre Türkçe ya da İngilizce açılır (`tr` ile başl
 
 **Play: https://mustafaktoriyel-11.github.io/lawris/**
 
-Lex Stack is a legal-themed falling-block puzzle. The board is 11 columns x 18 rows and the pieces are 3-6 cell legal symbols: Column, Gavel, Law book, Scales, Section (§), Sword and Pen (the Sword appears at half the odds of the others). It is plain HTML, CSS and JavaScript (Canvas 2D) with no packages or network dependencies.
+Lex Stack is a legal-themed falling-block puzzle. The board is 9 columns x 18 rows and the pieces are 3-6 cell legal symbols: Column, Gavel, Law book, Scales, Section (§), Sword and Pen (the Pen appears twice per bag, the Sword every third bag). It is plain HTML, CSS and JavaScript (Canvas 2D) with no packages or network dependencies.
 
 ### How to play
 
