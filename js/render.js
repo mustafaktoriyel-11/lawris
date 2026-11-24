@@ -118,8 +118,9 @@ export class Renderer {
     const c = cv.getContext('2d');
     c.clearRect(0, 0, cv.width, cv.height);
     if (!piece) return;
-    const s = Math.floor(Math.min(cv.width, cv.height) / 5.4);
-    const sz = sizeOf(piece.type, 0), img = getSprite(piece.type, 0, piece.golden, s);
+    const sz = sizeOf(piece.type, 0);
+    const s = Math.max(2, Math.floor(Math.min(cv.width / sz.w, cv.height / sz.h, cv.width / 3.4) * 0.94));
+    const img = getSprite(piece.type, 0, piece.golden, s);
     c.drawImage(img, Math.round((cv.width - sz.w * s) / 2), Math.round((cv.height - sz.h * s) / 2));
   }
 }

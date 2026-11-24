@@ -363,8 +363,8 @@ html[class*="ui-"] #rehber h2 { font-weight: 400; font-size: 1.35rem; margin: 0;
 .rh-keys { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .rh-keys li { display: flex; align-items: center; justify-content: center; gap: 5px; padding: 8px 6px; background: rgba(8,2,3,.35); border: 1px solid rgba(240,217,138,.28); border-radius: 8px; font-size: .85rem; }
 .rh-keys i { font-style: normal; font-size: 1.15rem; color: var(--g1, #f0d98a); min-width: 1.3em; }
-.rh-pieces { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 8px; }
-.rh-pieces figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 5px 2px 4px; background: rgba(8,2,3,.3); border: 1px solid rgba(240,217,138,.2); border-radius: 8px; }
+.rh-pieces { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 8px; }
+.rh-pieces figure { flex: 0 0 calc(25% - 6px); margin: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 5px 2px 4px; background: rgba(8,2,3,.3); border: 1px solid rgba(240,217,138,.2); border-radius: 8px; }
 .rh-pieces canvas { width: 60px; height: 58px; display: block; }
 .rh-pieces figcaption { font-size: .85rem; color: var(--g1, #f0d98a); }
 .rh-gold { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
@@ -383,3 +383,39 @@ html[class*="ui-"] #rehber h2 { font-weight: 400; font-size: 1.35rem; margin: 0;
 .rh-nav .alt { min-width: 70px; }
 .rh-nav .mini { min-width: 96px; }
 @media (prefers-reduced-motion: reduce) { .rh-track { scroll-behavior: auto; } }
+
+/* ---- Talik, 3'lü önizleme, 6 düğmeli pad ---- */
+#holdBox, #nextBox { flex: 0 0 auto; flex-direction: column; align-items: flex-start; justify-content: center; gap: 1px; }
+#holdBox { cursor: pointer; touch-action: manipulation; }
+.pv { display: flex; align-items: center; gap: 3px; }
+#hold, #next { width: 34px; height: 34px; display: block; }
+#holdBox canvas { transition: opacity .2s; }
+#holdBox.used canvas, #holdBox.used .lbl { opacity: .4; }
+.nx { display: flex; flex-direction: column; }
+#next2, #next3 { width: 17px; height: 17px; opacity: .85; display: block; }
+html[class*="ui-"] #hud .box:is(#holdBox, #nextBox) { height: 48px; padding-top: 1px; padding-bottom: 1px; }
+html[class*="ui-"] #holdBox .lbl, html[class*="ui-"] #nextBox .lbl { width: auto; max-width: none; line-height: 1; letter-spacing: .08em; font-size: .56rem; }
+html[class*="ui-"] #pad .grp { gap: 7px; }
+html[class*="ui-"] #pad button.hld { width: 48px; height: 48px; align-self: center; }
+html[class*="ui-"] #pad button.hld i { font-size: 1.3rem; }
+.rh-keys li.wide { grid-column: 1 / -1; }
+@media (max-width: 420px) {
+  html[class*="ui-"] #hud { padding: 0 5px 0 9px; }
+  html[class*="ui-"] .box { padding: 0 7px; }
+  html[class*="ui-"] .lbl { letter-spacing: .06em; }
+  html[class*="ui-"] #hud button { flex: 0 0 32px; height: 32px; margin-left: 3px; }
+  html[class*="ui-"] #pad { gap: 6px; padding-left: 0; padding-right: 0; }
+  html[class*="ui-"] #pad .grp { gap: 5px; }
+  html[class*="ui-"] #pad button { width: 50px; height: 50px; }
+  html[class*="ui-"] #pad button.rot { width: 66px; height: 66px; }
+  html[class*="ui-"] #pad button.hld { width: 42px; height: 42px; }
+  html[class*="ui-"] #pad button.hld i { font-size: 1.15rem; }
+  .rh-card { padding-left: 14px; padding-right: 14px; gap: 6px; }
+  .rh-pieces { gap: 5px; }
+  .rh-pieces figure { padding: 3px 2px 2px; }
+  .rh-pieces canvas { height: 50px; }
+  .rh-gold li { padding: 2px 6px; gap: 8px; font-size: .78rem; line-height: 1.2; }
+  .rh-gold canvas { width: 34px; height: 30px; flex-basis: 34px; }
+  .rh-keys li { padding: 6px; }
+}
+@media (max-height: 760px) { .rh-card p { font-size: .8rem; line-height: 1.3; } }

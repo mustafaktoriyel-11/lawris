@@ -19,12 +19,14 @@ const $ = (id) => document.getElementById(id);
 const board = new Board();
 const canvas = $('board');
 const renderer = new Renderer(canvas);
-const prevCv = $('next');
+const prevCvs = [$('next'), $('next2'), $('next3')];
+const holdCv = $('hold');
+const QUEUE_LEN = 3;
 
 let playMs = 0, sureSn = -1;
 const fmtSure = (ms) => { const s = Math.floor(ms / 1000), m = Math.floor(s / 60); return (m < 10 ? '0' : '') + m + ':' + String(s % 60).padStart(2, '0'); };
 let state = 'menu'; // menu | play | pause | over
-let piece = null, next = null;
+let piece = null, queue = [], held = null, holdUsed = false;
 let score = 0, rows = 0, level = 0, best = 0;
 let lockMs = 0, resets = 0, lowestY = 0;
 let doubleLeft = 0, slowMs = 0, acc = 0, last = 0;
@@ -36,20 +38,33 @@ function newPiece() {
   for (const t of TYPES) { r -= WEIGHTS[t]; if (r < 0) { type = t; break; } }
   return { type, rot: 0, x: 0, y: 0, golden: Math.random() < GOLD_CHANCE, id: 0 };
 }
-function spawn() {
-  piece = next || newPiece();
-  next = newPiece();
+function refill() { while (queue.length < QUEUE_LEN) queue.push(newPiece()); }
+function drawQueue() {
+  prevCvs.forEach((cv, i) => renderer.drawPreview(cv, queue[i]));
+  renderer.drawPreview(holdCv, held);
+  $('holdBox').classList.toggle('used', holdUsed);
+}
+// parçayı tepeye yerleştirir; sığmazsa oyun biter
+function place(p) {
+  piece = p;
   piece.id = nextId();
   piece.rot = 0;
   piece.x = Math.floor((COLS - sizeOf(piece.type, 0).w) / 2);
   piece.y = 0;
   acc = 0; lockMs = 0; resets = 0; lowestY = 0;
-  renderer.drawPreview(prevCv, next);
+  drawQueue();
   if (board.collides(piece)) gameOver();
+}
+function spawn() {
+  refill();
+  holdUsed = false;
+  const p = queue.shift();
+  refill();
+  place(p);
 }
 
 const gravityMs = () => {
-  let ms = Math.max(90, 800 * Math.pow(0.86, Math.floor(rows / 3)));
+  let ms = Math.max(110, 800 * Math.pow(0.95, Math.floor(rows / 3)));
   if (slowMs > 0) ms *= 1.8;
   return ms;
 };
@@ -108,6 +123,13 @@ function applyGolden(p) {
       const t = board.topRow();
       if (t >= 0) board.removeRows([t]);
       toast('Altın Paragraf: itiraz! En üst satır kaldırıldı.');
+      break;
+    }
+    case 'kalem': {
+      const y = board.fullestRow();
+      if (y >= 0) board.fillRowPlain(y);
+      score += 100;
+      toast('Altın Kalem: karar imzalandı, en dolu satır tamamlandı.');
       break;
     }
     case 'kilic': {
@@ -178,6 +200,15 @@ const act = {
     score += n * 2;
     lockPiece();
   },
+  hold() {
+    if (state !== 'play' || !piece || holdUsed) return;
+    const cur = { type: piece.type, golden: piece.golden };
+    let nx;
+    if (held) nx = held;
+    else { refill(); nx = queue.shift(); refill(); }
+    held = cur; holdUsed = true;
+    place({ type: nx.type, golden: nx.golden, rot: 0, x: 0, y: 0, id: 0 });
+  },
   pause() {
     if (state === 'play') { state = 'pause'; $('pause').hidden = false; music.pause(); }
     else if (state === 'pause') { state = 'play'; $('pause').hidden = true; last = performance.now(); music.resume(); }
@@ -193,7 +224,7 @@ function start() {
   board.reset();
   score = 0; rows = 0; level = 0; doubleLeft = 0; slowMs = 0;
   setLevelColors(0, true);
-  next = null; piece = null;
+  queue = []; held = null; holdUsed = false; piece = null;
   for (const id of ['menu', 'over', 'pause', 'rehber']) $(id).hidden = true;
   state = 'play';
   spawn();
@@ -315,8 +346,8 @@ function layout() {
   renderer.resize(w.clientWidth, w.clientHeight);
   clearSpriteCache();
   const d = window.devicePixelRatio || 1;
-  prevCv.width = Math.round(64 * d); prevCv.height = Math.round(64 * d);
-  renderer.drawPreview(prevCv, next);
+  for (const cv of [...prevCvs, holdCv]) { const px = Number(cv.dataset.px); cv.width = cv.height = Math.round(px * d); }
+  drawQueue();
 }
 
 $('play').addEventListener('click', start);
@@ -354,7 +385,7 @@ $('menuBest').textContent = best;
 kediMenu();
 layout();
 requestAnimationFrame((t) => { last = t; frame(t); });
-window.__lawris = { board, act, get state() { return state; }, get piece() { return piece; } };
+window.__lawris = { board, act, applyGolden, lockPiece, get state() { return state; }, get piece() { return piece; }, get held() { return held; }, get queue() { return queue; }, get holdUsed() { return holdUsed; }, get score() { return score; } };
 
 // Çevrimdışı çalışma ve her açılışta güncel sürüm
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

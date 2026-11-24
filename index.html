@@ -100,7 +100,8 @@
   <header id="hud">
     <div class="box"><span class="lbl">İçtihat puanı</span><b id="score">0</b><span class="sub">En iyi: <span id="best">0</span></span></div>
     <div class="box"><span class="lbl">Mahkeme</span><b id="level">Sulh</b><span class="sub"><span id="sure">00:00</span> <span id="status"></span></span></div>
-    <div class="box" id="nextBox"><span class="lbl">Sıradaki dava</span><canvas id="next" width="64" height="64"></canvas></div>
+    <div class="box" id="holdBox" data-act="hold" aria-label="Talik: parçayı beklet"><span class="lbl">Talik</span><span class="pv"><canvas id="hold" data-px="34" width="68" height="68"></canvas></span></div>
+    <div class="box" id="nextBox"><span class="lbl">Sıradaki</span><span class="pv"><canvas id="next" data-px="34" width="68" height="68"></canvas><span class="nx"><canvas id="next2" data-px="17" width="34" height="34"></canvas><canvas id="next3" data-px="17" width="34" height="34"></canvas></span></span></div>
     <button id="pauseBtn" aria-label="Duraklat">II</button>
     <button id="muteBtn" aria-label="Müziği kapat" aria-pressed="true">♪</button>
   </header>
@@ -129,7 +130,7 @@
       <p class="menu-best">En iyi <b id="menuBest">0</b></p>
       <button id="play" class="big">Oyna</button>
       <div class="menu-links"><button id="kursuBtn" class="alt" type="button">Şeref kürsüsü</button><i class="dot" aria-hidden="true"></i><button id="rehberBtn" class="alt" type="button">Nasıl oynanır</button></div>
-      <p class="small">Klavye: ← → hareket, ↑/X döndür, ↓ yavaş in, Boşluk düşür, P duraklat</p>
+      <p class="small">Klavye: ← → hareket, ↑/X döndür, ↓ yavaş in, Boşluk düşür, C talik, P duraklat</p>
       <a href="privacy.html">Gizlilik</a>
     </section>
     <section id="pause" class="overlay" hidden>
@@ -170,14 +171,15 @@
             <li><i>⟳</i><span>Döndür</span></li>
             <li><i>▼</i><span>Yavaş in</span></li>
             <li><i>⤓</i><span>Düşür</span></li>
+            <li class="wide"><i>⇄</i><span>Talik: parçayı beklet</span></li>
           </ul>
           <p>Tahtada parmağını kaydır: sağa/sola sürükle taşır, aşağı sürükle yavaş indirir, dokun döndürür, hızlıca aşağı çek düşürür.</p>
-          <p class="rh-kbd">Klavye: ← → hareket, ↑/X döndür, ↓ yavaş in, Boşluk düşür, P duraklat.</p>
-          <p class="rh-note">Parça yere değince yarım saniye daha kaydırabilirsin.</p></article>
-        <article class="rh-card" data-i="1"><h3>Parçalar</h3><div class="rh-pieces"><figure><canvas data-t="sutun" aria-hidden="true"></canvas><figcaption>Sütun</figcaption></figure><figure><canvas data-t="tokmak" aria-hidden="true"></canvas><figcaption>Tokmak</figcaption></figure><figure><canvas data-t="kanun" aria-hidden="true"></canvas><figcaption>Kanun</figcaption></figure><figure><canvas data-t="terazi" aria-hidden="true"></canvas><figcaption>Terazi</figcaption></figure><figure><canvas data-t="paragraf" aria-hidden="true"></canvas><figcaption>Paragraf</figcaption></figure><figure><canvas data-t="kilic" aria-hidden="true"></canvas><figcaption>Kılıç</figcaption></figure></div>
-          <p>Her parça bir hukuk sembolü; dolu satırlar silinir, buna hüküm denir.</p></article>
+          <p class="rh-kbd">Klavye: ← → hareket, ↑/X döndür, ↓ yavaş in, Boşluk düşür, C/Shift talik, P duraklat.</p>
+          <p class="rh-note">Talik: her parçada bir kez, Talik kutusuna dokun. Yere değince yarım saniye daha kaydırabilirsin.</p></article>
+        <article class="rh-card" data-i="1"><h3>Parçalar</h3><div class="rh-pieces"><figure><canvas data-t="sutun" aria-hidden="true"></canvas><figcaption>Sütun</figcaption></figure><figure><canvas data-t="tokmak" aria-hidden="true"></canvas><figcaption>Tokmak</figcaption></figure><figure><canvas data-t="kanun" aria-hidden="true"></canvas><figcaption>Kanun</figcaption></figure><figure><canvas data-t="terazi" aria-hidden="true"></canvas><figcaption>Terazi</figcaption></figure><figure><canvas data-t="paragraf" aria-hidden="true"></canvas><figcaption>Paragraf</figcaption></figure><figure><canvas data-t="kilic" aria-hidden="true"></canvas><figcaption>Kılıç</figcaption></figure><figure><canvas data-t="kalem" aria-hidden="true"></canvas><figcaption>Kalem</figcaption></figure></div>
+          <p>Her parça bir hukuk sembolü; dolu satırlar silinir, buna hüküm denir. Sıradaki 3 dava hep görünür.</p></article>
         <article class="rh-card" data-i="2"><h3>Altın parçalar</h3><p>Yaklaşık her 12 parçadan biri altın çıkar.</p>
-          <ul class="rh-gold"><li><canvas data-t="sutun" data-g="1" aria-hidden="true"></canvas><span><b>Sütun</b> Altındaki boşlukları mermerle doldurur.</span></li><li><canvas data-t="tokmak" data-g="1" aria-hidden="true"></canvas><span><b>Tokmak</b> Değdiği 3 satırı siler, +150 puan.</span></li><li><canvas data-t="kanun" data-g="1" aria-hidden="true"></canvas><span><b>Kanun</b> Sonraki 3 satır silmede puan x2.</span></li><li><canvas data-t="terazi" data-g="1" aria-hidden="true"></canvas><span><b>Terazi</b> +250 puan, 10 sn yavaş düşüş.</span></li><li><canvas data-t="paragraf" data-g="1" aria-hidden="true"></canvas><span><b>Paragraf</b> İtiraz! En üst satırı kaldırır.</span></li><li><canvas data-t="kilic" data-g="1" aria-hidden="true"></canvas><span><b>Kılıç</b> Kestiği satırları ve altındakini siler, +150.</span></li></ul></article>
+          <ul class="rh-gold"><li><canvas data-t="sutun" data-g="1" aria-hidden="true"></canvas><span><b>Sütun</b> Altındaki boşlukları mermerle doldurur.</span></li><li><canvas data-t="tokmak" data-g="1" aria-hidden="true"></canvas><span><b>Tokmak</b> Değdiği 3 satırı siler, +150 puan.</span></li><li><canvas data-t="kanun" data-g="1" aria-hidden="true"></canvas><span><b>Kanun</b> Sonraki 3 satır silmede puan x2.</span></li><li><canvas data-t="terazi" data-g="1" aria-hidden="true"></canvas><span><b>Terazi</b> +250 puan, 10 sn yavaş düşüş.</span></li><li><canvas data-t="paragraf" data-g="1" aria-hidden="true"></canvas><span><b>Paragraf</b> İtiraz! En üst satırı kaldırır.</span></li><li><canvas data-t="kilic" data-g="1" aria-hidden="true"></canvas><span><b>Kılıç</b> Kestiği satırları ve altındakini siler, +150.</span></li><li><canvas data-t="kalem" data-g="1" aria-hidden="true"></canvas><span><b>Kalem</b> İmzalar: en dolu satırı tamamlar, +100.</span></li></ul></article>
         <article class="rh-card" data-i="3"><h3>Mahkemeler</h3><ol class="rh-courts"><li>Sulh</li><li>Asliye</li><li>İstinaf</li><li>Yargıtay</li></ol>
           <p>Her 8 satırda bir üst mahkemeye çıkarsın.</p>
           <p>Üst mahkemede her satır daha çok puan: Yargıtay'da 4 katı.</p>
@@ -195,6 +197,7 @@
       <button data-act="right" aria-label="Sağ"><i>▶</i></button>
     </div>
     <div class="grp">
+      <button data-act="hold" class="hld" aria-label="Talik"><i>⇄</i></button>
       <button data-act="drop" aria-label="Düşür"><i>⤓</i></button>
       <button data-act="rotate" class="rot" aria-label="Döndür"><i>⟳</i></button>
     </div>

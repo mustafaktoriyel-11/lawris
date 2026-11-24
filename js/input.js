@@ -7,7 +7,7 @@ export function initInput(a, canvas, getCell) {
   // Klavye
   const KEYS = {
     ArrowLeft: 'left', ArrowRight: 'right', ArrowDown: 'down', ArrowUp: 'rotate',
-    x: 'rotate', X: 'rotate', ' ': 'drop', p: 'pause', P: 'pause',
+    x: 'rotate', X: 'rotate', c: 'hold', C: 'hold', Shift: 'hold', ' ': 'drop', p: 'pause', P: 'pause',
   };
   window.addEventListener('keydown', (e) => {
     const t = e.target;

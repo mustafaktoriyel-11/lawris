@@ -62,4 +62,22 @@ export class Board {
       if (!this.grid[y][x]) this.grid[y][x] = { type: 'plain', golden: false, rot: 0, lx: 0, ly: 0, id };
     }
   }
+
+  // y satırındaki boş hücreleri düz mermerle doldurur
+  fillRowPlain(y) {
+    const id = nextId();
+    for (let x = 0; x < COLS; x++) {
+      if (!this.grid[y][x]) this.grid[y][x] = { type: 'plain', golden: false, rot: 0, lx: 0, ly: 0, id };
+    }
+  }
+
+  // en dolu satır (eşitlikte en alttaki); boş tahtada -1
+  fullestRow() {
+    let best = -1, bc = 0;
+    for (let y = 0; y < ROWS; y++) {
+      const n = this.grid[y].filter(Boolean).length;
+      if (n > 0 && n >= bc) { bc = n; best = y; }
+    }
+    return best;
+  }
 }

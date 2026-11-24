@@ -1,12 +1,12 @@
 import { THEME } from './theme.js';
 // Lawris - parça tanımları ve sprite çizimi
-export const TYPES = ['sutun', 'tokmak', 'kanun', 'terazi', 'paragraf', 'kilic'];
+export const TYPES = ['sutun', 'tokmak', 'kanun', 'terazi', 'paragraf', 'kilic', 'kalem'];
 export const NAMES = {
   sutun: 'Sütun', tokmak: 'Tokmak', kanun: 'Kanun',
-  terazi: 'Terazi', paragraf: 'Paragraf', kilic: 'Kılıç',
+  terazi: 'Terazi', paragraf: 'Paragraf', kilic: 'Kılıç', kalem: 'Kalem',
 };
 // Üretim ağırlıkları (Kılıç yarı olasılıkla gelir)
-export const WEIGHTS = { sutun: 1, tokmak: 1, kanun: 1, terazi: 1, paragraf: 1, kilic: 0.5 };
+export const WEIGHTS = { sutun: 1, tokmak: 1, kanun: 1, terazi: 1, paragraf: 1, kilic: 0.5, kalem: 1 };
 
 const BASE = {
   sutun: [[0, 0], [0, 1], [0, 2], [0, 3], [0, 4]],
@@ -16,6 +16,7 @@ const BASE = {
   paragraf: [[0, 0], [1, 0], [1, 1], [1, 2], [2, 2]],
   // son iki hücre bıçaktır (dönmede sıra korunur)
   kilic: [[1, 0], [0, 1], [1, 1], [2, 1], [1, 2], [1, 3]],
+  kalem: [[0, 0], [0, 1], [0, 2]],
 };
 
 // 90 derece saat yönü: (x,y) -> (h-1-y, x)
@@ -51,6 +52,8 @@ const PAL = {
   kanun: { main: THEME.kanun ? THEME.kanun.main : C.bordo, dark: THEME.kanun ? THEME.kanun.dark : C.bordoD, acc: C.gold, accD: C.goldD },
   paragraf: { main: '#33805F', dark: '#1A4A35', acc: C.gold },
   kilic: { main: '#6C7A94', dark: '#323A4C', acc: '#F1F3F5', hilt: C.gold },
+  // vermilyon lak: dört zemin rengine karşı kontrast >= 4.2:1
+  kalem: { main: '#D9573A', dark: '#6B2010', acc: '#F6E3A1', ring: '#F2C94C' },
 };
 const GOLDEN = { main: C.gold, dark: C.goldD, acc: C.ink, accD: '#A89C74', grip: C.goldD, gripD: '#5E4A0C', gem: C.bordo };
 
@@ -247,8 +250,43 @@ function dKilic(c, s, P) {
   c.beginPath(); c.arc(cx, 0.32 * s, 0.15 * s, 0, Math.PI * 2); c.fillStyle = G; c.fill();
   c.lineCap = 'butt'; c.lineJoin = 'miter';
 }
+function dKalem(c, s, P) {
+  // Levha: 1x3 plaka + üstüne işlenmiş dolma kalem (kapak yukarıda, ucu aşağıda)
+  const cells = BASE.kalem, E = P.acc, D = P.dark, R = P.ring || E;
+  unionPlate(c, s, cells, P);
+  const cx = 0.5 * s, lw = Math.max(1, s * 0.035);
+  c.lineJoin = 'round'; c.lineCap = 'round';
+  // iç çerçeve
+  c.save(); c.globalAlpha = 0.35; c.strokeStyle = E; c.lineWidth = Math.max(1, s * 0.03);
+  c.strokeRect(0.16 * s, 0.16 * s, 0.68 * s, 2.68 * s);
+  c.restore();
+  // kapak: sivri başlık, yanda klips
+  c.beginPath();
+  c.moveTo(cx - 0.17 * s, 0.62 * s); c.lineTo(cx - 0.17 * s, 0.34 * s);
+  c.quadraticCurveTo(cx - 0.17 * s, 0.2 * s, cx, 0.2 * s); c.quadraticCurveTo(cx + 0.17 * s, 0.2 * s, cx + 0.17 * s, 0.34 * s);
+  c.lineTo(cx + 0.17 * s, 0.62 * s); c.closePath();
+  c.fillStyle = D; c.fill(); c.strokeStyle = E; c.lineWidth = lw; c.stroke();
+  c.fillStyle = E; c.fillRect(cx + 0.09 * s, 0.3 * s, 0.05 * s, 0.5 * s);
+  c.beginPath(); c.arc(cx + 0.115 * s, 0.82 * s, 0.045 * s, 0, Math.PI * 2); c.fill();
+  c.fillRect(cx - 0.17 * s, 0.6 * s, 0.34 * s, 0.05 * s);
+  // gövde
+  rr(c, cx - 0.15 * s, 0.66 * s, 0.3 * s, 1.3 * s, 0.05 * s); c.fillStyle = D; c.fill(); c.strokeStyle = E; c.lineWidth = lw; c.stroke();
+  c.globalAlpha = 0.45; c.fillStyle = E; c.fillRect(cx - 0.08 * s, 0.76 * s, 0.03 * s, 1.1 * s); c.globalAlpha = 1;
+  // altın bilezik
+  rr(c, cx - 0.18 * s, 1.94 * s, 0.36 * s, 0.1 * s, 0.03 * s); c.fillStyle = R; c.fill();
+  // tutuş bölümü (aşağı daralır)
+  c.beginPath(); c.moveTo(cx - 0.15 * s, 2.04 * s); c.lineTo(cx + 0.15 * s, 2.04 * s); c.lineTo(cx + 0.09 * s, 2.3 * s); c.lineTo(cx - 0.09 * s, 2.3 * s); c.closePath();
+  c.fillStyle = D; c.fill(); c.strokeStyle = E; c.lineWidth = lw; c.stroke();
+  // uç: yarık ve nefes deliği
+  c.beginPath(); c.moveTo(cx - 0.11 * s, 2.3 * s); c.lineTo(cx + 0.11 * s, 2.3 * s);
+  c.quadraticCurveTo(cx + 0.13 * s, 2.55 * s, cx, 2.84 * s); c.quadraticCurveTo(cx - 0.13 * s, 2.55 * s, cx - 0.11 * s, 2.3 * s); c.closePath();
+  c.fillStyle = R; c.fill(); c.strokeStyle = D; c.lineWidth = lw; c.stroke();
+  c.beginPath(); c.moveTo(cx, 2.55 * s); c.lineTo(cx, 2.83 * s); c.stroke();
+  c.beginPath(); c.arc(cx, 2.5 * s, 0.035 * s, 0, Math.PI * 2); c.fillStyle = D; c.fill();
+  c.lineCap = 'butt'; c.lineJoin = 'miter';
+}
 const UPRIGHT = new Set(['terazi', 'paragraf', 'kanun']);
-const DRAW = { tokmak: dTokmak, terazi: dTerazi, sutun: dSutun, kanun: dKanun, paragraf: dParagraf, kilic: dKilic };
+const DRAW = { tokmak: dTokmak, terazi: dTerazi, sutun: dSutun, kanun: dKanun, paragraf: dParagraf, kilic: dKilic, kalem: dKalem };
 
 function mk(w, h) {
   const cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(w)); cv.height = Math.max(1, Math.round(h));

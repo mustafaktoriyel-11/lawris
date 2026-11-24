@@ -3,7 +3,7 @@ import { getSprite, sizeOf } from './pieces.js';
 
 const LINES = [
   'Önce kontrolleri öğren, sonra kürsü senin!',
-  'Altı parça, altı hukuk sembolü.',
+  'Yedi parça, yedi hukuk sembolü.',
   'Altın parça görürsen sevin!',
   'Yargıtay\'a kadar çıkabilir misin?',
 ];
