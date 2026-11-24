@@ -84,6 +84,29 @@ export class Renderer {
     // altın parça etkisini gösterince: kilit hücrelerinde kısa altın sönme
     this.flashAge = g.flash ? performance.now() - g.flash.t0 : Infinity;
     this.flashId = g.flash ? g.flash.id : 0;
+    if (g.bursts && g.bursts.length) this.drawBursts(c, g.bursts);
+  }
+
+  // Satır silme / altın etki ışığı: etkilenen satır ve sütunlarda kısa bir ışık şeridi
+  drawBursts(c, list) {
+    const s = this.s, now = performance.now(), D = 650;
+    for (let i = list.length - 1; i >= 0; i--) {
+      const b = list[i], a = (now - b.t0) / D;
+      if (a >= 1) { list.splice(i, 1); continue; }
+      const k = 1 - a, col = b.gold ? '255,214,110' : '255,244,214';
+      c.save();
+      if (b.rows) for (const y of b.rows) {
+        const yy = this.by + y * s, g = c.createLinearGradient(0, yy, 0, yy + s);
+        g.addColorStop(0, `rgba(${col},0)`); g.addColorStop(0.5, `rgba(${col},${0.85 * k})`); g.addColorStop(1, `rgba(${col},0)`);
+        c.fillStyle = g; c.fillRect(this.bx, yy - s * 0.3 * a, COLS * s, s * (1 + 0.6 * a));
+      }
+      if (b.cols) for (const x of b.cols) {
+        const xx = this.bx + x * s, y0 = this.by + (b.from || 0) * s, g = c.createLinearGradient(xx, 0, xx + s, 0);
+        g.addColorStop(0, `rgba(${col},0)`); g.addColorStop(0.5, `rgba(${col},${0.75 * k})`); g.addColorStop(1, `rgba(${col},0)`);
+        c.fillStyle = g; c.fillRect(xx, y0, s, this.by + ROWS * s - y0);
+      }
+      c.restore();
+    }
   }
 
   drawCell(c, board, cell, q, r) {

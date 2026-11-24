@@ -30,6 +30,8 @@ let piece = null, queue = [], held = null, holdUsed = false;
 let score = 0, rows = 0, level = 0, best = 0;
 let lockMs = 0, resets = 0, lowestY = 0;
 let flashInfo = null, pvMs = 0;
+const bursts = [];
+const burst = (o) => { bursts.push({ ...o, t0: performance.now() }); if (bursts.length > 8) bursts.shift(); };
 const announced = new WeakSet();
 let doubleLeft = 0, slowMs = 0, acc = 0, last = 0;
 
@@ -110,7 +112,7 @@ function applyGolden(p) {
   switch (p.type) {
     case 'tokmak': {
       const ys = new Set(cells.map((c) => p.y + c[1]));
-      board.removeRows([...ys].filter((y) => y >= 0 && y < ROWS)); score += 150;
+      { const rs = [...ys].filter((y) => y >= 0 && y < ROWS); burst({ rows: rs, gold: true }); board.removeRows(rs); } score += 150;
       toast('Altın Tokmak: hüküm verildi, değdiği satırlar silindi.');
       break;
     }
@@ -118,6 +120,7 @@ function applyGolden(p) {
       const cols = new Map();
       for (const [cx, cy] of cells) cols.set(p.x + cx, Math.max(cols.get(p.x + cx) ?? -1, p.y + cy));
       for (const [x, y] of cols) board.fillPlain(x, y + 1);
+      burst({ cols: [...cols.keys()], from: Math.min(...cols.values()) + 1, gold: true });
       toast('Altın Sütun: altındaki boşluklar mermerle dolduruldu.');
       break;
     }
@@ -131,13 +134,13 @@ function applyGolden(p) {
       break;
     case 'paragraf': {
       const t = board.topRow();
-      if (t >= 0) board.removeRows([t]);
+      if (t >= 0) { burst({ rows: [t], gold: true }); board.removeRows([t]); }
       toast('Altın Paragraf: itiraz! En üst satır kaldırıldı.');
       break;
     }
     case 'kalem': {
       const y = board.fullestRow();
-      if (y >= 0) board.fillRowPlain(y);
+      if (y >= 0) { burst({ rows: [y], gold: true }); board.fillRowPlain(y); }
       score += 100;
       toast('Altın Kalem: karar imzalandı, en dolu satır tamamlandı.');
       break;
@@ -148,7 +151,7 @@ function applyGolden(p) {
       const set = new Set(ys);
       const below = Math.max(...ys) + 1;
       if (below < ROWS) set.add(below);
-      board.removeRows([...set].filter((y) => y >= 0 && y < ROWS)); score += 150;
+      { const rs = [...set].filter((y) => y >= 0 && y < ROWS); burst({ rows: rs, gold: true }); board.removeRows(rs); } score += 150;
       toast('Altın Kılıç: kılıç indi, namlunun kestiği satırlar silindi.');
       break;
     }
@@ -161,6 +164,7 @@ function lockPiece() {
   if (wasGold) { flashInfo = { id: piece.id, t0: performance.now() }; applyGolden(piece); }
   const full = board.fullRows();
   if (full.length) {
+    burst({ rows: full });
     board.removeRows(full);
     const n = full.length;
     let pts = (LINE_SCORE[Math.min(n, LINE_SCORE.length - 1)]) * (level + 1);
@@ -350,7 +354,7 @@ function frame(t) {
     if ($('status').textContent !== '' || slowMs > 0) hud();
   }
   if (state !== 'menu' && hasGoldenView() && t - pvMs > 33) { pvMs = t; drawQueue(); }
-  renderer.draw({ board, piece: state === 'menu' ? null : piece, ghostY: piece ? ghostY() : 0, flash: flashInfo });
+  renderer.draw({ board, piece: state === 'menu' ? null : piece, ghostY: piece ? ghostY() : 0, flash: flashInfo, bursts });
   requestAnimationFrame(frame);
 }
 
