@@ -45,12 +45,12 @@ const C = {
   ink: '#F3EBD3', steel: '#888780', steelD: '#5F5E5A',
 };
 const PAL = {
-  tokmak: { main: '#8B5A2E', dark: '#4E2F18', acc: C.gold },
+  tokmak: { main: '#9A6433', dark: '#4E2F18', acc: C.gold },
   terazi: { main: '#A9B0BA', dark: '#5C6470', acc: '#7A5E10', pivot: C.gold },
   sutun: { main: C.marble, dark: C.marbleD, acc: C.marbleD },
   kanun: { main: THEME.kanun ? THEME.kanun.main : C.bordo, dark: THEME.kanun ? THEME.kanun.dark : C.bordoD, acc: C.gold, accD: C.goldD },
-  paragraf: { main: '#2E7558', dark: '#174332', acc: C.gold },
-  kilic: { main: '#4A5466', dark: '#232933', acc: '#E9ECEF', hilt: C.gold },
+  paragraf: { main: '#33805F', dark: '#1A4A35', acc: C.gold },
+  kilic: { main: '#6C7A94', dark: '#323A4C', acc: '#F1F3F5', hilt: C.gold },
 };
 const GOLDEN = { main: C.gold, dark: C.goldD, acc: C.ink, accD: '#A89C74', grip: C.goldD, gripD: '#5E4A0C', gem: C.bordo };
 
