@@ -53,7 +53,7 @@ export function initInput(a, canvas, getCell) {
       const lock = c * 0.55;
       if (Math.abs(dx) < lock && Math.abs(dy) < lock) return;
       st.axis = Math.abs(dy) > Math.abs(dx) ? 'y' : 'x';
-      st.ax = st.x; st.ay = st.y;
+      st.ax = st.x; st.ay = st.y; st.sx = e.clientX; st.sy = e.clientY;
     }
     if (st.axis === 'x') {
       const cell = c * 1.1;
@@ -65,6 +65,12 @@ export function initInput(a, canvas, getCell) {
       if (dy > c * 2.2 && dt < 220) { st.done = true; st.moved = true; fire('drop'); return; }
       const cell = c * 1.1;
       while (e.clientY - st.ay > cell) { st.ay += cell; st.moved = true; fire('down'); }
+      // Aşağı sürüklerken yan yönlendirme: parmak belirgin şekilde yana giderse bir hücre kayar.
+      // Düz aşağı çekerken oluşan küçük sapma birikmesin diye, dikey yol uzayınca yan çapa sıfırlanır.
+      const hx = e.clientX - st.sx, vy = Math.abs(e.clientY - st.sy), yan = c * 1.15;
+      if (Math.abs(hx) > yan && Math.abs(hx) > vy * 0.8) {
+        st.sx += Math.sign(hx) * yan; st.sy = e.clientY; st.moved = true; fire(hx > 0 ? 'right' : 'left');
+      } else if (vy > c * 1.6 && Math.abs(hx) < c * 0.6) { st.sx = e.clientX; st.sy = e.clientY; }
     }
   });
   const end = (e) => {
