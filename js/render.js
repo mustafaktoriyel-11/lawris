@@ -1,4 +1,4 @@
-// Lawris - çizim
+// Juristack - çizim
 import { COLS, ROWS } from './board.js';
 import { THEME as TH } from './theme.js';
 import { getSprite, hasCell, sizeOf, cellsOf, COLORS as C } from './pieces.js';
@@ -151,9 +151,14 @@ export class Renderer {
     c.fillStyle = TH.fD; c.fillRect(0, 1.25 * s, W, 0.45 * s);
     c.fillStyle = TH.f; c.fillRect(0, 1.25 * s, W, 0.14 * s);
     if (TH.band) { c.fillStyle = TH.band; c.fillRect(0, 1.62 * s, W, 0.06 * s); }
-    c.fillStyle = C.gold; c.font = 'bold ' + Math.round(s * 0.62) + 'px Georgia, serif';
-    c.textAlign = 'center'; c.textBaseline = 'alphabetic';
-    c.fillText('L A W R I S', W / 2, 1.08 * s);
+    c.fillStyle = C.gold; c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+    { // alınlık yazısı: üçgene sığacak şekilde boyutlanır
+      const txt = 'J U R I S T A C K'; let fs = Math.round(s * 0.56);
+      c.font = 'bold ' + fs + 'px Georgia, serif';
+      const maxW = W * 0.46; const w = c.measureText(txt).width;
+      if (w > maxW) { fs = Math.floor(fs * maxW / w); c.font = 'bold ' + fs + 'px Georgia, serif'; }
+      c.fillText(txt, W / 2, 1.08 * s);
+    }
     // sütunlar
     for (const cx of [0, W - COLW * s]) {
       c.fillStyle = TH.f; c.fillRect(cx + 0.15 * s, this.by, 0.7 * s, colH);

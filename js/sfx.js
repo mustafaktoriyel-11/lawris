@@ -1,4 +1,4 @@
-// Lawris - efekt kitaplığı (prosedürel, dosyasız). Ortak ses çekirdeği music.js'den gelir:
+// Juristack - efekt kitaplığı (prosedürel, dosyasız). Ortak ses çekirdeği music.js'den gelir:
 // hepsi tek efekt veriyolundan geçer (tanh yumuşak sınırlama + kısa oda yankısı + sınırlayıcı).
 import { music } from './music.js';
 

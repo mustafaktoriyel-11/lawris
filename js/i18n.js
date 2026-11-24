@@ -1,10 +1,10 @@
-// Lawris - çok dillilik (tr / en). Yeni dil eklemek için DICT'e bir sözlük ve LANGS'a kod eklemek yeter.
+// Juristack - çok dillilik (tr / en). Yeni dil eklemek için DICT'e bir sözlük ve LANGS'a kod eklemek yeter.
 const KEY = 'lawris.dil';
 export const LANGS = ['tr', 'en'];
 
 const tr = {
-  'doc.title': 'Lawris',
-  'meta.desc': 'Lawris: hukuk temalı düşen blok bulmaca oyunu.',
+  'doc.title': 'Juristack',
+  'meta.desc': 'Juristack: hukuk temalı düşen blok bulmaca oyunu.',
   'menu.bubble': 'Duruşma açılıyor! Kürsü seni bekliyor.',
   'menu.tag': 'Davaları istifle, satırlara hüküm ver.',
   'menu.best': 'En iyi',
@@ -103,8 +103,8 @@ const tr = {
 };
 
 const en = {
-  'doc.title': 'Lawris',
-  'meta.desc': 'Lawris: a legal-themed falling-block puzzle game.',
+  'doc.title': 'Juristack',
+  'meta.desc': 'Juristack: a legal-themed falling-block puzzle game.',
   'menu.bubble': 'Court is in session! The bench awaits.',
   'menu.tag': 'Stack the cases. Rule the rows.',
   'menu.best': 'Best',

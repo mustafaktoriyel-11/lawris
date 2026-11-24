@@ -1,4 +1,4 @@
-// Lawris - oyun mantığı
+// Juristack - oyun mantığı
 import { Board, COLS, ROWS, nextId } from './board.js';
 import { TYPES, WEIGHTS, cellsOf, sizeOf, clearSpriteCache } from './pieces.js';
 import { Renderer } from './render.js';

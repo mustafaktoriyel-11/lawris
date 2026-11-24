@@ -1,4 +1,4 @@
-// Lawris - tahta modeli
+// Juristack - tahta modeli
 import { cellsOf } from './pieces.js';
 
 export const COLS = 11;

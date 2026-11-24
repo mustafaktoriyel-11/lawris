@@ -1,4 +1,4 @@
-// Lawris - girdi (klavye, ekran düğmeleri, kaydırma)
+// Juristack - girdi (klavye, ekran düğmeleri, kaydırma)
 const REPEAT = { left: [170, 55], right: [170, 55], down: [150, 45] };
 
 export function initInput(a, canvas, getCell) {

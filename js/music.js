@@ -1,4 +1,4 @@
-// Lawris - prosedürel arka plan müziği ve "Hüküm" sesi (Web Audio, dosyasız)
+// Juristack - prosedürel arka plan müziği ve "Hüküm" sesi (Web Audio, dosyasız)
 // "Mahkeme kütüphanesi" havası: klavsen/pizzicato arpejler + yumuşak pad, Re majör / la minör renkleri.
 const LS_KEY = 'lawris.music';
 const BASE_BPM = 90;
@@ -14,7 +14,7 @@ const C = {
 // Akor kökleri (pitch class) - bas hattı için
 const ROOT = { D: 2, A: 9, Bm: 11, Fsm: 6, G: 7, Em: 4, Am: 9, Dm: 2, C: 0, A7: 9, Fs7: 6 };
 const bassMidi = (name) => 38 + ((ROOT[name] - 2) % 12 + 12) % 12;
-// ---- LAWRIS TEMASI (lider ezgi) ----
+// ---- JURISTACK TEMASI (lider ezgi) ----
 // Biçim: ölçü başına [[midi, sekizlik_süre], ...]; her ölçü 8 sekizlik. midi 0 = es.
 // Re majör: ilk 4 ölçü "soru" (yarım kapanış, Do# üzerinde), son 4 ölçü "cevap" (Re'ye çözülür).
 // Açılış motifi: La -> Re (yükselen dörtlü), noktalı vuruş, sonra basamaklı iniş.
@@ -230,7 +230,7 @@ function pad(t, midi, dur, k) {
   g.connect(fade);
 }
 
-// Lider ses (Lawris teması): yumuşak sinüs + üçgen karışımı, geç başlayan hafif vibrato
+// Lider ses (Juristack teması): yumuşak sinüs + üçgen karışımı, geç başlayan hafif vibrato
 function lead(t, midi, dur, vel) {
   if (vel < 0.02 || live > MAX_OSC - 4) return;
   const f = hz(midi), g = ctx.createGain(), end = t + dur;
