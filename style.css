@@ -736,3 +736,7 @@ html.daily-mode #sure { font-size: 1.5em; line-height: 1; opacity: 1; font-weigh
 .kursu-gun li { font-size: .72rem; padding: 2px 8px; border: 1px solid rgba(240,217,138,.28); border-radius: 999px; font-variant-numeric: tabular-nums; }
 .kursu-gun[hidden] { display: none; }
 #over.daily #again { letter-spacing: .12em; text-indent: .12em; padding: 0 20px; white-space: nowrap; }
+/* Tablet yan ray: Talik sol altta, başparmağa yakın (puan ve mekân üstte kalır) */
+html.ui-mix.rails #app #hud .box:nth-child(1) { grid-row: 1; }
+html.ui-mix.rails #app #hud .box:nth-child(2) { grid-row: 2; }
+html.ui-mix.rails #app #hud #holdBox { grid-row: 4 / 8; align-self: end; }
