@@ -119,28 +119,43 @@ function sparkle(A, o, t, dur, hf, v) { A.noiseTo(o, t, 'highpass', hf, hf * 2.4
 // Altta küçük tok vuruş (>=120 Hz, baskın değil)
 function thump(A, o, t, v) { A.tone(o, t, 'sine', 190, 135, 0.003, 0.11, v); }
 
-// Parçaya göre yerleşme (tok) ayarı: [gövde Hz üst/alt, süre, gövde seviyesi, orta band Hz, orta Q, tık Hz, tık seviyesi]
+// Parçaya göre yerleşme: [gövde Hz üst, alt, gövde türü, gövde süresi, tak bandı Hz, tak Q, tık Hz, tık seviyesi, genel seviye]
+// Telefon hoparlörü için asıl enerji 800 Hz-3 kHz tak/tık geçicisinde; gövde 200-400 Hz + 2.5x harmonik.
 const LOCK = {
-  default:  [86, 46, 0.17, 0.9, 650, 1.0, 2800, 0.5],
-  kanun:    [72, 38, 0.24, 1.0, 430, 0.9, 2200, 0.4],    // kalın cilt: derin kitap sesi
-  sutun:    [80, 44, 0.2, 0.95, 820, 2.2, 3200, 0.6],    // taş
-  kalem:    [118, 66, 0.1, 0.65, 950, 1.1, 4200, 0.5],   // hafif
-  kilic:    [92, 50, 0.15, 0.85, 700, 1.0, 3400, 0.55],  // + metalik kenar
-  tokmak:   [100, 56, 0.15, 0.9, 620, 4.5, 3000, 0.5],   // ahşap
-  terazi:   [90, 48, 0.15, 0.85, 560, 1.4, 3000, 0.5],
-  paragraf: [102, 56, 0.12, 0.75, 1000, 1.2, 3600, 0.45],
+  default:  [310, 200, 'triangle', 0.075, 1300, 1.3, 2800, 0.6, 1.0],
+  kanun:    [240, 150, 'sine',     0.11,  1000, 0.9, 2300, 0.5, 1.25],   // kalın taş tablet: ağır
+  sutun:    [380, 260, 'sine',     0.08,  1700, 2.0, 3200, 0.75, 1.05],  // mermer: sert taş tak
+  kalem:    [520, 360, 'triangle', 0.05,  2200, 1.4, 4000, 0.7, 0.85],   // hafif
+  kilic:    [330, 220, 'triangle', 0.08,  1500, 1.2, 3400, 0.7, 1.0],    // + metalik kenar
+  tokmak:   [330, 270, 'triangle', 0.09,  950,  5.0, 2600, 0.5, 1.05],   // ahşap tıkırtı
+  terazi:   [310, 230, 'triangle', 0.075, 1200, 1.6, 3000, 0.55, 1.0],
+  paragraf: [450, 300, 'triangle', 0.06,  1900, 1.3, 3600, 0.6, 0.9],
 };
 function thud(A, o, t, type, heavy) {
-  const [f0, f1, dur, bv, mf, mq, cf, cv] = LOCK[type] || LOCK.default;
-  const k = jit(0.04), hv = heavy ? 1.25 : 1;
-  A.tone(o, t, 'sine', f0 * k * (heavy ? 1.1 : 1), f1 * k, 0.003, dur * (heavy ? 1.5 : 1), bv * hv);   // alçak gümbürtü
-  A.tone(o, t, 'triangle', f0 * 2.4 * k, f1 * 1.6, 0.002, 0.06, 0.18 * hv);                          // vuruş gövdesi
-  A.noiseTo(o, t, 'bandpass', mf * 1.25, mf * 0.7, mq, 0.002, 0.09 * (heavy ? 1.3 : 1), 0.62 * hv);   // orta gövde
-  A.noiseTo(o, t, 'bandpass', cf, cf * 0.8, 0.8, 0.0008, 0.014, cv);                                 // net tık
-  if (type === 'kilic') { A.tone(o, t, 'sine', 2100, 2060, 0.002, 0.14, 0.07); A.tone(o, t, 'sine', 3140, 3100, 0.002, 0.09, 0.04); }
-  if (type === 'tokmak') A.tone(o, t, 'triangle', 330, 300, 0.003, 0.14, 0.16);
-  if (type === 'kanun') A.noiseTo(o, t, 'lowpass', 380, 160, 0.7, 0.003, 0.16, 0.45);
-  if (type === 'sutun') A.tone(o, t, 'sine', 240, 190, 0.003, 0.08, 0.14);
+  const [f0, f1, bt, dur, mf, mq, cf, cv, lv0] = LOCK[type] || LOCK.default;
+  const k = jit(0.04), lv = lv0 * (heavy ? 1.35 : 1), dm = heavy ? 1.5 : 1;
+  A.tone(o, t, bt, f0 * k, f1 * k, 0.002, dur * dm, 0.62 * lv);                         // pitchli gövde
+  A.tone(o, t, 'sine', f0 * 2.5 * k, f1 * 2.3 * k, 0.001, dur * 0.7, 0.3 * lv);        // 2.5x harmonik (küçük hoparlörde duyulur)
+  A.noiseTo(o, t, 'bandpass', mf * 1.2, mf * 0.8, mq, 0.001, 0.055 * dm, 0.95 * lv);     // tak geçicisi (800 Hz-3 kHz)
+  A.noiseTo(o, t, 'bandpass', cf, cf * 0.85, 0.9, 0.0006, 0.014, cv * (heavy ? 1.2 : 1)); // parlak tık
+  A.tone(o, t, 'sine', heavy ? 125 : 150, heavy ? 85 : 110, 0.003, heavy ? 0.16 : 0.09, heavy ? 0.45 : 0.22);   // alt ağırlık (varsa)
+  if (heavy) A.noiseTo(o, t, 'bandpass', 700, 450, 0.8, 0.002, 0.12, 0.45);
+  if (type === 'kilic') { A.tone(o, t, 'sine', 2100, 2060, 0.002, 0.16, 0.12); A.tone(o, t, 'sine', 3140, 3100, 0.002, 0.1, 0.07); }
+  if (type === 'tokmak') A.tone(o, t, 'triangle', 340, 300, 0.003, 0.14, 0.22);
+  if (type === 'kanun') A.noiseTo(o, t, 'lowpass', 500, 220, 0.7, 0.003, 0.14, 0.4);
+  if (type === 'sutun') { A.tone(o, t, 'sine', 1050 * k, 1000 * k, 0.001, 0.09, 0.14); A.tone(o, t, 'sine', 2900, 2850, 0.001, 0.05, 0.08); }
+  if (type === 'terazi') A.tone(o, t, 'sine', 1760, 1740, 0.001, 0.12, 0.07);
+}
+// Parlak "shing" geçicisi (3-6 kHz, kısa) + metalik tıngırtı
+function shing(A, o, t, v) {
+  A.noiseTo(o, t, 'bandpass', 3200, 5800, 1.3, 0.002, 0.11, v);
+  A.noiseTo(o, t, 'highpass', 3500, 5500, 0.7, 0.002, 0.07, v * 0.45);
+  A.tone(o, t, 'sine', 4300, 4300, 0.001, 0.12, v * 0.22);
+  A.tone(o, t, 'sine', 5600, 5600, 0.001, 0.07, v * 0.14);
+}
+// Kısa yankı kuyruğu: aynı notanın sönen 2 tekrarı
+function tail(A, o, t, midi, v, pan = 0) {
+  bell(A, o, t + 0.11, midi, v * 0.32, 0.5, pan * 0.6); bell(A, o, t + 0.22, midi, v * 0.16, 0.45, -pan * 0.6);
 }
 
 export const sfx = {
@@ -154,19 +169,28 @@ export const sfx = {
     }, { gap: 25 });
   },
   move() {
-    play('move', 0.06, (A, o, t) => {
-      A.noiseTo(o, t, 'bandpass', 2300, 1700, 3, 0.001, 0.022, 0.2);
-      A.tone(o, t, 'sine', 430, 300, 0.001, 0.03, 0.12);
-    }, { gap: 30 });
+    play('move', 0.05, (A, o, t) => {
+      const k = jit(0.05);
+      A.noiseTo(o, t, 'bandpass', 2000 * k, 1700, 3, 0.001, 0.016, 0.16);
+      A.tone(o, t, 'sine', 900 * k, 700, 0.001, 0.018, 0.07);
+    }, { gap: 35 });
   },
+  // Alçalma adımı: çok hafif tık (main.js bağlamak isterse)
+  softDrop() {
+    play('soft', 0.04, (A, o, t) => {
+      A.noiseTo(o, t, 'bandpass', 1500, 1200, 3, 0.001, 0.012, 0.08);
+      A.tone(o, t, 'sine', 600, 500, 0.001, 0.014, 0.04);
+    }, { gap: 45 });
+  },
+  // Dönüş: kısa hışırtı (1.2-3 kHz süpürme) + ~1.5 kHz perdeli tık
   rotate() {
-    play('rotate', 0.15, (A, o, t) => {
-      const k = jit(0.03);
-      A.noiseTo(o, t, 'bandpass', 2000, 700, 1.2, 0.002, 0.05, 0.6);               // kamçı geçici sesi
-      A.tone(o, t, 'triangle', 640 * k, 300 * k, 0.002, 0.1, 0.6);                  // düşen perdeli gövde
-      A.tone(o, t, 'sine', 330 * k, 170, 0.002, 0.11, 0.38);
-      A.noiseTo(o, t, 'bandpass', 4200, 3600, 1, 0.001, 0.012, 0.3);
-    }, { gap: 40 });
+    play('rotate', 0.1, (A, o, t) => {
+      const k = jit(0.07);
+      A.noiseTo(o, t, 'bandpass', 1200 * k, 3000 * k, 1.6, 0.004, 0.045, 0.85);   // swish
+      A.tone(o, t + 0.022, 'sine', 1500 * k, 1250 * k, 0.001, 0.035, 0.5);         // perdeli tık
+      A.tone(o, t + 0.022, 'triangle', 750 * k, 640 * k, 0.001, 0.03, 0.18);
+      A.noiseTo(o, t + 0.022, 'bandpass', 3000, 2600, 1.2, 0.0006, 0.01, 0.38);    // tık geçicisi
+    }, { gap: 45 });
   },
   hold() {
     play('hold', 0.3, (A, o, t) => {
@@ -179,11 +203,11 @@ export const sfx = {
   lock(type) { play('lock', 0.3, (A, o, t) => thud(A, o, t, type, false), { gap: 20, prio: true }); },
   // Hızlı düşürme: hızlı hışırtı, ardından ağır gümbürtü (mesafe n hücre)
   hardDrop(type, n = 8) {
-    const d = Math.max(0.07, Math.min(0.15, 0.05 + n * 0.006));
-    play('hard', 0.45, (A, o, t) => {
-      A.noiseTo(o, t, 'bandpass', 3400, 450, 0.9, 0.012, d, 0.55);
-      A.tone(o, t, 'sine', 900, 150, 0.01, d, 0.12);
-      thud(A, o, t + d * 0.9, type, true);
+    const d = Math.max(0.1, Math.min(0.17, 0.07 + n * 0.006));
+    play('hard', 0.5, (A, o, t) => {
+      A.noiseTo(o, t, 'bandpass', 2800, 300, 1.2, 0.01, d, 0.8);             // aşağı süpürmeli whoosh
+      A.tone(o, t, 'sine', 1400, 250, 0.008, d, 0.14);
+      thud(A, o, t + d * 0.92, type, true);
     }, { prio: true });
   },
   // Satır silme: sayıya göre kademeli (1: ışıltılı çınlama, 2: daha yüksek+ikinci ses, 3: arp+akor çiçeği, 4+: fanfar); seviye ile hafifçe yükselir
@@ -192,38 +216,45 @@ export const sfx = {
     const br = 1 + sh * 0.12;
     play('clear', 1.8, (A, o, t) => {
       if (n === 1) {
-        thump(A, o, t, 0.2);
-        [0, 4, 7].forEach((x, i) => bell(A, o, t + i * 0.05, r + 12 + x, 0.36, 0.45, (i - 1) * 0.25));
+        thump(A, o, t, 0.28);
+        shing(A, o, t, 0.55);
+        [0, 4, 7].forEach((x, i) => { bell(A, o, t + i * 0.05, r + 12 + x, 0.55, 0.55, (i - 1) * 0.25); });
+        tail(A, o, t + 0.1, r + 19, 0.55, 0.3);
         sparkle(A, o, t, 0.25, 3000, 0.22);
       } else if (n === 2) {
-        thump(A, o, t, 0.2);
+        thump(A, o, t, 0.28);
+        shing(A, o, t, 0.6);
+        tail(A, o, t + 0.2, r + 24, 0.5, 0.3);
         [0, 4, 7, 12].forEach((x, i) => {
-          bell(A, o, t + i * 0.055, r + 12 + x, 0.36, 0.55, (i - 1.5) * 0.25);
-          bell(A, o, t + i * 0.055 + 0.012, r + 19 + x, 0.16, 0.5, (1.5 - i) * 0.2);   // beşli üstü ikinci ses
+          bell(A, o, t + i * 0.055, r + 12 + x, 0.5, 0.6, (i - 1.5) * 0.25);
+          bell(A, o, t + i * 0.055 + 0.012, r + 19 + x, 0.22, 0.5, (1.5 - i) * 0.2);   // beşli üstü ikinci ses
         });
         sparkle(A, o, t, 0.34, 3000, 0.3);
         crotale(A, o, t + 0.17, r + 36, 0.07, 0.3);
       } else if (n === 3) {
-        thump(A, o, t, 0.2);
-        [0, 4, 7, 12].forEach((x, i) => bell(A, o, t + i * 0.06, r + 12 + x, 0.27, 0.6, (i - 1.5) * 0.4));
+        thump(A, o, t, 0.28);
+        shing(A, o, t, 0.65);
+        [0, 4, 7, 12].forEach((x, i) => bell(A, o, t + i * 0.06, r + 12 + x, 0.4, 0.65, (i - 1.5) * 0.4));
         const tb = t + 0.24;                                       // akor çiçeği
         [12, 19, 24, 28].forEach((x, i) => {
-          bell(A, o, tb, r + x, 0.17, 0.9, (i - 1.5) * 0.45);
+          bell(A, o, tb, r + x, 0.24, 1.0, (i - 1.5) * 0.45);
           A.tone(o, tb, 'triangle', A.hz(r + x), A.hz(r + x), 0.03, 0.8, 0.06);
         });
         sparkle(A, o, t, 0.5, 3200, 0.3);
         crotale(A, o, t + 0.18, r + 31, 0.08, -0.4); crotale(A, o, t + 0.26, r + 36, 0.08, 0.4); crotale(A, o, tb + 0.06, r + 40, 0.07, 0);
-        sparkle(A, o, tb, 0.6, 5500, 0.16);
+        sparkle(A, o, tb, 0.6, 5500, 0.16); shing(A, o, tb, 0.4); tail(A, o, tb, r + 31, 0.4, 0.4);
       } else {
-        thump(A, o, t, 0.24);
+        thump(A, o, t, 0.32);
+        shing(A, o, t, 0.7);
         // cornu tarzı kısa pirinç: iki kısa vuruş + uzun akor (hızlı kabarma)
-        brass(A, o, t, r, 0.16, 0.13, br); brass(A, o, t, r + 7, 0.16, 0.1, br);
-        brass(A, o, t + 0.17, r + 4, 0.16, 0.13, br); brass(A, o, t + 0.17, r + 12, 0.16, 0.1, br);
-        [0, 7, 12, 16].forEach((x) => brass(A, o, t + 0.34, r + x, 0.75, 0.12, br));
+        brass(A, o, t, r, 0.16, 0.17, br); brass(A, o, t, r + 7, 0.16, 0.13, br);
+        brass(A, o, t + 0.17, r + 4, 0.16, 0.17, br); brass(A, o, t + 0.17, r + 12, 0.16, 0.13, br);
+        [0, 7, 12, 16].forEach((x) => brass(A, o, t + 0.34, r + x, 0.75, 0.16, br));
         // parlak yükselen arp üstte
-        [0, 4, 7, 12, 16, 19].forEach((x, i) => bell(A, o, t + 0.02 + i * 0.055, r + 12 + x, 0.26, 0.6, (i - 2.5) * 0.3));
+        [0, 4, 7, 12, 16, 19].forEach((x, i) => bell(A, o, t + 0.02 + i * 0.055, r + 12 + x, 0.36, 0.6, (i - 2.5) * 0.3));
         const tb = t + 0.36;
-        [12, 19, 24, 28, 31].forEach((x, i) => bell(A, o, tb, r + x, 0.14, 1.0, (i - 2) * 0.4));
+        [12, 19, 24, 28, 31].forEach((x, i) => bell(A, o, tb, r + x, 0.2, 1.1, (i - 2) * 0.4));
+        shing(A, o, tb, 0.5); tail(A, o, tb, r + 31, 0.45, 0.4);
         crotale(A, o, t + 0.34, r + 36, 0.09, -0.4); crotale(A, o, t + 0.42, r + 40, 0.09, 0.4); crotale(A, o, t + 0.5, r + 43, 0.08, 0);
         sparkle(A, o, t, 0.4, 3200, 0.28);
         sparkle(A, o, tb, 0.8, 5000, 0.24);                        // zil ışıltısı

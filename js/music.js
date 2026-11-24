@@ -112,7 +112,7 @@ let sfxMuted = false, hidden = false, mode = 'game';   // mode: 'menu' | 'game'
 let duckG = null, holdG = null, sfxIn = null, sfxMaster = null, menuTm = null;
 const LS_SFX = 'lawris.sfx';
 const MUSIC_GAIN = 0.12;   // müzik veriyolu
-const SFX_GAIN = 0.38;     // efekt veriyolu (müzikten belirgin yüksek; hepsi aynı sınırlayıcıdan geçer)
+const SFX_GAIN = 0.5;      // efekt veriyolu (müzikten belirgin yüksek; hepsi aynı sınırlayıcıdan geçer)
 const MENU_VOL = 0.6;      // menü müziği: oyun müziğinden daha kısık
 try { muted = localStorage.getItem(LS_KEY) === 'off'; } catch (_) { muted = false; }
 try { sfxMuted = localStorage.getItem(LS_SFX) === 'off'; } catch (_) { sfxMuted = false; }
