@@ -411,5 +411,103 @@ export function getSprite(type, rot, golden, s) {
   cache.set(key, cv);
   return cv;
 }
-export function clearSpriteCache() { cache.clear(); }
+export function clearSpriteCache() { cache.clear(); mcache.clear(); }
+
+// ---------- Mermer kabartma (kilitli parçalar) ----------
+export const MERMER = typeof location === 'undefined' || !/[?&]mermer=0/.test(location.search);
+const MRAMP = [[0x8E, 0x85, 0x74], [0xCF, 0xC6, 0xB3], [0xEE, 0xE8, 0xDA]];
+function mramp(t, o, i) {
+  t = t < 0 ? 0 : t > 1 ? 1 : t;
+  const k = t < 0.5 ? 0 : 1, f = t < 0.5 ? t * 2 : (t - 0.5) * 2, A = MRAMP[k], B = MRAMP[k + 1];
+  return A[i] + (B[i] - A[i]) * f;
+}
+function seeded(n) { let a = (n | 0) + 0x9E3779B9; return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function hashStr(s) { let h = 7; for (let i = 0; i < s.length; i++) h = (Math.imul(h, 31) + s.charCodeAt(i)) | 0; return h; }
+function veins(cv, seed, s) {
+  const c = cv.getContext('2d'), R = seeded(seed), w = cv.width, h = cv.height;
+  c.lineCap = 'round'; c.lineJoin = 'round';
+  const n = 2 + Math.round((w * h) / (s * s * 5));
+  for (let i = 0; i < n; i++) {
+    let x = R() * w, y = R() * h, a = R() * Math.PI * 2;
+    const len = s * (0.8 + R() * 1.6), step = s * 0.18;
+    c.beginPath(); c.moveTo(x, y);
+    for (let d = 0; d < len; d += step) { a += (R() - 0.5) * 1.1; x += Math.cos(a) * step; y += Math.sin(a) * step; c.lineTo(x, y); }
+    c.strokeStyle = 'rgba(120,112,98,' + (0.10 + R() * 0.10).toFixed(3) + ')'; c.lineWidth = Math.max(0.6, s * (0.015 + R() * 0.02)); c.stroke();
+    if (R() < 0.5) { c.strokeStyle = 'rgba(255,255,250,0.22)'; c.lineWidth = Math.max(0.6, s * 0.02); c.translate(s * 0.02, s * 0.02); c.stroke(); c.setTransform(1, 0, 0, 1, 0, 0); }
+  }
+}
+// Renkli sprite'tan bir kez türetilen mermer kabartma: sembol oyulmuş, dış kenar net gri çizgi + iç pah
+function buildMarble(src, seed, s) {
+  const w = src.width, h = src.height, out = mk(w, h), x = out.getContext('2d');
+  x.drawImage(src, 0, 0);
+  const img = x.getImageData(0, 0, w, h), a = img.data, N = w * h;
+  const t = Math.max(1, s * 0.055), R = Math.ceil(t * 2) + 2;
+  const op = (px, py) => px >= 0 && py >= 0 && px < w && py < h && a[(py * w + px) * 4 + 3] > 127;
+  const dist = new Float32Array(N), lum = new Float32Array(N);
+  const hist = new Uint32Array(256); let cnt = 0;
+  for (let py = 0; py < h; py++) for (let px = 0; px < w; px++) {
+    const i = py * w + px; if (a[i * 4 + 3] < 8) continue;
+    let d = R + 1;
+    for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
+      if (!op(px + dx, py + dy)) { const q = Math.sqrt(dx * dx + dy * dy); if (q < d) d = q; }
+    }
+    dist[i] = d;
+    const L = 0.3 * a[i * 4] + 0.59 * a[i * 4 + 1] + 0.11 * a[i * 4 + 2]; lum[i] = L;
+    if (d > t * 2 + 1) { hist[L | 0]++; cnt++; }
+  }
+  let base = 128, acc = 0; for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc >= cnt / 2) { base = v; break; } }
+  // oyma derinliği (0..1): taban tondan sapma (koyu ya da açık), hafif yumuşatılır
+  const raw = new Float32Array(N), carve = new Float32Array(N);
+  for (let i = 0; i < N; i++) { if (a[i * 4 + 3] < 8) continue; raw[i] = dist[i] <= t * 1.6 ? 0 : Math.min(1, Math.abs(lum[i] - base) / 90); }
+  for (let py = 0; py < h; py++) for (let px = 0; px < w; px++) {
+    let sum = 0, wt = 0;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const X = px + dx, Y = py + dy; if (X < 0 || Y < 0 || X >= w || Y >= h) continue;
+      const k = (dx || dy) ? 1 : 2; sum += raw[Y * w + X] * k; wt += k;
+    }
+    carve[py * w + px] = sum / wt;
+  }
+  const rnd = seeded(seed), ph1 = rnd() * 6, ph2 = rnd() * 6, f1 = 0.9 / s, f2 = 2.3 / s;
+  const cg = (px, py) => carve[Math.max(0, Math.min(h - 1, py)) * w + Math.max(0, Math.min(w - 1, px))];
+  for (let py = 0; py < h; py++) for (let px = 0; px < w; px++) {
+    const i = py * w + px, o = i * 4; if (a[o + 3] < 8) continue;
+    const c0 = carve[i], e = cg(px - 1, py - 1) - cg(px + 1, py + 1);
+    let T = 0.9 + 0.035 * Math.sin(px * f1 * 3 + py * f1 * 2 + ph1) + 0.025 * Math.sin(px * f2 - py * f2 * 1.3 + ph2);
+    T -= 0.66 * Math.min(1, c0 * 2.1) + 0.75 * e;
+    let r = mramp(T, 0, 0), g = mramp(T, 0, 1), b = mramp(T, 0, 2);
+    const sr = a[o], sg = a[o + 1], sb = a[o + 2];
+    if (c0 > 0.45 && sr > 150 && sr > sb * 1.5 && sg > sb * 1.2) { const k = Math.min(0.35, (c0 - 0.45) * 0.9); r += (150 - r) * k; g += (118 - g) * k; b += (42 - b) * k; }   // oluklarda çok ince altın
+    const d = dist[i];
+    if (d <= t) { const k = 1; r = 0x7A * k; g = 0x72 * k; b = 0x63 * k; }
+    else if (d <= t + 1.2) { r = r * 0.55 + 0xFA * 0.45; g = g * 0.55 + 0xF7 * 0.45; b = b * 0.55 + 0xEE * 0.45; }
+    else if (d <= t + 2.4) { r *= 0.96; g *= 0.96; b *= 0.96; }
+    a[o] = r; a[o + 1] = g; a[o + 2] = b;
+  }
+  x.putImageData(img, 0, 0);
+  const vn = mk(w, h); veins(vn, seed, s);
+  x.globalCompositeOperation = 'source-atop'; x.drawImage(vn, 0, 0); x.globalCompositeOperation = 'source-over';
+  return out;
+}
+const mcache = new Map();
+export function getMarbleSprite(type, rot, s) {
+  const key = type + '|' + (rot & 3) + '|' + s;
+  let cv = mcache.get(key);
+  if (!cv) { cv = buildMarble(getSprite(type, rot, false, s), hashStr(type) + 17 * (rot & 3), s); mcache.set(key, cv); }
+  return cv;
+}
+// Sembolsüz düz mermer hücre (altın sütun etkisiyle oluşan dolgu)
+export function getPlainMarble(s, k) {
+  const key = 'plain|' + s + '|' + (k & 3);
+  let cv = mcache.get(key);
+  if (cv) return cv;
+  cv = mk(s, s); const c = cv.getContext('2d'), t = Math.max(1, s * 0.055);
+  const g = c.createLinearGradient(0, 0, s, s); g.addColorStop(0, '#EFE9DB'); g.addColorStop(1, '#DAD2BF');
+  c.fillStyle = g; c.fillRect(0, 0, s, s);
+  veins(cv, 91 + (k & 3) * 13, s);
+  c.fillStyle = 'rgba(255,252,244,0.55)'; c.fillRect(t, t, s - 2 * t, t * 0.9); c.fillRect(t, t, t * 0.9, s - 2 * t);
+  c.fillStyle = 'rgba(120,112,96,0.28)'; c.fillRect(t, s - t * 1.9, s - 2 * t, t * 0.9); c.fillRect(s - t * 1.9, t, t * 0.9, s - 2 * t);
+  c.strokeStyle = '#7A7263'; c.lineWidth = t * 1.1; c.strokeRect(t * 0.55, t * 0.55, s - t * 1.1, s - t * 1.1);
+  mcache.set(key, cv); return cv;
+}
+
 export const COLORS = C;

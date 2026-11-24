@@ -1,7 +1,7 @@
 // Lex Stack - çizim
 import { COLS, ROWS } from './board.js';
 import { THEME as TH, levelFade } from './theme.js';
-import { getSprite, hasCell, sizeOf, cellsOf, COLORS as C } from './pieces.js';
+import { getSprite, getMarbleSprite, getPlainMarble, MERMER, hasCell, sizeOf, cellsOf, COLORS as C } from './pieces.js';
 import { makeBackdrop } from './roma.js';
 import { drawBurst, BURST_MS, shakeX, drawCalm } from './fx.js';
 
@@ -158,7 +158,7 @@ export class Renderer {
     let h = s | 0, n = 0;
     for (let r = 0; r < ROWS; r++) for (let q = 0; q < COLS; q++) { const cl = board.grid[r][q]; if (cl) { n++; h = (Math.imul(h, 31) + cl.id * 7 + q * 3 + r * 5 + cl.lx * 11 + cl.ly * 13 + (cl.type.charCodeAt(0) | 0)) | 0; } }
     const bw = COLS * s, bh = ROWS * s;
-    if (!n) return null;
+    if (!n) { if (this._seen) this._seen.clear(); return null; }
     let L = this._sh;
     if (L && L.h === h && L.bw === bw) return L;
     if (!L || L.bw !== bw || L.bh !== bh) {
@@ -347,37 +347,50 @@ export class Renderer {
   drawCell(c, board, cell, q, r) {
     const s = this.s, x = this.bx + q * s, y = this.by + r * s;
     if (cell.type === 'plain') {
-      c.fillStyle = C.marble; c.fillRect(x, y, s, s);
-      c.strokeStyle = C.marbleD; c.lineWidth = Math.max(1, s * 0.06); c.strokeRect(x + 0.5, y + 0.5, s - 1, s - 1);
-      c.beginPath(); c.moveTo(x + s * 0.2, y + s * 0.7); c.lineTo(x + s * 0.5, y + s * 0.45); c.lineTo(x + s * 0.8, y + s * 0.3); c.stroke();
+      if (MERMER) c.drawImage(getPlainMarble(s, cell.id), x, y);
+      else {
+        c.fillStyle = C.marble; c.fillRect(x, y, s, s);
+        c.strokeStyle = C.marbleD; c.lineWidth = Math.max(1, s * 0.06); c.strokeRect(x + 0.5, y + 0.5, s - 1, s - 1);
+        c.beginPath(); c.moveTo(x + s * 0.2, y + s * 0.7); c.lineTo(x + s * 0.5, y + s * 0.45); c.lineTo(x + s * 0.8, y + s * 0.3); c.stroke();
+      }
       return;
     }
-    c.drawImage(getSprite(cell.type, cell.rot, cell.golden, s), cell.lx * s, cell.ly * s, s, s, x, y, s, s);
+    const col = getSprite(cell.type, cell.rot, cell.golden, s);
+    if (MERMER) {
+      // kilitlenince renkli -> mermer çapraz geçiş (~250 ms)
+      const seen = this._seen || (this._seen = new Map()), now = performance.now();
+      let t0 = seen.get(cell.id); if (t0 === undefined) { t0 = now; seen.set(cell.id, t0); if (seen.size > 300) for (const k of seen.keys()) { seen.delete(k); if (seen.size < 150) break; } }
+      const k = Math.min(1, (now - t0) / 250), m = getMarbleSprite(cell.type, cell.rot, s);
+      if (k < 1 && !REDUCED.matches) {
+        c.drawImage(col, cell.lx * s, cell.ly * s, s, s, x, y, s, s);
+        c.globalAlpha = k * k * (3 - 2 * k); c.drawImage(m, cell.lx * s, cell.ly * s, s, s, x, y, s, s); c.globalAlpha = 1;
+      } else c.drawImage(m, cell.lx * s, cell.ly * s, s, s, x, y, s, s);
+    } else c.drawImage(col, cell.lx * s, cell.ly * s, s, s, x, y, s, s);
     if (cell.id === this.flashId && this.flashAge < FLASH_MS) {
       c.fillStyle = 'rgba(255,214,102,' + (0.65 * (1 - this.flashAge / FLASH_MS)).toFixed(3) + ')'; c.fillRect(x, y, s, s);
     }
-    // kopmuş kenarlar
+    // kesilen kenarlar: parçanın özgün hücresi var ama tahtada yok -> düz kesilmiş taş kenarı (diğer dış kenarlarla aynı çizgi + pah)
     for (let d = 0; d < 4; d++) {
       const [dx, dy] = DIRS[d];
       if (!hasCell(cell.type, cell.rot, cell.lx + dx, cell.ly + dy)) continue;
       const nr = r + dy, nq = q + dx;
       const n = nr >= 0 && nr < ROWS && nq >= 0 && nq < COLS ? board.grid[nr][nq] : null;
       if (n && n.id === cell.id) continue;
-      this.jag(c, x, y, s, d);
+      this.cutEdge(c, x, y, s, d);
     }
   }
 
-  jag(c, x, y, s, d) {
-    const sides = [[0, 0, 1, 0, 0, 1], [1, 0, 0, 1, -1, 0], [0, 1, 1, 0, 0, -1], [0, 0, 0, 1, 1, 0]];
-    const [sx, sy, ux, uy, nx, ny] = sides[d];
-    c.strokeStyle = '#10162C'; c.lineWidth = Math.max(1.5, s * 0.08);
-    c.beginPath();
-    for (let i = 0; i <= 5; i++) {
-      const t = (i / 5) * s, off = i % 2 ? s * 0.12 : 0;
-      const px = x + sx * s + ux * t + nx * off, py = y + sy * s + uy * t + ny * off;
-      if (i) c.lineTo(px, py); else c.moveTo(px, py);
-    }
-    c.stroke();
+  cutEdge(c, x, y, s, d) {
+    const t = Math.max(1, s * 0.055), m = MERMER;
+    // d: 0=üst 1=sağ 2=alt 3=sol; şerit (kenardan içeri) verilen kalınlıkta
+    const strip = (o, th) => {
+      if (d === 0) c.fillRect(x, y + o, s, th); else if (d === 2) c.fillRect(x, y + s - o - th, s, th);
+      else if (d === 3) c.fillRect(x + o, y, th, s); else c.fillRect(x + s - o - th, y, th, s);
+    };
+    c.save(); c.beginPath(); c.rect(x, y, s, s); c.clip();
+    if (m) { c.fillStyle = 'rgba(250,247,238,0.5)'; strip(t, 1.2); c.fillStyle = '#7A7263'; strip(0, t); }
+    else { c.fillStyle = 'rgba(6,8,22,0.85)'; strip(0, t); }
+    c.restore();
   }
 
   drawFrame(c, s, W, H) {
