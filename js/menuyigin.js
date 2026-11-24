@@ -10,7 +10,7 @@ menu.appendChild(cv);
 const c = cv.getContext('2d');
 const azHareket = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-let sonu = 0, gor = 1, W = 0, H = 0, s = 24, cols = 12, rows = 7, grid = [], kalici = [], dusen = null, bekle = 0, isik = null, son = 0;
+let DPR = 1, sonu = 0, gor = 1, W = 0, H = 0, s = 24, cols = 12, rows = 7, grid = [], kalici = [], dusen = null, bekle = 0, isik = null, son = 0;
 
 const bos = () => Array.from({ length: rows }, () => Array(cols).fill(false));
 function carpar(cs, x, y) {
@@ -68,7 +68,7 @@ function kur() {
   const r = menu.getBoundingClientRect();
   W = r.width; s = Math.round(Math.max(20, Math.min(30, W / 13)));
   cols = Math.ceil(W / s) + 1; rows = 7; H = rows * s + 7;
-  const dpr = Math.min(2, devicePixelRatio || 1);
+  const dpr = Math.min(3, devicePixelRatio || 1); DPR = dpr;
   cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.width = W + 'px'; cv.style.height = H + 'px';
   c.setTransform(dpr, 0, 0, dpr, 0, 0);
   doldur();
@@ -80,12 +80,13 @@ function doldur() {
 }
 
 function parcaCiz(p, y) {
-  const spr = getSprite(p.t, p.r, p.g, s);
-  if (!p.dy || !Object.keys(p.dy).length) { c.drawImage(spr, p.x * s, y * s, spr.width, spr.height); return; }
+  // Keskinlik: sprite ekranın gerçek piksel yoğunluğunda üretilir (oyun tahtasıyla aynı netlik)
+  const S = Math.round(s * DPR), spr = getSprite(p.t, p.r, p.g, S);
+  if (!p.dy || !Object.keys(p.dy).length) { c.drawImage(spr, p.x * s, y * s, spr.width / DPR, spr.height / DPR); return; }
   // satır silindiyse hücre hücre çiz
   for (const [cx, cy] of cellsOf(p.t, p.r)) {
     const d = p.dy[cx + ',' + cy] || 0; if (d === 99) continue;
-    c.drawImage(spr, cx * s, cy * s, s, s, (p.x + cx) * s, (y + cy + d) * s, s, s);
+    c.drawImage(spr, cx * S, cy * S, S, S, (p.x + cx) * s, (y + cy + d) * s, s, s);
   }
 }
 
@@ -103,9 +104,9 @@ function kare(now) {
     }
   }
   c.clearRect(0, 0, W, H);
-  c.save(); c.globalAlpha = 0.9 * Math.max(0, gor);
+  c.save(); c.globalAlpha = Math.max(0, gor);
   for (const p of kalici) parcaCiz(p, p.y);
-  if (dusen) { c.globalAlpha = Math.max(0, gor) * Math.min(0.9, Math.max(0, (dusen.fy + 4) / 3)); parcaCiz(dusen, dusen.fy); }
+  if (dusen) { c.globalAlpha = Math.max(0, gor) * Math.min(1, Math.max(0, (dusen.fy + 4) / 3)); parcaCiz(dusen, dusen.fy); }
   c.restore();
   // mermer kaide + altın çizgi (yığın havada durmasın)
   const ky = rows * s, kg = c.createLinearGradient(0, ky, 0, ky + 7);
