@@ -8,8 +8,9 @@ import { music } from './music.js';
 import { sfx } from './sfx.js';
 import * as skor from './skor.js';
 import { initRehber } from './rehber.js';
-import { t, setLang, onLang, fmtDate, courtLabel, isDefaultName, roman } from './i18n.js';
-import { aslanHukum, aslanSeviye, kediSoyle, kediMenu, kediOver, maskotReset } from './maskot.js';
+import { t, setLang, onLang, getLang, fmtDate, courtLabel, isDefaultName, roman } from './i18n.js';
+import { aslanHukum, aslanSeviye, aslanSoyle, kediSoyle, kediMenu, kediOver, maskotReset } from './maskot.js';
+import * as gunluk from './gunluk.js';
 import './menuyigin.js';
 
 const DEBUG_LV = (() => { try { const v = +new URLSearchParams(location.search).get('seviye'); return v >= 1 && v <= 60 ? v | 0 : 0; } catch (_) { return 0; } })();
@@ -65,19 +66,22 @@ best = skor.enIyi();
 
 // Torba: her torbada her tür bir kez, Kalem (3'lü) iki kez, Kılıç her üçüncü torbada; kıtlık/taşkın olmaz
 let bag = [], bagN = 0, sinceGold = 0;
+// Rastgelelik kaynağı: normal modda Math.random, Günlük Davada günün tohumuyla mulberry32 (torba sırası + altın kararları)
+let rng = Math.random;
+let daily = null;   // null = normal mod; Günlük Davada { key, no, seed, done }
 function nextType() {
   if (!bag.length) {
     bag = TYPES.filter((t) => t !== 'kilic');
     bag.push('kalem');
     if (bagN++ % 3 === 0) bag.push('kilic');
-    for (let i = bag.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [bag[i], bag[j]] = [bag[j], bag[i]]; }
+    for (let i = bag.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [bag[i], bag[j]] = [bag[j], bag[i]]; }
   }
   return bag.pop();
 }
 function newPiece() {
   const type = nextType();
   sinceGold++;
-  const golden = GOLD_TYPES.includes(type) && (sinceGold >= GOLD_GUARANTEE || Math.random() < GOLD_CHANCE);
+  const golden = GOLD_TYPES.includes(type) && (sinceGold >= GOLD_GUARANTEE || rng() < GOLD_CHANCE);
   if (golden) sinceGold = 0;
   return { type, rot: 0, x: 0, y: 0, golden, id: 0 };
 }
@@ -159,11 +163,11 @@ function fitLevel() {
 window.addEventListener('resize', () => { if ($('level')) fitLevel(); });
 function hud() {
   $('score').textContent = score;
-  $('best').textContent = best;
+  $('best').textContent = daily ? gunluk.info(daily.key).best : best;
   $('menuBest').textContent = best;
   { // mekân adı + küçük aşama rakamı (sonsuzda: İmparatorluk + tur sayısı)
     const el = $('level'), end = level >= PLACES;
-    const nm = end ? t('court.end.short') : t('court.' + level + '.short'), nu = end ? roman(level - PLACES + 1) : roman(stageOf(rows) + 1);
+    const nm = end ? t('court.end.short') : t('court.' + level + '.short'), nu = end ? roman(level - PLACES + 1) : roman(stageOf(rows) + 1);   // placeLabel() ile aynı biçim
     if (el.dataset.k !== nm + '|' + nu) {
       el.dataset.k = nm + '|' + nu; el.textContent = nm + ' ';
       const sp = document.createElement('span'); sp.className = 'stg'; sp.textContent = nu;
@@ -298,15 +302,25 @@ const act = {
   },
 };
 
-function start() {
+function start() { startGame(null); }
+function startDaily() {
+  const key = gunluk.dayKey();
+  startGame({ key, no: gunluk.caseNo(key), seed: gunluk.seedOf(key), done: false });
+}
+function startGame(d) {
   sonKayit = null;
-  playMs = 0; sureSn = -1; $('sure').textContent = '00:00';
+  if (d || daily) { bag = []; bagN = 0; sinceGold = 0; }   // günlük dizi hep aynı noktadan başlar; normal moda dönünce de temiz başlangıç
+  daily = d;
+  rng = d ? gunluk.mulberry32(d.seed) : Math.random;
+  document.documentElement.classList.toggle('daily-mode', !!d);
+  playMs = 0; sureSn = -1; $('sure').textContent = d ? fmtSure(gunluk.DURATION_MS) : '00:00';
+  $('sure').classList.remove('tl');
   maskotReset();
   music.init();
   music.start();
   music.setTension(0);
   board.reset();
-  score = 0; rows = 0; level = DEBUG_LV; slowMs = 0;
+  score = 0; rows = 0; level = d ? 0 : DEBUG_LV; slowMs = 0;
   if (level) rows = level * PLACE_ROWS;
   prevStage = stageIdx(rows);
   setLevelColors(level, true); resetReveal();
@@ -316,6 +330,7 @@ function start() {
   spawn();
   hud();
   last = performance.now();
+  if (d) aslanSoyle(t('daily.lion'), 3200);
 }
 
 // ---- Şeref kürsüsü ----
@@ -324,7 +339,7 @@ let sonKayit = null, kursuOnceki = null, temizOnay = 0;
 function kayitHazirla() {
   $('kayitSonuc').hidden = true; $('kayitSonuc').classList.remove('yeni');
   const f = $('kayit');
-  f.hidden = !skor.sigarMi(score);
+  f.hidden = !!daily || !skor.sigarMi(score);   // günlük puanlar Şeref kürsüsüne girmez
   if (!f.hidden) $('adIn').value = skor.sonAd();
 }
 function kayitEt(e) {
@@ -356,6 +371,12 @@ function kursuCiz() {
     mk('mt', [courtLabel(e.mahkeme), fmtDate(e.tarih)].filter(Boolean).join(' · '));
     ol.appendChild(li);
   });
+  { // son 7 günün Günlük Dava puanları (ayrı liste)
+    const g = gunluk.recent(7), ul = $('kursuGunList');
+    ul.textContent = '';
+    g.forEach((e) => { const li = document.createElement('li'); li.textContent = '#' + e.no + ' · ' + gunluk.fmtNum(e.best, getLang()); ul.appendChild(li); });
+    $('kursuGun').hidden = g.length === 0;
+  }
   $('kursuBos').hidden = l.length > 0;
   ol.hidden = l.length === 0;
   $('kursuTemizle').hidden = l.length === 0;
@@ -389,12 +410,73 @@ $('kursuTemizle').addEventListener('click', () => {
 $('kayit').addEventListener('submit', kayitEt);
 window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('kursu').hidden) kursuKapat(); });
 
+const placeLabel = (lv, st) => (lv >= PLACES ? t('court.end.short') + ' ' + roman(lv - PLACES + 1) : t('court.' + lv + '.short') + ' ' + roman(st + 1));
+// Günlük Dava: deneme sonucu bir kez kaydedilir (seri, en iyi, ilk deneme)
+function dailyFinish() {
+  if (!daily || daily.done) return;
+  daily.done = true;
+  daily.res = gunluk.record(score, daily.key);
+  daily.score = score; daily.lv = level; daily.st = stageOf(rows);
+  dailyMenu();
+}
+function dailyOverRender() {
+  const r = daily.res, f = (n) => gunluk.fmtNum(n, getLang());
+  $('over').classList.add('daily');
+  $('over').querySelector('h2').textContent = t('daily.over.title', { n: daily.no });
+  $('finalBest').previousElementSibling.textContent = t('daily.over.best');
+  $('final').textContent = daily.score;
+  $('finalBest').textContent = r.best;
+  const fi = $('dailyFirst');
+  fi.hidden = r.first === daily.score;
+  fi.textContent = t('daily.over.first', { n: f(r.first) });
+  $('dailyStreak').textContent = t('daily.streak', { n: r.streak }) + (r.bestStreak > r.streak ? ' · ' + t('daily.streakBest', { n: r.bestStreak }) : '');
+  $('dailyEnd').hidden = false;
+  $('over').querySelector('.sure-son').hidden = true;
+  $('again').textContent = t('daily.again');
+}
+function dailyOverReset() {
+  $('over').classList.remove('daily');
+  $('over').querySelector('h2').textContent = t('over.title');
+  $('finalBest').previousElementSibling.textContent = t('over.best');
+  $('dailyEnd').hidden = true;
+  $('over').querySelector('.sure-son').hidden = false;
+  $('again').textContent = t('over.again');
+}
+function dailyShareText() {
+  const r = daily.res, f = (n) => gunluk.fmtNum(n, getLang());
+  const lines = [t('daily.share.title', { n: daily.no }), t('daily.share.line', { score: f(daily.score), place: placeLabel(daily.lv, daily.st) })];
+  if (r.streak >= 2) lines.push(t('daily.share.streak', { n: r.streak }));
+  lines.push(gunluk.SHARE_URL);
+  return lines.join('\n');
+}
+let shareTm = 0;
+function shareToast(text) {
+  const el = $('shareToast');
+  el.textContent = text; el.classList.add('show');
+  clearTimeout(shareTm); shareTm = setTimeout(() => el.classList.remove('show'), 1800);
+}
+$('shareBtn').addEventListener('click', async () => {
+  if (!daily || !daily.res) return;
+  const r = await gunluk.share(dailyShareText());
+  if (r === 'copied') shareToast(t('daily.copied'));
+  else if (r === 'fail') shareToast(t('daily.copyFail'));
+});
+// Menüdeki Günlük Dava düğmesi: bugünün numarası + oynandıysa en iyi puan
+function dailyMenu() {
+  const key = gunluk.dayKey(), i = gunluk.info(key), d = $('dailyDone');
+  $('dailyLbl').textContent = t('daily.btn', { n: gunluk.caseNo(key) });
+  d.hidden = !i.played;
+  if (i.played) d.textContent = '✓ ' + gunluk.fmtNum(i.best, getLang());
+  $('dailyBtn').classList.toggle('done', i.played);
+}
+
 function gameOver() {
+  if (state === 'over') return;
   state = 'over';
   music.fadeOut(1.0); music.setTension(0);
   sfx.gameOver();
   music.startMenu(2800);   // sting bitince menü müziği (Tekrar oyna başlatırsa iptal olur)
-  if (score > best) {
+  if (!daily && score > best) {
     best = score;
     try { localStorage.setItem('lawris.best', String(best)); } catch (_) { /* yoksay */ }
   }
@@ -402,6 +484,7 @@ function gameOver() {
   $('final').textContent = score;
   $('finalBest').textContent = best;
   $('finalSure').textContent = fmtSure(playMs);
+  if (daily) { dailyFinish(); dailyOverRender(); } else dailyOverReset();
   $('over').hidden = false;
   maskotReset();
   kediOver();
@@ -413,8 +496,18 @@ function frame(t) {
   tickColors(dt);
   if (state === 'play' && piece) {
     playMs += dt;
-    const sn = Math.floor(playMs / 1000);
-    if (sn !== sureSn) { sureSn = sn; $('sure').textContent = fmtSure(playMs); }
+    if (daily) {   // Günlük Dava: 2 dakikalık geri sayım; son 10 sn vurgulu
+      const D = gunluk.DURATION_MS;
+      if (playMs > D) playMs = D;
+      const sn = Math.ceil((D - playMs) / 1000);
+      if (sn !== sureSn) { sureSn = sn; $('sure').textContent = fmtSure(sn * 1000); $('sure').classList.toggle('tl', sn <= 10); }
+      if (playMs >= D) gameOver();
+    } else {
+      const sn = Math.floor(playMs / 1000);
+      if (sn !== sureSn) { sureSn = sn; $('sure').textContent = fmtSure(playMs); }
+    }
+  }
+  if (state === 'play' && piece) {
     if (slowMs > 0) { slowMs = Math.max(0, slowMs - dt); }
     if (grounded()) {
       acc = 0; lockMs += dt;
@@ -479,10 +572,14 @@ let layoutTm = 0;
 function layoutSoon() { clearTimeout(layoutTm); layoutTm = setTimeout(layout, 60); }
 
 $('play').addEventListener('click', start);
-$('again').addEventListener('click', start);
+$('again').addEventListener('click', () => { if (daily) startDaily(); else start(); });
+$('dailyBtn').addEventListener('click', startDaily);
 // Ana menüye dönüş
 function toMenu() {
+  if (daily && !daily.done && state === 'pause') dailyFinish();   // yarıda bırakılan deneme de sayılır
   state = 'menu'; piece = null;
+  if (daily) { daily = null; rng = Math.random; document.documentElement.classList.remove('daily-mode'); $('sure').classList.remove('tl'); }
+  dailyMenu();
   for (const id of ['over', 'pause', 'kursu', 'rehber']) { const el = $(id); if (el) el.hidden = true; }
   board.reset(); setLevelColors(0, true); level = 0; rows = 0; prevStage = 0; resetReveal();
   music.startMenu(); music.setTension(0); maskotReset(); kediMenu();
@@ -512,7 +609,8 @@ showSnd();
 // Dil düğmeleri (açılış ekranı + duraklatma kartı) ve canlı yenileme
 document.querySelectorAll('[data-lang]').forEach((b) => b.addEventListener('click', () => { setLang(b.dataset.lang); b.blur(); }));
 onLang(() => {
-  showSnd(); hud();
+  showSnd(); hud(); dailyMenu();
+  if (!$('over').hidden && daily && daily.res) dailyOverRender();
   if (!$('kursu').hidden) kursuCiz();
   const r = $('kayitSonuc');
   if (!r.hidden && r.dataset.sira) r.textContent = t('kayit.saved', { n: r.dataset.sira });
@@ -540,7 +638,7 @@ document.addEventListener('click', (e) => {
   if (!el || el.disabled || el.hasAttribute('data-act')) return;
   sfx.ui();
 }, true);
-document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') act.pause(); music.setHidden(document.hidden); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') act.pause(); else if (!document.hidden && state === 'menu') dailyMenu(); music.setHidden(document.hidden); });
 window.addEventListener('resize', layoutSoon);
 window.addEventListener('orientationchange', () => { layoutSoon(); setTimeout(layout, 300); });
 if (typeof ResizeObserver === 'function') new ResizeObserver(layoutSoon).observe($('stage'));
@@ -552,9 +650,10 @@ initRehber({ onStart: start });
 $('best').textContent = best;
 $('menuBest').textContent = best;
 kediMenu();
+dailyMenu();
 layout();
 requestAnimationFrame((t) => { last = t; frame(t); });
-window.__lawris = { board, act, applyGolden, lockPiece, get state() { return state; }, get piece() { return piece; }, get held() { return held; }, get queue() { return queue; }, get holdUsed() { return holdUsed; }, get score() { return score; }, setLevel(n) { level = n; rows = n * PLACE_ROWS; prevStage = stageIdx(rows); setLevelColors(n); resetReveal(); music.setLevel(n); hud(); }, setRows(r) { rows = r; level = levelOf(r); prevStage = stageIdx(r); setLevelColors(level); resetReveal(); hud(); }, setProgress(n) { rows = level * PLACE_ROWS + n; renderer.setProgress(visLevel % PLACES, n, true); }, gravityMs, baseMs, stageOf, renderer, burst };
+window.__lawris = { startDaily, setGun(v) { const k = gunluk.setOverride(v); dailyMenu(); return k; }, gunluk, get daily() { return daily; }, get level() { return level; }, get rows() { return rows; }, get playMs() { return playMs; }, gameOver, board, act, applyGolden, lockPiece, get state() { return state; }, get piece() { return piece; }, get held() { return held; }, get queue() { return queue; }, get holdUsed() { return holdUsed; }, get score() { return score; }, setLevel(n) { level = n; rows = n * PLACE_ROWS; prevStage = stageIdx(rows); setLevelColors(n); resetReveal(); music.setLevel(n); hud(); }, setRows(r) { rows = r; level = levelOf(r); prevStage = stageIdx(r); setLevelColors(level); resetReveal(); hud(); }, setProgress(n) { rows = level * PLACE_ROWS + n; renderer.setProgress(visLevel % PLACES, n, true); }, gravityMs, baseMs, stageOf, renderer, burst };
 
 // Çevrimdışı çalışma ve her açılışta güncel sürüm
 // Android uygulamasında (Capacitor) dosyalar zaten telefonda: service worker gerekmez

@@ -56,6 +56,9 @@ export function aslanHukum(n) {
 export function aslanSeviye(head, body) {
   enqueue({ kind: 'seviye', who: 'aslan', text: body, head, cls: 'aslan-big', ms: 3800 });
 }
+export function aslanSoyle(text, ms = 3000) {
+  enqueue({ kind: 'seviye', who: 'aslan', text, cls: 'aslan-side', ms });
+}
 export function kediSoyle(text, ms = 2200) {
   enqueue({ kind: 'kedi', who: 'kedi', text, cls: 'kedi-corner', ms: Math.min(ms, 2200) });
 }

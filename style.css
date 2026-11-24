@@ -681,3 +681,48 @@ html.ui-mix #menu .menu-links {
   -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); position: relative; z-index: 3;
 }
 html.ui-mix #menu .menu-links .alt { text-shadow: none; border-bottom-color: transparent; }
+
+/* ===== Günlük Dava ===== */
+.daily-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; min-height: 42px; max-width: 100%; padding: 0 20px; font: 400 .82rem Georgia, 'Times New Roman', serif; font-variant: small-caps; letter-spacing: .14em; white-space: nowrap; color: var(--g1, #f0d98a); background: rgba(10,8,30,.5); border: 1px solid var(--g2, #c9a227); border-radius: 999px; cursor: pointer; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: 0 2px 10px rgba(0,0,0,.35), inset 0 0 12px rgba(240,196,106,.1); }
+.daily-btn svg { width: 17px; height: 17px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.daily-btn .dd { font-variant: normal; letter-spacing: .04em; font-size: .78rem; padding: 2px 8px; border-radius: 999px; background: rgba(240,196,106,.18); color: #ffe7b0; }
+.daily-btn.done { border-color: #ffd45e; }
+.daily-btn:active { transform: scale(.98); }
+.daily-btn:focus-visible, .share:focus-visible { outline: 2px solid var(--g2, #C9A227); outline-offset: 2px; }
+.daily-btn[hidden], .daily-btn .dd[hidden] { display: none; }
+html[class*="ui-"] #menu .daily-btn { position: relative; }
+/* Aydınlık menü: ikincil düğme krem cam hap; üst bloklar sıkılaşır ki bağlantı hapı tapınak çatısına binmesin */
+html.ui-mix #menu .daily-btn { color: #6B1F24; background: rgba(255,250,238,.9); border: 1.5px solid #B8862B; text-shadow: none; box-shadow: 0 4px 14px rgba(60,30,10,.2); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); z-index: 3; }
+html.ui-mix #menu .daily-btn .dd { background: rgba(184,134,43,.22); color: #5A1A1F; }
+html.ui-mix #menu .daily-btn.done { border-color: #D9A93A; box-shadow: 0 4px 14px rgba(60,30,10,.2), 0 0 10px rgba(217,169,58,.55); }
+@media (max-height: 900px) {
+  html.ui-mix .rule { margin: 10px 0 8px; }
+  html.ui-mix .menu-best { margin: 8px 0 12px !important; }
+  html.ui-mix #menu .mascot-badge { --ms: 96px; }
+}
+@media (max-height: 780px) {
+  html.ui-mix #menu .mascot-badge { --ms: 84px; }
+  html.ui-mix .rule { margin: 8px 0 6px; }
+  html.ui-mix .menu-best { margin: 6px 0 10px !important; }
+  html.ui-mix .daily-btn { min-height: 38px; margin-top: 10px; }
+  html.ui-mix #menu .menu-links { margin-top: 10px; }
+}
+html.daily-mode #sure { font-size: 1.5em; line-height: 1; opacity: 1; font-weight: 700; color: var(--g1, #f0d98a); font-variant-numeric: tabular-nums; }
+#sure.tl { color: #ff8a7a !important; animation: dailyTick 1s ease-in-out infinite; display: inline-block; transform-origin: 0 50%; }
+@keyframes dailyTick { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.22); opacity: .65; } }
+@media (prefers-reduced-motion: reduce) { #sure.tl { animation: none; } }
+.daily-end { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; }
+.daily-end[hidden], .d-first[hidden] { display: none; }
+.d-first { font-size: .85rem !important; opacity: .85; }
+.d-streak { font-size: .95rem !important; color: var(--g1, #f0d98a); }
+.mini.share { display: inline-flex; align-items: center; gap: 7px; justify-content: center; padding: 0 20px; cursor: pointer; }
+.mini.share svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+#over.daily #overKursu { display: none; }
+#shareToast { position: absolute; left: 50%; bottom: 14%; transform: translate(-50%, 8px); z-index: 40; padding: 8px 18px; border-radius: 999px; background: rgba(10,8,30,.92); color: #ffe7b0; border: 1px solid var(--g2, #c9a227); font-size: .9rem; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; white-space: nowrap; }
+#shareToast.show { opacity: 1; transform: translate(-50%, 0); }
+.kursu-gun { width: 100%; text-align: center; }
+.kursu-gun h3 { margin: 2px 0 4px; font: 400 .85rem Georgia, serif; font-variant: small-caps; letter-spacing: .14em; color: var(--g2, #C9A227); }
+.kursu-gun ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 6px; }
+.kursu-gun li { font-size: .72rem; padding: 2px 8px; border: 1px solid rgba(240,217,138,.28); border-radius: 999px; font-variant-numeric: tabular-nums; }
+.kursu-gun[hidden] { display: none; }
+#over.daily #again { letter-spacing: .12em; text-indent: .12em; padding: 0 20px; white-space: nowrap; }
