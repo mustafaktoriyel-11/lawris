@@ -164,7 +164,7 @@ const en = {
   'rh.c0.note': 'Hold: once per piece, tap the Hold box. After landing you can slide for another half second.',
   'rh.c1.title': 'Pieces',
   'rh.c1.text': 'Each piece is a legal symbol; full rows are cleared, which is called a verdict. The next 3 cases are always visible.',
-  'piece.sutun': 'Column', 'piece.tokmak': 'Gavel', 'piece.kanun': 'Law book', 'piece.terazi': 'Scales',
+  'piece.sutun': 'Column', 'piece.tokmak': 'Gavel', 'piece.kanun': 'Law tablet', 'piece.terazi': 'Scales',
   'piece.paragraf': 'Section §', 'piece.kilic': 'Sword', 'piece.kalem': 'Pen',
   'rh.c2.title': 'Golden pieces',
   'rh.c2.text': 'Only the Column and the Law tablet can turn golden, roughly once every 7 pieces. They arrive shimmering and fade once their effect fires.',
