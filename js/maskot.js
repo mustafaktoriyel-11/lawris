@@ -1,4 +1,4 @@
-// Lex Stack maskotları: aslan (hâkim) ve kedi (stajyer). Semboller index.html içindeki gizli SVG'de.
+// Lex Stack maskotları: aslan (Adaletin Hizmetkârı, Sacerdos Iustitiae) ve kedi (stajyer). Semboller index.html içindeki gizli SVG'de.
 import { t } from './i18n.js';
 const $ = (id) => document.getElementById(id);
 const reduce = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
