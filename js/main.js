@@ -311,6 +311,24 @@ function layout() {
 
 $('play').addEventListener('click', start);
 $('again').addEventListener('click', start);
+// Ana menüye dönüş
+function toMenu() {
+  state = 'menu'; piece = null;
+  for (const id of ['over', 'pause', 'kursu']) { const el = $(id); if (el) el.hidden = true; }
+  board.reset(); setLevelColors(0, true);
+  music.fadeOut(); maskotReset(); kediMenu();
+  $('menuBest').textContent = best;
+  $('menu').hidden = false;
+}
+$('overMenu').addEventListener('click', toMenu);
+// Duraklatmadan çıkarken oyun kaybolacağı için ikinci dokunuşla onay
+let menuOnayT = 0;
+$('pauseMenu').addEventListener('click', () => {
+  const b = $('pauseMenu');
+  if (b.dataset.onay === '1') { clearTimeout(menuOnayT); b.dataset.onay = ''; b.textContent = 'Ana menü'; toMenu(); return; }
+  b.dataset.onay = '1'; b.textContent = 'Dava kapanacak, emin misin? Tekrar dokun';
+  menuOnayT = setTimeout(() => { b.dataset.onay = ''; b.textContent = 'Ana menü'; }, 3500);
+});
 $('resume').addEventListener('click', () => act.pause());
 $('pauseBtn').addEventListener('click', () => act.pause());
 function showMute() {
