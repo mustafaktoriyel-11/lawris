@@ -2,6 +2,7 @@
 import { cellsOf, sizeOf, getSprite, COLORS as C } from './pieces.js';
 import { THEME as TH } from './theme.js';
 import { goldFx } from './render.js';
+import { music } from './music.js';
 import { drawBurst, BURST_MS, shakeX, drawCalm } from './fx.js';
 
 const COLS = 7, ROWS = 6, CELL = 18, SCENE_MS = 2700, DROP_MS = 520, FX_AT = 600;
@@ -60,6 +61,7 @@ export function createDemo(canvas, nameEl, textEl) {
   function apply(now) {
     const { type, sc, grid, cells } = scene;
     const abs = cells.map(([cx, cy]) => [sc.x + cx, sc.y + cy]);
+    if (music.isLive()) music.sfx(type, 0.5);
     cells.forEach(([cx, cy], i) => { const [x, y] = abs[i]; if (y >= 0 && y < ROWS) grid[y][x] = { type, rot: sc.rot, lx: cx, ly: cy }; });
     switch (type) {
       case 'tokmak': {

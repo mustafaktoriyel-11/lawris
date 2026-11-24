@@ -285,6 +285,90 @@ function tick() {
   }
 }
 
+
+// ---- Altın etki sesleri (kısa, yumuşak; sessizde / ses kapalıyken hiçbir şey yapmaz) ----
+let noiseBuf = null, sfxLive = 0;
+function noiseBuffer() {
+  if (noiseBuf && noiseBuf.sampleRate === ctx.sampleRate) return noiseBuf;
+  const len = Math.floor(ctx.sampleRate * 1.0);
+  noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
+  const d = noiseBuf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  return noiseBuf;
+}
+// filtreli gürültü: f0 -> f1 süpürme, a: [atak, ömür], v: seviye
+function sfxNoise(out, t, type, f0, f1, q, atk, dur, v) {
+  const n = ctx.createBufferSource(); n.buffer = noiseBuffer();
+  const f = ctx.createBiquadFilter(); f.type = type; f.Q.value = q;
+  f.frequency.setValueAtTime(f0, t); if (f1 !== f0) f.frequency.exponentialRampToValueAtTime(f1, t + dur);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + atk); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  n.connect(f); f.connect(g); g.connect(out);
+  n.start(t, Math.random() * 0.5); n.stop(t + dur + 0.03);
+}
+function sfxTone(out, t, type, f0, f1, atk, dur, v, vib) {
+  const o = ctx.createOscillator(); o.type = type;
+  o.frequency.setValueAtTime(f0, t); if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + atk); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(out);
+  if (vib) {
+    const l = ctx.createOscillator(), lg = ctx.createGain(); l.frequency.value = vib[0]; lg.gain.value = vib[1];
+    l.connect(lg); lg.connect(o.frequency); l.start(t); l.stop(t + dur + 0.05);
+  }
+  o.start(t); o.stop(t + dur + 0.05);
+}
+const SFX = {
+  tokmak(o, t) {
+    [[0, 1], [0.15, 0.65]].forEach(([d, v]) => {
+      sfxTone(o, t + d, 'sine', 125, 100, 0.004, 0.2, 0.75 * v);
+      sfxNoise(o, t + d, 'bandpass', 1500, 1100, 1.4, 0.002, 0.05, 0.9 * v);
+    });
+    sfxTone(o, t + 0.15, 'triangle', 320, 290, 0.004, 0.3, 0.1);   // ahşap tınısı
+    sfxNoise(o, t + 0.15, 'bandpass', 620, 560, 7, 0.004, 0.32, 0.25);
+  },
+  kilic(o, t) {
+    sfxNoise(o, t, 'bandpass', 1200, 7000, 1.1, 0.12, 0.27, 0.5);
+    sfxNoise(o, t + 0.05, 'highpass', 3000, 6500, 0.7, 0.1, 0.22, 0.18);
+    [[1240, 0.2, 0.5], [1870, 0.12, 0.38], [2630, 0.08, 0.28]].forEach(([f, v, d]) => sfxTone(o, t + 0.25, 'sine', f, f, 0.004, d, v));
+  },
+  kalem(o, t) {
+    let d = 0;
+    const n = 4 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < n; i++) {
+      const f = 3000 + Math.random() * 2000;
+      sfxNoise(o, t + d, 'bandpass', f, f * (0.85 + Math.random() * 0.3), 2.5, 0.006, 0.035 + Math.random() * 0.03, 0.5);
+      d += 0.045 + Math.random() * 0.05;
+    }
+    sfxNoise(o, t + d + 0.03, 'bandpass', 900, 700, 1.5, 0.002, 0.04, 0.45);
+    sfxTone(o, t + d + 0.03, 'sine', 220, 160, 0.002, 0.07, 0.2);
+  },
+  paragraf(o, t) {
+    sfxNoise(o, t, 'bandpass', 3200, 1100, 0.9, 0.015, 0.3, 0.5);
+    sfxTone(o, t + 0.2, 'sine', 1760, 1760, 0.006, 0.5, 0.16);
+    sfxTone(o, t + 0.2, 'sine', 3520, 3520, 0.006, 0.3, 0.04);
+  },
+  sutun(o, t) {
+    sfxNoise(o, t, 'lowpass', 160, 380, 0.7, 0.35, 0.5, 0.8);
+    sfxTone(o, t, 'sine', 62, 90, 0.4, 0.55, 0.45);
+    [[196, 0.22], [293.7, 0.12]].forEach(([f, v]) => sfxTone(o, t + 0.45, 'sine', f, f, 0.02, 0.35, v));
+  },
+  kanun(o, t) {
+    sfxTone(o, t, 'sine', 95, 50, 0.004, 0.3, 0.85);
+    sfxNoise(o, t, 'lowpass', 700, 300, 0.8, 0.003, 0.14, 0.7);
+    [[1318.5, 0.3], [1975.5, 0.36]].forEach(([f, d], i) => {
+      sfxTone(o, t + 0.26 + i * 0.1, 'triangle', f, f, 0.004, 0.32, 0.22);
+      sfxTone(o, t + 0.26 + i * 0.1, 'sine', f * 2, f * 2, 0.004, 0.18, 0.06);
+    });
+  },
+  terazi(o, t) {
+    sfxTone(o, t, 'sine', 880, 440, 0.18, 0.7, 0.3, [5.5, 9]);
+    sfxTone(o, t, 'sine', 1320, 660, 0.2, 0.6, 0.06, [5.5, 12]);
+    sfxNoise(o, t + 0.5, 'bandpass', 2400, 2200, 6, 0.002, 0.04, 0.3);
+    sfxTone(o, t + 0.5, 'sine', 1500, 1400, 0.002, 0.06, 0.08);
+  },
+};
+
 function stopTimer() { if (timer) { clearInterval(timer); timer = null; } }
 
 export const music = {
@@ -376,4 +460,16 @@ export const music = {
       n.start(t); o.start(t); o.stop(t + 0.25);
     } catch (_) { /* yoksay */ }
   },
+  // Altın etki sesi (kind: tokmak|kilic|kalem|paragraf|sutun|kanun|terazi); vol 0..1
+  sfx(kind, vol = 1) {
+    if (muted || !ctx || ctx.state !== 'running' || !SFX[kind] || sfxLive >= 3) return;
+    try {
+      const out = ctx.createGain(); out.gain.value = Math.max(0, Math.min(1, vol)) * 0.9;
+      out.connect(master); sfxLive++;
+      SFX[kind](out, ctx.currentTime + 0.01);
+      setTimeout(() => { sfxLive = Math.max(0, sfxLive - 1); try { out.disconnect(); } catch (_) { /* yoksay */ } }, 1100);
+    } catch (_) { /* yoksay */ }
+  },
+  // Rehber demosu için: yalnızca ses zaten çalışıyorsa ve kapalı değilse (asla sesi başlatmaz)
+  isLive() { return !muted && !!ctx && ctx.state === 'running'; },
 };

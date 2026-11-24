@@ -119,6 +119,7 @@ function x2Badge() {
 
 function applyGolden(p) {
   const cells = cellsOf(p.type, p.rot);
+  music.sfx(p.type);
   switch (p.type) {
     case 'tokmak': {
       const ys = new Set(cells.map((c) => p.y + c[1]));
@@ -182,7 +183,7 @@ function lockPiece() {
     score += pts; rows += n;
     flash('Hüküm!');
     if (n >= 2) aslanHukum(n);
-    music.knock();
+    if (!wasGold) music.knock();   // altın etkinin kendi sesi varken ikinci darbe yığılmasın
     const nl = Math.min(LEVELS.length - 1, Math.floor(rows / 8));
     if (nl > level) { level = nl; music.setLevel(level); aslanSeviye(LEVELS[level]); setLevelColors(level); }
   }
