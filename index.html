@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#190A0E">
-<meta name="description" content="Lawris: hukuk temalı düşen blok bulmaca oyunu.">
+<meta name="description" content="Lawris: hukuk temalı düşen blok bulmaca oyunu." data-i18n-attr="content:meta.desc">
 <title>Lawris</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
@@ -98,17 +98,17 @@
 </svg>
 <div id="app">
   <header id="hud">
-    <div class="box"><span class="lbl">İçtihat puanı</span><b id="score">0</b><span class="sub">En iyi: <span id="best">0</span></span></div>
-    <div class="box"><span class="lbl">Mahkeme</span><b id="level">Sulh</b><span class="sub"><span id="sure">00:00</span> <span id="status"></span></span></div>
-    <div class="box" id="holdBox" data-act="hold" aria-label="Talik: parçayı beklet"><span class="lbl">Talik</span><span class="pv"><canvas id="hold" data-px="34" width="68" height="68"></canvas></span></div>
-    <div class="box" id="nextBox"><span class="lbl">Sıradaki</span><span class="pv"><canvas id="next" data-px="34" width="68" height="68"></canvas><span class="nx"><canvas id="next2" data-px="17" width="34" height="34"></canvas><canvas id="next3" data-px="17" width="34" height="34"></canvas></span></span></div>
-    <button id="pauseBtn" aria-label="Duraklat">II</button>
-    <button id="muteBtn" class="snd" data-snd="music" type="button" aria-label="Müziği kapat" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="ic" d="M9 18V6l10-2v12"/><circle class="ic" cx="6.5" cy="18" r="2.5"/><circle class="ic" cx="16.5" cy="16" r="2.5"/><path class="slash" d="M3.5 3.5l17 17"/></svg></button>
-    <button id="sfxBtn" class="snd" data-snd="sfx" type="button" aria-label="Efektleri kapat" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="ic" d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="ic w1" d="M15.2 9.2a4 4 0 010 5.6"/><path class="ic w2" d="M17.6 6.8a7.5 7.5 0 010 10.4"/><path class="slash" d="M3.5 3.5l17 17"/></svg></button>
+    <div class="box"><span class="lbl" data-i18n="hud.score">İçtihat puanı</span><b id="score">0</b><span class="sub"><span data-i18n="hud.best">En iyi: </span><span id="best">0</span></span></div>
+    <div class="box"><span class="lbl" data-i18n="hud.court">Mahkeme</span><b id="level" data-i18n="court.0.short">Sulh</b><span class="sub"><span id="sure">00:00</span> <span id="status"></span></span></div>
+    <div class="box" id="holdBox" data-act="hold" data-i18n-attr="aria-label:hud.holdAria" aria-label="Talik: parçayı beklet"><span class="lbl" data-i18n="hud.hold">Talik</span><span class="pv"><canvas id="hold" data-px="34" width="68" height="68"></canvas></span></div>
+    <div class="box" id="nextBox"><span class="lbl" data-i18n="hud.next">Sıradaki</span><span class="pv"><canvas id="next" data-px="34" width="68" height="68"></canvas><span class="nx"><canvas id="next2" data-px="17" width="34" height="34"></canvas><canvas id="next3" data-px="17" width="34" height="34"></canvas></span></span></div>
+    <button id="pauseBtn" data-i18n-attr="aria-label:aria.pause" aria-label="Duraklat">II</button>
+    <button id="muteBtn" class="snd" data-snd="music" type="button" data-i18n-attr="aria-label:aria.musicOff" aria-label="Müziği kapat" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="ic" d="M9 18V6l10-2v12"/><circle class="ic" cx="6.5" cy="18" r="2.5"/><circle class="ic" cx="16.5" cy="16" r="2.5"/><path class="slash" d="M3.5 3.5l17 17"/></svg></button>
+    <button id="sfxBtn" class="snd" data-snd="sfx" type="button" data-i18n-attr="aria-label:aria.sfxOff" aria-label="Efektleri kapat" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="ic" d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="ic w1" d="M15.2 9.2a4 4 0 010 5.6"/><path class="ic w2" d="M17.6 6.8a7.5 7.5 0 010 10.4"/><path class="slash" d="M3.5 3.5l17 17"/></svg></button>
   </header>
   <main id="stage">
     <canvas id="board"></canvas>
-    <div id="flash">Hüküm!</div>
+    <div id="flash" data-i18n="flash.verdict">Hüküm!</div>
     <div id="toast"></div>
     <div id="mascotLayer" aria-hidden="true"></div>
     <section id="menu" class="overlay">
@@ -124,86 +124,87 @@
         <rect x="40" y="168" width="330" height="8"/><rect x="26" y="176" width="358" height="10"/><rect x="12" y="186" width="386" height="12"/><rect x="0" y="198" width="390" height="22"/></g>
         <path d="M26 72L195 16 364 72" fill="none" stroke="#ffbf6b" stroke-opacity=".35" stroke-width="1"/></svg></div>
       <div class="deco deco-3" aria-hidden="true"><svg class="co tl"><use href="#lw-corner"/></svg><svg class="co tr"><use href="#lw-corner"/></svg><svg class="co bl"><use href="#lw-corner"/></svg><svg class="co br"><use href="#lw-corner"/></svg></div>
-      <div class="menu-snd"><button id="menuMuteBtn" class="snd" data-snd="music" type="button" aria-label="Müziği kapat" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="ic" d="M9 18V6l10-2v12"/><circle class="ic" cx="6.5" cy="18" r="2.5"/><circle class="ic" cx="16.5" cy="16" r="2.5"/><path class="slash" d="M3.5 3.5l17 17"/></svg></button><button id="menuSfxBtn" class="snd" data-snd="sfx" type="button" aria-label="Efektleri kapat" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="ic" d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="ic w1" d="M15.2 9.2a4 4 0 010 5.6"/><path class="ic w2" d="M17.6 6.8a7.5 7.5 0 010 10.4"/><path class="slash" d="M3.5 3.5l17 17"/></svg></button></div>
-      <div class="menu-hero"><div class="mascot-badge"><svg viewBox="0 0 120 120" aria-hidden="true"><use href="#mf-aslan"/></svg></div><div class="bubble" id="menuBubble">Duruşma açılıyor! Kürsü seni bekliyor.</div></div>
+      <div class="menu-snd"><div class="lang-sw" role="group" data-i18n-attr="aria-label:lang.label" aria-label="Dil"><button type="button" data-lang="tr" aria-pressed="true">TR</button><button type="button" data-lang="en" aria-pressed="false">EN</button></div><button id="menuMuteBtn" class="snd" data-snd="music" type="button" data-i18n-attr="aria-label:aria.musicOff" aria-label="Müziği kapat" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="ic" d="M9 18V6l10-2v12"/><circle class="ic" cx="6.5" cy="18" r="2.5"/><circle class="ic" cx="16.5" cy="16" r="2.5"/><path class="slash" d="M3.5 3.5l17 17"/></svg></button><button id="menuSfxBtn" class="snd" data-snd="sfx" type="button" data-i18n-attr="aria-label:aria.sfxOff" aria-label="Efektleri kapat" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="ic" d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="ic w1" d="M15.2 9.2a4 4 0 010 5.6"/><path class="ic w2" d="M17.6 6.8a7.5 7.5 0 010 10.4"/><path class="slash" d="M3.5 3.5l17 17"/></svg></button></div>
+      <div class="menu-hero"><div class="mascot-badge"><svg viewBox="0 0 120 120" aria-hidden="true"><use href="#mf-aslan"/></svg></div><div class="bubble" id="menuBubble" data-i18n="menu.bubble">Duruşma açılıyor! Kürsü seni bekliyor.</div></div>
       <h1>LAWRIS</h1>
       <i class="rule" aria-hidden="true"></i>
-      <p class="tag">Davaları istifle, satırlara hüküm ver.</p>
-      <p class="menu-best">En iyi <b id="menuBest">0</b></p>
-      <button id="play" class="big">Oyna</button>
-      <div class="menu-links"><button id="kursuBtn" class="alt" type="button">Şeref kürsüsü</button><i class="dot" aria-hidden="true"></i><button id="rehberBtn" class="alt" type="button">Nasıl oynanır</button></div>
-      <p class="small">Klavye: ← → hareket, ↑/X döndür, ↓ yavaş in, Boşluk düşür, C talik, P duraklat</p>
-      <a href="privacy.html">Gizlilik</a>
+      <p class="tag" data-i18n="menu.tag">Davaları istifle, satırlara hüküm ver.</p>
+      <p class="menu-best"><span data-i18n="menu.best">En iyi</span> <b id="menuBest">0</b></p>
+      <button id="play" class="big" data-i18n="menu.play">Oyna</button>
+      <div class="menu-links"><button id="kursuBtn" class="alt" type="button" data-i18n="menu.kursu">Şeref kürsüsü</button><i class="dot" aria-hidden="true"></i><button id="rehberBtn" class="alt" type="button" data-i18n="menu.rehber">Nasıl oynanır</button></div>
+      <p class="small" data-i18n="kbd.menu">Klavye: ← → hareket, ↑/X döndür, ↓ yavaş in, Boşluk düşür, C talik, P duraklat</p>
+      <a href="privacy.html" data-i18n="menu.privacy" data-i18n-attr="href:privacy.href">Gizlilik</a>
     </section>
     <section id="pause" class="overlay" hidden>
-      <h2>Duraklatıldı</h2>
-      <button id="resume" class="big">Devam</button>
-      <button id="pauseMenu" class="alt" type="button">Ana menü</button>
+      <h2 data-i18n="pause.title">Duraklatıldı</h2>
+      <button id="resume" class="big" data-i18n="pause.resume">Devam</button>
+      <button id="pauseMenu" class="alt" type="button" data-i18n="pause.menu">Ana menü</button>
+      <div class="lang-sw" role="group" data-i18n-attr="aria-label:lang.label" aria-label="Dil"><button type="button" data-lang="tr" aria-pressed="true">TR</button><button type="button" data-lang="en" aria-pressed="false">EN</button></div>
     </section>
     <section id="over" class="overlay" hidden>
-      <h2>Dava düştü</h2>
-      <p>İçtihat puanı: <b id="final">0</b></p>
-      <p>En iyi: <b id="finalBest">0</b></p>
-      <p class="sure-son">Duruşma süresi: <b id="finalSure">00:00</b></p>
+      <h2 data-i18n="over.title">Dava düştü</h2>
+      <p><span data-i18n="over.score">İçtihat puanı: </span><b id="final">0</b></p>
+      <p><span data-i18n="over.best">En iyi: </span><b id="finalBest">0</b></p>
+      <p class="sure-son"><span data-i18n="over.time">Duruşma süresi: </span><b id="finalSure">00:00</b></p>
       <form id="kayit" class="kayit" hidden autocomplete="off">
-        <label for="adIn">Şeref kürsüsüne adını yaz</label>
-        <div class="kayit-satir"><input id="adIn" type="text" maxlength="16" placeholder="Takma ad" enterkeyhint="done" autocomplete="off" autocapitalize="words" spellcheck="false"><button type="submit" class="mini">Kaydet</button></div>
+        <label for="adIn" data-i18n="kayit.label">Şeref kürsüsüne adını yaz</label>
+        <div class="kayit-satir"><input id="adIn" type="text" maxlength="16" data-i18n-attr="placeholder:kayit.ph" placeholder="Takma ad" enterkeyhint="done" autocomplete="off" autocapitalize="words" spellcheck="false"><button type="submit" class="mini" data-i18n="kayit.save">Kaydet</button></div>
       </form>
       <p id="kayitSonuc" class="kayit-sonuc" hidden></p>
       <div class="menu-hero"><div class="mascot-badge"><svg viewBox="0 0 120 120" aria-hidden="true"><use href="#mf-kedi"/></svg></div><div class="bubble" id="overBubble"></div></div>
-      <button id="again" class="big">Tekrar oyna</button>
-      <button id="overKursu" class="alt" type="button">Şeref kürsüsü</button>
-      <button id="overMenu" class="alt" type="button">Ana menü</button>
-      <a class="small" id="lexLink" href="https://lexodak.com" target="_blank" rel="noopener">Hukuk çalışmaya devam et → Lex Odak</a>
+      <button id="again" class="big" data-i18n="over.again">Tekrar oyna</button>
+      <button id="overKursu" class="alt" type="button" data-i18n="menu.kursu">Şeref kürsüsü</button>
+      <button id="overMenu" class="alt" type="button" data-i18n="pause.menu">Ana menü</button>
+      <a class="small" id="lexLink" data-lang-only="tr" data-i18n="over.lex" href="https://lexodak.com" target="_blank" rel="noopener">Hukuk çalışmaya devam et → Lex Odak</a>
     </section>
     <section id="kursu" class="overlay" hidden role="dialog" aria-labelledby="kursuBaslik">
-      <h2 id="kursuBaslik">Şeref Kürsüsü</h2>
+      <h2 id="kursuBaslik" data-i18n="kursu.title">Şeref Kürsüsü</h2>
       <ol id="kursuList" class="kursu-list"></ol>
-      <p id="kursuBos" class="kursu-bos" hidden>Henüz hüküm yok. İlk davayı sen aç!</p>
-      <button id="kursuKapat" class="big" type="button">Kapat</button>
-      <button id="kursuTemizle" class="alt" type="button">Listeyi temizle</button>
+      <p id="kursuBos" class="kursu-bos" hidden data-i18n="kursu.empty">Henüz hüküm yok. İlk davayı sen aç!</p>
+      <button id="kursuKapat" class="big" type="button" data-i18n="kursu.close">Kapat</button>
+      <button id="kursuTemizle" class="alt" type="button" data-i18n="kursu.clear">Listeyi temizle</button>
     </section>
     <section id="rehber" class="overlay" hidden role="dialog" aria-modal="true" aria-labelledby="rehberBaslik">
-      <button id="rehberX" class="rh-x" type="button" aria-label="Kapat">&times;</button>
-      <h2 id="rehberBaslik">Nasıl oynanır</h2>
+      <button id="rehberX" class="rh-x" type="button" data-i18n-attr="aria-label:aria.close" aria-label="Kapat">&times;</button>
+      <h2 id="rehberBaslik" data-i18n="rh.title">Nasıl oynanır</h2>
       <div class="menu-hero rh-hero"><div class="mascot-badge"><svg viewBox="0 0 120 120" aria-hidden="true"><use href="#mf-kedi"/></svg></div><div class="bubble" id="rehberBubble"></div></div>
       <div id="rehberTrack" class="rh-track" tabindex="0">
-        <article class="rh-card" data-i="0"><h3>Kontroller</h3><ul class="rh-keys">
-            <li><i>◀</i><i>▶</i><span>Hareket</span></li>
-            <li><i>⟳</i><span>Döndür</span></li>
-            <li><i>▼</i><span>Yavaş in</span></li>
-            <li><i>⤓</i><span>Düşür</span></li>
-            <li class="wide"><i>⇄</i><span>Talik: parçayı beklet</span></li>
+        <article class="rh-card" data-i="0"><h3 data-i18n="rh.c0.title">Kontroller</h3><ul class="rh-keys">
+            <li><i>◀</i><i>▶</i><span data-i18n="rh.move">Hareket</span></li>
+            <li><i>⟳</i><span data-i18n="rh.rotate">Döndür</span></li>
+            <li><i>▼</i><span data-i18n="rh.soft">Yavaş in</span></li>
+            <li><i>⤓</i><span data-i18n="rh.drop">Düşür</span></li>
+            <li class="wide"><i>⇄</i><span data-i18n="rh.holdKey">Talik: parçayı beklet</span></li>
           </ul>
-          <p>Tahtada parmağını kaydır: sağa/sola sürükle taşır, aşağı sürükle yavaş indirir, dokun döndürür, hızlıca aşağı çek düşürür.</p>
-          <p class="rh-kbd">Klavye: ← → hareket, ↑/X döndür, ↓ yavaş in, Boşluk düşür, C/Shift talik, P duraklat.</p>
-          <p class="rh-note">Talik: her parçada bir kez, Talik kutusuna dokun. Yere değince yarım saniye daha kaydırabilirsin.</p></article>
-        <article class="rh-card" data-i="1"><h3>Parçalar</h3><div class="rh-pieces"><figure><canvas data-t="sutun" aria-hidden="true"></canvas><figcaption>Sütun</figcaption></figure><figure><canvas data-t="tokmak" aria-hidden="true"></canvas><figcaption>Tokmak</figcaption></figure><figure><canvas data-t="kanun" aria-hidden="true"></canvas><figcaption>Kanun</figcaption></figure><figure><canvas data-t="terazi" aria-hidden="true"></canvas><figcaption>Terazi</figcaption></figure><figure><canvas data-t="paragraf" aria-hidden="true"></canvas><figcaption>Paragraf</figcaption></figure><figure><canvas data-t="kilic" aria-hidden="true"></canvas><figcaption>Kılıç</figcaption></figure><figure><canvas data-t="kalem" aria-hidden="true"></canvas><figcaption>Kalem</figcaption></figure></div>
-          <p>Her parça bir hukuk sembolü; dolu satırlar silinir, buna hüküm denir. Sıradaki 3 dava hep görünür.</p></article>
-        <article class="rh-card" data-i="2"><h3>Altın parçalar</h3><p>Yaklaşık her 12 parçadan biri altın çıkar. Altın parça parıldayarak gelir; etkisini gösterince söner.</p>
+          <p data-i18n="rh.c0.touch">Tahtada parmağını kaydır: sağa/sola sürükle taşır, aşağı sürükle yavaş indirir, dokun döndürür, hızlıca aşağı çek düşürür.</p>
+          <p class="rh-kbd" data-i18n="rh.c0.kbd">Klavye: ← → hareket, ↑/X döndür, ↓ yavaş in, Boşluk düşür, C/Shift talik, P duraklat.</p>
+          <p class="rh-note" data-i18n="rh.c0.note">Talik: her parçada bir kez, Talik kutusuna dokun. Yere değince yarım saniye daha kaydırabilirsin.</p></article>
+        <article class="rh-card" data-i="1"><h3 data-i18n="rh.c1.title">Parçalar</h3><div class="rh-pieces"><figure><canvas data-t="sutun" aria-hidden="true"></canvas><figcaption data-i18n="piece.sutun">Sütun</figcaption></figure><figure><canvas data-t="tokmak" aria-hidden="true"></canvas><figcaption data-i18n="piece.tokmak">Tokmak</figcaption></figure><figure><canvas data-t="kanun" aria-hidden="true"></canvas><figcaption data-i18n="piece.kanun">Kanun</figcaption></figure><figure><canvas data-t="terazi" aria-hidden="true"></canvas><figcaption data-i18n="piece.terazi">Terazi</figcaption></figure><figure><canvas data-t="paragraf" aria-hidden="true"></canvas><figcaption data-i18n="piece.paragraf">Paragraf</figcaption></figure><figure><canvas data-t="kilic" aria-hidden="true"></canvas><figcaption data-i18n="piece.kilic">Kılıç</figcaption></figure><figure><canvas data-t="kalem" aria-hidden="true"></canvas><figcaption data-i18n="piece.kalem">Kalem</figcaption></figure></div>
+          <p data-i18n="rh.c1.text">Her parça bir hukuk sembolü; dolu satırlar silinir, buna hüküm denir. Sıradaki 3 dava hep görünür.</p></article>
+        <article class="rh-card" data-i="2"><h3 data-i18n="rh.c2.title">Altın parçalar</h3><p data-i18n="rh.c2.text">Yaklaşık her 12 parçadan biri altın çıkar. Altın parça parıldayarak gelir; etkisini gösterince söner.</p>
           <div class="rh-demo"><canvas id="demoCv" aria-hidden="true"></canvas><div class="rh-cap" aria-live="off"><b id="demoName"></b><span id="demoText"></span></div></div>
-          <ul class="rh-gold" id="rhGold"><li><button type="button" data-p="sutun" data-n="Sütun" data-d="Altındaki boşlukları mermerle doldurur." aria-label="Sütun: Altındaki boşlukları mermerle doldurur."><canvas data-t="sutun" data-g="1" aria-hidden="true"></canvas><span>Sütun</span></button></li><li><button type="button" data-p="tokmak" data-n="Tokmak" data-d="Değdiği 3 satırı siler, +150 puan." aria-label="Tokmak: Değdiği 3 satırı siler, +150 puan."><canvas data-t="tokmak" data-g="1" aria-hidden="true"></canvas><span>Tokmak</span></button></li><li><button type="button" data-p="kanun" data-n="Kanun" data-d="Sonraki 3 satır silmede puan x2." aria-label="Kanun: Sonraki 3 satır silmede puan x2."><canvas data-t="kanun" data-g="1" aria-hidden="true"></canvas><span>Kanun</span></button></li><li><button type="button" data-p="terazi" data-n="Terazi" data-d="+250 puan, 10 sn yavaş düşüş." aria-label="Terazi: +250 puan, 10 sn yavaş düşüş."><canvas data-t="terazi" data-g="1" aria-hidden="true"></canvas><span>Terazi</span></button></li><li><button type="button" data-p="paragraf" data-n="Paragraf" data-d="İtiraz! En üst satırı kaldırır." aria-label="Paragraf: İtiraz! En üst satırı kaldırır."><canvas data-t="paragraf" data-g="1" aria-hidden="true"></canvas><span>Paragraf</span></button></li><li><button type="button" data-p="kilic" data-n="Kılıç" data-d="Kestiği satırları ve altındakini siler, +150." aria-label="Kılıç: Kestiği satırları ve altındakini siler, +150."><canvas data-t="kilic" data-g="1" aria-hidden="true"></canvas><span>Kılıç</span></button></li><li><button type="button" data-p="kalem" data-n="Kalem" data-d="İmzalar: en dolu satırı tamamlar, +100." aria-label="Kalem: İmzalar: en dolu satırı tamamlar, +100."><canvas data-t="kalem" data-g="1" aria-hidden="true"></canvas><span>Kalem</span></button></li></ul></article>
-        <article class="rh-card" data-i="3"><h3>Mahkemeler</h3><ol class="rh-courts"><li>Sulh</li><li>Asliye</li><li>İstinaf</li><li>Yargıtay</li></ol>
-          <p>Her 8 satırda bir üst mahkemeye çıkarsın.</p>
-          <p>Üst mahkemede her satır daha çok puan: Yargıtay'da 4 katı.</p>
-          <p>Aynı anda birden çok satır sil, aslan hükmünü okusun!</p>
-          <p class="rh-note">Duruşma süresi sayılır; en iyilerin Şeref kürsüsüne yazılır.</p></article>
+          <ul class="rh-gold" id="rhGold"><li><button type="button" data-p="sutun" data-n="Sütun" data-d="Altındaki boşlukları mermerle doldurur." data-i18n-attr="data-n:piece.sutun;data-d:gold.sutun"><canvas data-t="sutun" data-g="1" aria-hidden="true"></canvas><span data-i18n="piece.sutun">Sütun</span></button></li><li><button type="button" data-p="tokmak" data-n="Tokmak" data-d="Değdiği 3 satırı siler, +150 puan." data-i18n-attr="data-n:piece.tokmak;data-d:gold.tokmak"><canvas data-t="tokmak" data-g="1" aria-hidden="true"></canvas><span data-i18n="piece.tokmak">Tokmak</span></button></li><li><button type="button" data-p="kanun" data-n="Kanun" data-d="Sonraki 3 satır silmede puan x2." data-i18n-attr="data-n:piece.kanun;data-d:gold.kanun"><canvas data-t="kanun" data-g="1" aria-hidden="true"></canvas><span data-i18n="piece.kanun">Kanun</span></button></li><li><button type="button" data-p="terazi" data-n="Terazi" data-d="+250 puan, 10 sn yavaş düşüş." data-i18n-attr="data-n:piece.terazi;data-d:gold.terazi"><canvas data-t="terazi" data-g="1" aria-hidden="true"></canvas><span data-i18n="piece.terazi">Terazi</span></button></li><li><button type="button" data-p="paragraf" data-n="Paragraf" data-d="İtiraz! En üst satırı kaldırır." data-i18n-attr="data-n:piece.paragraf;data-d:gold.paragraf"><canvas data-t="paragraf" data-g="1" aria-hidden="true"></canvas><span data-i18n="piece.paragraf">Paragraf</span></button></li><li><button type="button" data-p="kilic" data-n="Kılıç" data-d="Kestiği satırları ve altındakini siler, +150." data-i18n-attr="data-n:piece.kilic;data-d:gold.kilic"><canvas data-t="kilic" data-g="1" aria-hidden="true"></canvas><span data-i18n="piece.kilic">Kılıç</span></button></li><li><button type="button" data-p="kalem" data-n="Kalem" data-d="İmzalar: en dolu satırı tamamlar, +100." data-i18n-attr="data-n:piece.kalem;data-d:gold.kalem"><canvas data-t="kalem" data-g="1" aria-hidden="true"></canvas><span data-i18n="piece.kalem">Kalem</span></button></li></ul></article>
+        <article class="rh-card" data-i="3"><h3 data-i18n="rh.c3.title">Mahkemeler</h3><ol class="rh-courts"><li data-i18n="court.0.full">Sulh</li><li data-i18n="court.1.full">Asliye</li><li data-i18n="court.2.full">İstinaf</li><li data-i18n="court.3.full">Yargıtay</li></ol>
+          <p data-i18n="rh.c3.p1">Her 8 satırda bir üst mahkemeye çıkarsın.</p>
+          <p data-i18n="rh.c3.p2">Üst mahkemede her satır daha çok puan: Yargıtay'da 4 katı.</p>
+          <p data-i18n="rh.c3.p3">Aynı anda birden çok satır sil, aslan hükmünü okusun!</p>
+          <p class="rh-note" data-i18n="rh.c3.note">Duruşma süresi sayılır; en iyilerin Şeref kürsüsüne yazılır.</p></article>
       </div>
       <div class="rh-dots" id="rehberDots" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-      <div class="rh-nav"><button id="rehberGeri" class="alt" type="button">Geri</button><button id="rehberIleri" class="mini" type="button">İleri</button></div>
+      <div class="rh-nav"><button id="rehberGeri" class="alt" type="button" data-i18n="rh.back">Geri</button><button id="rehberIleri" class="mini" type="button" data-i18n="rh.next">İleri</button></div>
     </section>
   </main>
-  <p id="kbdHelp" aria-hidden="true"><b>Klavye</b><span>← → hareket · ↑/X döndür · ↓ in · Boşluk düşür · C talik · P duraklat</span></p>
+  <p id="kbdHelp" aria-hidden="true"><b data-i18n="kbd.title">Klavye</b><span data-i18n="kbd.help">← → hareket · ↑/X döndür · ↓ in · Boşluk düşür · C talik · P duraklat</span></p>
   <nav id="pad">
     <div class="grp">
-      <button data-act="left" aria-label="Sol"><i>◀</i></button>
-      <button data-act="down" aria-label="Aşağı"><i>▼</i></button>
-      <button data-act="right" aria-label="Sağ"><i>▶</i></button>
+      <button data-act="left" data-i18n-attr="aria-label:aria.left" aria-label="Sol"><i>◀</i></button>
+      <button data-act="down" data-i18n-attr="aria-label:aria.down" aria-label="Aşağı"><i>▼</i></button>
+      <button data-act="right" data-i18n-attr="aria-label:aria.right" aria-label="Sağ"><i>▶</i></button>
     </div>
     <div class="grp">
-      <button data-act="hold" class="hld" aria-label="Talik"><i>⇄</i></button>
-      <button data-act="drop" aria-label="Düşür"><i>⤓</i></button>
-      <button data-act="rotate" class="rot" aria-label="Döndür"><i>⟳</i></button>
+      <button data-act="hold" class="hld" data-i18n-attr="aria-label:aria.hold" aria-label="Talik"><i>⇄</i></button>
+      <button data-act="drop" data-i18n-attr="aria-label:aria.drop" aria-label="Düşür"><i>⤓</i></button>
+      <button data-act="rotate" class="rot" data-i18n-attr="aria-label:aria.rotate" aria-label="Döndür"><i>⟳</i></button>
     </div>
   </nav>
 </div>

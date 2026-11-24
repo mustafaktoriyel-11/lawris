@@ -43,17 +43,23 @@ export function createDemo(canvas, nameEl, textEl) {
     canvas.style.width = cell * COLS + 'px'; canvas.style.height = cell * ROWS + 'px';
   }
 
+  // başlık ve açıklama düğmelerin (i18n ile güncellenen) data-n / data-d niteliklerinden okunur
+  function caption() {
+    if (!scene) return;
+    const btn = document.querySelector('#rhGold [data-p="' + scene.type + '"]');
+    if (btn) {
+      nameEl.textContent = btn.dataset.n || scene.type;
+      textEl.textContent = btn.dataset.d || '';
+    }
+  }
+
   // sahneyi hazırlar; captionEl metinlerini düğmelerden okur
   function begin(i, now) {
     idx = ((i % ORDER.length) + ORDER.length) % ORDER.length;
     const type = ORDER[idx], sc = SCENES[type];
     scene = { type, sc, grid: buildGrid(sc.st), done: false, calm: 0, cells: cellsOf(type, sc.rot), sz: sizeOf(type, sc.rot), phase: 0 };
     bursts = []; calmT0 = popT0 = -1e9; t0 = now;
-    const btn = document.querySelector('#rhGold [data-p="' + type + '"]');
-    if (btn) {
-      nameEl.textContent = btn.dataset.n || type;
-      textEl.textContent = btn.dataset.d || '';
-    }
+    caption();
     document.querySelectorAll('#rhGold [data-p]').forEach((b) => b.classList.toggle('on', b.dataset.p === type));
   }
 
@@ -172,5 +178,5 @@ export function createDemo(canvas, nameEl, textEl) {
   const setActive = (on) => { want = !!on; refresh(); };
   document.addEventListener('visibilitychange', refresh);
   function goto(type) { const i = ORDER.indexOf(type); if (i < 0) return; idx = i; scene = null; }
-  return { setActive, goto, resize() { if (active) size(); }, get active() { return active; } };
+  return { setActive, goto, relabel: caption, resize() { if (active) size(); }, get active() { return active; } };
 }

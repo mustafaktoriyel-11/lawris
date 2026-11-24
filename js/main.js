@@ -8,9 +8,11 @@ import { music } from './music.js';
 import { sfx } from './sfx.js';
 import * as skor from './skor.js';
 import { initRehber } from './rehber.js';
+import { t, setLang, onLang, fmtDate, courtLabel, isDefaultName } from './i18n.js';
 import { aslanHukum, aslanSeviye, kediSoyle, kediMenu, kediOver, maskotReset } from './maskot.js';
 
-const LEVELS = ['Sulh', 'Asliye', 'İstinaf', 'Yargıtay'];
+const LEVEL_COUNT = 4;   // mahkeme adları i18n'de: court.N.short / court.N.full
+const levelName = (i) => t('court.' + i + '.short');
 const LINE_SCORE = [0, 100, 300, 500, 800, 1200, 1800];
 const GOLD_CHANCE = 0.08;
 const LOCK_DELAY = 500;   // yere değdikten sonra kayma/döndürme süresi (ms)
@@ -82,8 +84,8 @@ const gravityMs = () => {
   return ms;
 };
 
-function toast(text) {
-  if (state === 'play' && /^Altın|^Kılıç/.test(text)) { kediSoyle(text, 2200); return; }
+function toast(text, gold) {
+  if (state === 'play' && gold) { kediSoyle(text, 2200); return; }
   const el = $('toast');
   el.textContent = text;
   el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
@@ -98,8 +100,9 @@ function hud() {
   $('score').textContent = score;
   $('best').textContent = best;
   $('menuBest').textContent = best;
-  $('level').textContent = LEVELS[level];
-  $('status').textContent = (doubleLeft > 0 ? 'x2 puan (' + doubleLeft + ') ' : '') + (slowMs > 0 ? 'yavaş ' + Math.ceil(slowMs / 1000) + 'sn' : '');
+  $('level').textContent = levelName(level);
+  $('status').textContent = (doubleLeft > 0 ? t('hud.x2', { n: doubleLeft }) : '') + (slowMs > 0 ? t('hud.slow', { n: Math.ceil(slowMs / 1000) }) : '');
+  $('level').parentElement.classList.toggle('st', doubleLeft > 0 || slowMs > 0);   // dar ekranda süre yerine durum görünür
 }
 
 function ghostY() {
@@ -125,7 +128,7 @@ function applyGolden(p) {
     case 'tokmak': {
       const ys = new Set(cells.map((c) => p.y + c[1]));
       { const rs = [...ys].filter((y) => y >= 0 && y < ROWS); burst({ rows: rs, gold: true, kind: 'tokmak' }); board.removeRows(rs); } score += 150;
-      toast('Altın Tokmak: hüküm verildi, değdiği satırlar silindi.');
+      toast(t('toast.tokmak'), true);
       break;
     }
     case 'sutun': {
@@ -133,28 +136,28 @@ function applyGolden(p) {
       for (const [cx, cy] of cells) cols.set(p.x + cx, Math.max(cols.get(p.x + cx) ?? -1, p.y + cy));
       for (const [x, y] of cols) board.fillPlain(x, y + 1);
       burst({ cols: [...cols.keys()], from: Math.min(...cols.values()) + 1, gold: true, kind: 'sutun' });
-      toast('Altın Sütun: altındaki boşluklar mermerle dolduruldu.');
+      toast(t('toast.sutun'), true);
       break;
     }
     case 'terazi':
       score += 250; slowMs = 10000;
-      toast('Altın Terazi: +250 puan, yerçekimi 10 sn yavaş.');
+      toast(t('toast.terazi'), true);
       break;
     case 'kanun':
       doubleLeft = 3; x2Badge();
-      toast('Altın Kanun: sonraki 3 satır silmede puan iki katı.');
+      toast(t('toast.kanun'), true);
       break;
     case 'paragraf': {
-      const t = board.topRow();
-      if (t >= 0) { burst({ rows: [t], gold: true, kind: 'paragraf' }); board.removeRows([t]); }
-      toast('Altın Paragraf: itiraz! En üst satır kaldırıldı.');
+      const tr0 = board.topRow();
+      if (tr0 >= 0) { burst({ rows: [tr0], gold: true, kind: 'paragraf' }); board.removeRows([tr0]); }
+      toast(t('toast.paragraf'), true);
       break;
     }
     case 'kalem': {
       const y = board.fullestRow();
       if (y >= 0) { burst({ rows: [y], gold: true, kind: 'kalem' }); board.fillRowPlain(y); }
       score += 100;
-      toast('Altın Kalem: karar imzalandı, en dolu satır tamamlandı.');
+      toast(t('toast.kalem'), true);
       break;
     }
     case 'kilic': {
@@ -164,7 +167,7 @@ function applyGolden(p) {
       const below = Math.max(...ys) + 1;
       if (below < ROWS) set.add(below);
       { const rs = [...set].filter((y) => y >= 0 && y < ROWS); burst({ rows: rs, gold: true, kind: 'kilic' }); board.removeRows(rs); } score += 150;
-      toast('Altın Kılıç: kılıç indi, namlunun kestiği satırlar silindi.');
+      toast(t('toast.kilic'), true);
       break;
     }
   }
@@ -189,11 +192,11 @@ function lockPiece(hard) {
     let pts = (LINE_SCORE[Math.min(n, LINE_SCORE.length - 1)]) * (level + 1);
     if (doubleLeft > 0) { pts *= 2; doubleLeft--; }
     score += pts; rows += n;
-    flash('Hüküm!');
+    flash(t('flash.verdict'));
     if (n >= 2) aslanHukum(n);
     sfx.lineClear(n, level);
-    const nl = Math.min(LEVELS.length - 1, Math.floor(rows / 8));
-    if (nl > level) { level = nl; music.setLevel(level); aslanSeviye(LEVELS[level]); setLevelColors(level); sfx.levelUp(level, 0.45); }
+    const nl = Math.min(LEVEL_COUNT - 1, Math.floor(rows / 8));
+    if (nl > level) { level = nl; music.setLevel(level); aslanSeviye(level); setLevelColors(level); sfx.levelUp(level, 0.45); }
   }
   piece = null;
   updateTension();
@@ -289,14 +292,15 @@ function kayitEt(e) {
   e.preventDefault();
   if ($('kayit').hidden) return;
   const ad = skor.temizAd($('adIn').value);
-  const sira = skor.ekle(ad, score, LEVELS[level], rows);
+  const sira = skor.ekle(ad, score, 'c' + level, rows);
   sonKayit = { ad, puan: score };
   best = Math.max(best, skor.enIyi());
   hud(); $('finalBest').textContent = best;
   $('kayit').hidden = true;
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   const r = $('kayitSonuc');
-  r.textContent = 'Kürsüde ' + sira + '. sıradasın!';
+  r.textContent = t('kayit.saved', { n: sira });
+  r.dataset.sira = sira;
   r.hidden = false; r.classList.remove('yeni'); void r.offsetWidth; r.classList.add('yeni');
 }
 function kursuCiz() {
@@ -308,15 +312,15 @@ function kursuCiz() {
     if (sonKayit && sonKayit.ad === e.ad && sonKayit.puan === e.puan) li.classList.add('yeni');
     const mk = (cls, t) => { const s = document.createElement('span'); s.className = cls; s.textContent = t; li.appendChild(s); };
     mk('rk', String(i + 1));
-    mk('nm', e.ad);
+    mk('nm', isDefaultName(e.ad) ? t('kayit.defaultName') : e.ad);
     mk('pn', String(e.puan));
-    mk('mt', [e.mahkeme, skor.kisaTarih(e.tarih)].filter(Boolean).join(' · '));
+    mk('mt', [courtLabel(e.mahkeme), fmtDate(e.tarih)].filter(Boolean).join(' · '));
     ol.appendChild(li);
   });
   $('kursuBos').hidden = l.length > 0;
   ol.hidden = l.length === 0;
   $('kursuTemizle').hidden = l.length === 0;
-  temizOnay = 0; $('kursuTemizle').textContent = 'Listeyi temizle';
+  temizOnay = 0; $('kursuTemizle').textContent = t('kursu.clear');
 }
 function kursuAc(opener) {
   kursuOnceki = opener || null;
@@ -335,8 +339,8 @@ $('kursuKapat').addEventListener('click', kursuKapat);
 $('kursuTemizle').addEventListener('click', () => {
   const b = $('kursuTemizle');
   if (!temizOnay) {
-    temizOnay = 1; b.textContent = 'Emin misin? Tekrar dokun';
-    setTimeout(() => { if (temizOnay) { temizOnay = 0; b.textContent = 'Listeyi temizle'; } }, 4000);
+    temizOnay = 1; b.textContent = t('kursu.confirm');
+    setTimeout(() => { if (temizOnay) { temizOnay = 0; b.textContent = t('kursu.clear'); } }, 4000);
     return;
   }
   skor.temizle(); sonKayit = null;
@@ -434,7 +438,7 @@ function showSnd() {
     const isMusic = b.dataset.snd === 'music', off = isMusic ? mm : sm;
     b.classList.toggle('off', off);
     b.setAttribute('aria-pressed', String(!off));
-    b.setAttribute('aria-label', isMusic ? (off ? 'Müziği aç' : 'Müziği kapat') : (off ? 'Efektleri aç' : 'Efektleri kapat'));
+    b.setAttribute('aria-label', t(isMusic ? (off ? 'aria.musicOn' : 'aria.musicOff') : (off ? 'aria.sfxOn' : 'aria.sfxOff')));
   });
 }
 document.querySelectorAll('[data-snd]').forEach((b) => b.addEventListener('click', () => {
@@ -443,6 +447,15 @@ document.querySelectorAll('[data-snd]').forEach((b) => b.addEventListener('click
   showSnd();
 }));
 showSnd();
+// Dil düğmeleri (açılış ekranı + duraklatma kartı) ve canlı yenileme
+document.querySelectorAll('[data-lang]').forEach((b) => b.addEventListener('click', () => { setLang(b.dataset.lang); b.blur(); }));
+onLang(() => {
+  showSnd(); hud();
+  if (!$('kursu').hidden) kursuCiz();
+  const r = $('kayitSonuc');
+  if (!r.hidden && r.dataset.sira) r.textContent = t('kayit.saved', { n: r.dataset.sira });
+  kediMenu(); if (!$('over').hidden) kediOver(true);
+});
 // İlk kullanıcı hareketi: ses bağlamını aç; menüdeysek menü müziğini başlat (tarayıcılar otomatik çalmayı engeller)
 let gestured = false;
 function firstGesture() {

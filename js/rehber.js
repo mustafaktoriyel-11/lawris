@@ -1,13 +1,8 @@
 // Lawris - "Nasıl oynanır" rehberi (4 kaydırmalı kart)
 import { getSprite, sizeOf } from './pieces.js';
 import { createDemo } from './demo.js';
+import { t, onLang } from './i18n.js';
 
-const LINES = [
-  'Önce kontrolleri öğren, sonra kürsü senin!',
-  'Yedi parça, yedi hukuk sembolü.',
-  'Altın parça görürsen sevin!',
-  'Yargıtay\'a kadar çıkabilir misin?',
-];
 const KEY = 'lawris.rehber';
 const $ = (id) => document.getElementById(id);
 
@@ -43,6 +38,13 @@ export function initRehber({ onStart }) {
     });
   }
 
+  // altın parça düğmelerinin erişilebilir adı; dil değişince yenilenir
+  function labels() {
+    $('rhGold').querySelectorAll('[data-p]').forEach((b) => b.setAttribute('aria-label', b.dataset.n + ': ' + b.dataset.d));
+  }
+  labels();
+  onLang(() => { labels(); sync(); demo.relabel(); });
+
   function show(i, smooth) {
     idx = Math.max(0, Math.min(cards.length - 1, i));
     track.scrollTo({ left: idx * track.clientWidth, behavior: smooth ? 'smooth' : 'auto' });
@@ -51,8 +53,8 @@ export function initRehber({ onStart }) {
   function sync() {
     dots.forEach((d, k) => d.classList.toggle('on', k === idx));
     cards.forEach((c, k) => c.setAttribute('aria-hidden', String(k !== idx)));
-    $('rehberBubble').textContent = LINES[idx];
-    ileri.textContent = idx === cards.length - 1 ? 'Başla' : 'İleri';
+    $('rehberBubble').textContent = t('rh.l' + idx);
+    ileri.textContent = t(idx === cards.length - 1 ? 'rh.start' : 'rh.next');
     geri.style.visibility = idx === 0 ? 'hidden' : 'visible';
     demoSync();
   }

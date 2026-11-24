@@ -1,19 +1,9 @@
 // Lawris maskotları: aslan (hâkim) ve kedi (stajyer). Semboller index.html içindeki gizli SVG'de.
+import { t } from './i18n.js';
 const $ = (id) => document.getElementById(id);
 const reduce = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-const HUKUM = { 2: 'Hüküm!', 3: 'Oybirliğiyle!', 4: 'Emsal karar!' };
-const SEVIYE = {
-  'Asliye': 'Dosya Asliye\'ye gönderildi',
-  'İstinaf': 'İstinaf incelemesi başlıyor',
-  'Yargıtay': 'Yargıtay huzurundasın',
-};
-const TESELLI = [
-  'Bir dahakine istinafa götürürüz!',
-  'Her büyük hukukçu dava kaybetmiştir.',
-  'Biraz mola, sonra yeniden duruşma!',
-  'Dosya kapanmadı, temyiz yolu açık!',
-];
+let overIdx = -1;
 
 const queue = [];
 let busy = false, timer = 0, cur = null;
@@ -54,11 +44,11 @@ function next() {
 }
 
 export function aslanHukum(n) {
-  const text = HUKUM[Math.min(Math.max(n, 2), 4)];
+  const text = t('lion.' + Math.min(Math.max(n, 2), 4));
   enqueue({ kind: 'hukum', who: 'aslan', text, cls: 'aslan-side', ms: 1500 });
 }
-export function aslanSeviye(levelName) {
-  const text = SEVIYE[levelName] || levelName;
+export function aslanSeviye(level) {
+  const text = t('lion.lvl.' + level);
   enqueue({ kind: 'seviye', who: 'aslan', text, cls: 'aslan-big', ms: 1800 });
 }
 export function kediSoyle(text, ms = 2200) {
@@ -66,11 +56,13 @@ export function kediSoyle(text, ms = 2200) {
 }
 export function kediMenu() {
   const b = $('menuBubble');
-  if (b) b.textContent = 'Duruşma açılıyor! Kürsü seni bekliyor.';
+  if (b) b.textContent = t('menu.bubble');
 }
-export function kediOver() {
+// keep: dil değişiminde aynı teselli cümlesini çevirir
+export function kediOver(keep) {
   const b = $('overBubble');
-  if (b) b.textContent = TESELLI[Math.floor(Math.random() * TESELLI.length)];
+  if (!keep || overIdx < 0) overIdx = Math.floor(Math.random() * 4);
+  if (b) b.textContent = t('over.consol.' + overIdx);
 }
 export function maskotReset() {
   queue.length = 0; clearTimeout(timer); busy = false;

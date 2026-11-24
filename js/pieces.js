@@ -1,10 +1,6 @@
 import { THEME } from './theme.js';
 // Lawris - parça tanımları ve sprite çizimi
 export const TYPES = ['sutun', 'tokmak', 'kanun', 'terazi', 'paragraf', 'kilic', 'kalem'];
-export const NAMES = {
-  sutun: 'Sütun', tokmak: 'Tokmak', kanun: 'Kanun',
-  terazi: 'Terazi', paragraf: 'Paragraf', kilic: 'Kılıç', kalem: 'Kalem',
-};
 // Üretim ağırlıkları (Kılıç yarı olasılıkla gelir)
 export const WEIGHTS = { sutun: 1, tokmak: 1, kanun: 1, terazi: 1, paragraf: 1, kilic: 0.5, kalem: 1 };
 

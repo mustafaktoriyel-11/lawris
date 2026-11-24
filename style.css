@@ -574,4 +574,16 @@ html[class*="ui-"] #menu > .menu-snd { position: absolute; z-index: 3; top: calc
   html.ui-mix #app #hud .box { padding: 0 6px; }
   html.ui-mix #app #hud #nextBox { padding-right: 3px; gap: 3px; }
   html.ui-mix #app #hud #nextBox .lbl { width: 38px; }
+  html.ui-mix #app #hud #level { font-size: .8rem; }
+  html.ui-mix #app #hud #level ~ .sub { overflow: hidden; text-overflow: ellipsis; max-width: 100%; line-height: 1.25; }
+  html.ui-mix #app #hud .box.st #sure { display: none; }
 }
+
+/* dil geçişi (TR | EN): açılış ekranı üst sağ + duraklatma kartı */
+[data-lang-only][hidden] { display: none !important; }
+.lang-sw { display: inline-flex; align-items: center; height: 40px; padding: 3px; gap: 2px; border-radius: 999px; color: #e8d3ae; background: rgba(255,255,255,.07); border: 1px solid rgba(240,196,106,.3); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.lang-sw button { min-width: 34px; height: 32px; padding: 0 8px; border: 0; border-radius: 999px; background: none; color: inherit; font: 400 .74rem Georgia, serif; letter-spacing: .1em; cursor: pointer; opacity: .7; }
+.lang-sw button[aria-pressed="true"] { background: rgba(240,196,106,.24); color: #f6e3a6; opacity: 1; box-shadow: inset 0 0 0 1px rgba(240,196,106,.45); }
+.lang-sw button:focus-visible { outline: 2px solid #f0c46a; outline-offset: 1px; }
+.menu-snd { align-items: center; }
+#pause .lang-sw { align-self: center; margin-top: 6px; }
