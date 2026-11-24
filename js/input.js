@@ -10,6 +10,8 @@ export function initInput(a, canvas, getCell) {
     x: 'rotate', X: 'rotate', ' ': 'drop', p: 'pause', P: 'pause',
   };
   window.addEventListener('keydown', (e) => {
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
     const n = KEYS[e.key];
     if (!n) return;
     e.preventDefault();

@@ -142,6 +142,7 @@
       <p class="tag">Davaları istifle, satırlara hüküm ver.</p>
       <p class="menu-best">En iyi <b id="menuBest">0</b></p>
       <button id="play" class="big">Oyna</button>
+      <button id="kursuBtn" class="alt" type="button">Şeref kürsüsü</button>
       <p class="small">Klavye: ← → hareket, ↑/X döndür, ↓ yavaş in, Boşluk düşür, P duraklat</p>
       <a href="privacy.html">Gizlilik</a>
     </section>
@@ -153,9 +154,22 @@
       <h2>Dava düştü</h2>
       <p>İçtihat puanı: <b id="final">0</b></p>
       <p>En iyi: <b id="finalBest">0</b></p>
+      <form id="kayit" class="kayit" hidden autocomplete="off">
+        <label for="adIn">Şeref kürsüsüne adını yaz</label>
+        <div class="kayit-satir"><input id="adIn" type="text" maxlength="16" placeholder="Takma ad" enterkeyhint="done" autocomplete="off" autocapitalize="words" spellcheck="false"><button type="submit" class="mini">Kaydet</button></div>
+      </form>
+      <p id="kayitSonuc" class="kayit-sonuc" hidden></p>
       <div class="menu-hero"><div class="mascot-badge"><svg viewBox="0 0 120 120" aria-hidden="true"><use href="#mf-kedi"/></svg></div><div class="bubble" id="overBubble"></div></div>
       <button id="again" class="big">Tekrar oyna</button>
+      <button id="overKursu" class="alt" type="button">Şeref kürsüsü</button>
       <a class="small" id="lexLink" href="https://lexodak.com" target="_blank" rel="noopener">Hukuk çalışmaya devam et → Lex Odak</a>
+    </section>
+    <section id="kursu" class="overlay" hidden role="dialog" aria-labelledby="kursuBaslik">
+      <h2 id="kursuBaslik">Şeref Kürsüsü</h2>
+      <ol id="kursuList" class="kursu-list"></ol>
+      <p id="kursuBos" class="kursu-bos" hidden>Henüz hüküm yok. İlk davayı sen aç!</p>
+      <button id="kursuKapat" class="big" type="button">Kapat</button>
+      <button id="kursuTemizle" class="alt" type="button">Listeyi temizle</button>
     </section>
   </main>
   <nav id="pad">

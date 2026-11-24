@@ -5,6 +5,7 @@ import { Renderer } from './render.js';
 import { setLevelColors, tickColors } from './theme.js';
 import { initInput } from './input.js';
 import { music } from './music.js';
+import * as skor from './skor.js';
 import { aslanHukum, aslanSeviye, kediSoyle, kediMenu, kediOver, maskotReset } from './maskot.js';
 
 const LEVELS = ['Sulh', 'Asliye', 'İstinaf', 'Yargıtay'];
@@ -25,7 +26,7 @@ let score = 0, rows = 0, level = 0, best = 0;
 let lockMs = 0, resets = 0, lowestY = 0;
 let doubleLeft = 0, slowMs = 0, acc = 0, last = 0;
 
-try { best = parseInt(localStorage.getItem('lawris.best') || '0', 10) || 0; } catch (_) { best = 0; }
+best = skor.enIyi();
 
 function newPiece() {
   let r = Math.random() * TYPES.reduce((a, t) => a + WEIGHTS[t], 0), type = TYPES[0];
@@ -179,6 +180,7 @@ const act = {
 };
 
 function start() {
+  sonKayit = null;
   maskotReset();
   music.init();
   music.start();
@@ -193,6 +195,76 @@ function start() {
   last = performance.now();
 }
 
+// ---- Şeref kürsüsü ----
+let sonKayit = null, kursuOnceki = null, temizOnay = 0;
+
+function kayitHazirla() {
+  $('kayitSonuc').hidden = true; $('kayitSonuc').classList.remove('yeni');
+  const f = $('kayit');
+  f.hidden = !skor.sigarMi(score);
+  if (!f.hidden) $('adIn').value = skor.sonAd();
+}
+function kayitEt(e) {
+  e.preventDefault();
+  if ($('kayit').hidden) return;
+  const ad = skor.temizAd($('adIn').value);
+  const sira = skor.ekle(ad, score, LEVELS[level], rows);
+  sonKayit = { ad, puan: score };
+  best = Math.max(best, skor.enIyi());
+  hud(); $('finalBest').textContent = best;
+  $('kayit').hidden = true;
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  const r = $('kayitSonuc');
+  r.textContent = 'Kürsüde ' + sira + '. sıradasın!';
+  r.hidden = false; r.classList.remove('yeni'); void r.offsetWidth; r.classList.add('yeni');
+}
+function kursuCiz() {
+  const ol = $('kursuList'), l = skor.liste();
+  ol.textContent = '';
+  l.forEach((e, i) => {
+    const li = document.createElement('li');
+    if (i < 3) li.classList.add('r' + (i + 1));
+    if (sonKayit && sonKayit.ad === e.ad && sonKayit.puan === e.puan) li.classList.add('yeni');
+    const mk = (cls, t) => { const s = document.createElement('span'); s.className = cls; s.textContent = t; li.appendChild(s); };
+    mk('rk', String(i + 1));
+    mk('nm', e.ad);
+    mk('pn', String(e.puan));
+    mk('mt', [e.mahkeme, skor.kisaTarih(e.tarih)].filter(Boolean).join(' · '));
+    ol.appendChild(li);
+  });
+  $('kursuBos').hidden = l.length > 0;
+  ol.hidden = l.length === 0;
+  $('kursuTemizle').hidden = l.length === 0;
+  temizOnay = 0; $('kursuTemizle').textContent = 'Listeyi temizle';
+}
+function kursuAc(opener) {
+  kursuOnceki = opener || null;
+  kursuCiz();
+  $('kursu').hidden = false;
+  $('kursuKapat').focus({ preventScroll: true });
+}
+function kursuKapat() {
+  $('kursu').hidden = true;
+  if (kursuOnceki && !kursuOnceki.closest('[hidden]')) kursuOnceki.focus({ preventScroll: true });
+  kursuOnceki = null;
+}
+$('kursuBtn').addEventListener('click', (e) => kursuAc(e.currentTarget));
+$('overKursu').addEventListener('click', (e) => kursuAc(e.currentTarget));
+$('kursuKapat').addEventListener('click', kursuKapat);
+$('kursuTemizle').addEventListener('click', () => {
+  const b = $('kursuTemizle');
+  if (!temizOnay) {
+    temizOnay = 1; b.textContent = 'Emin misin? Tekrar dokun';
+    setTimeout(() => { if (temizOnay) { temizOnay = 0; b.textContent = 'Listeyi temizle'; } }, 4000);
+    return;
+  }
+  skor.temizle(); sonKayit = null;
+  kursuCiz();
+  $('menuBest').textContent = best;
+});
+$('kayit').addEventListener('submit', kayitEt);
+window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('kursu').hidden) kursuKapat(); });
+
 function gameOver() {
   state = 'over';
   music.fadeOut();
@@ -200,6 +272,7 @@ function gameOver() {
     best = score;
     try { localStorage.setItem('lawris.best', String(best)); } catch (_) { /* yoksay */ }
   }
+  kayitHazirla();
   $('final').textContent = score;
   $('finalBest').textContent = best;
   $('over').hidden = false;

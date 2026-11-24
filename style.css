@@ -282,3 +282,40 @@ html.ui-mix #over b{ color: var(--g1); }
 html.ui-mix .overlay:not(#menu) a{ color: var(--g2); text-decoration: none; font-variant: small-caps; letter-spacing: .06em; }
 html.ui-mix .overlay:not(#menu) button.big{ font-size: 1.05rem; }
 html.ui-mix .deco-2 svg{ filter: drop-shadow(0 0 14px rgba(255,150,60,.25)); }
+
+/* ===== Şeref kürsüsü + isim formu (yerel skor listesi) ===== */
+input, textarea { user-select: text; -webkit-user-select: text; }
+.overlay .alt { font: 400 .85rem Georgia, 'Times New Roman', serif; font-variant: small-caps; letter-spacing: .16em; color: var(--g2, #C9A227); background: none; border: 0; padding: 12px 16px; min-height: 44px; cursor: pointer; opacity: .9; }
+.overlay .alt:active { opacity: .6; }
+#menu .alt { color: #e8d3ae; border-bottom: 1px solid var(--hair, rgba(201,162,39,.4)); border-radius: 0; min-height: 0; padding: 4px 2px; margin-top: 14px; opacity: .85; }
+#menu .alt:focus-visible, .overlay .alt:focus-visible, .kayit input:focus-visible { outline: 2px solid var(--g2, #C9A227); outline-offset: 2px; }
+.kayit { display: flex; flex-direction: column; gap: 6px; width: 100%; align-items: center; }
+.kayit label { font-size: .8rem; font-variant: small-caps; letter-spacing: .1em; opacity: .9; }
+.kayit-satir { display: flex; gap: 8px; width: 100%; }
+.kayit input { flex: 1; min-width: 0; height: 42px; padding: 0 12px; font: 1rem Georgia, 'Times New Roman', serif; color: #F3EBD3; background: rgba(8,2,3,.45); border: 1px solid var(--g2, #C9A227); border-radius: 6px; }
+.kayit input::placeholder { color: #F3EBD3; opacity: .45; }
+button.mini { height: 42px; padding: 0 16px; font: 400 .9rem Georgia, serif; font-variant: small-caps; letter-spacing: .12em; color: var(--ink, #2b0d0e); background: linear-gradient(180deg, var(--g1, #f0d98a), var(--g2, #C9A227)); border: 1px solid var(--g3, #8C6F12); border-radius: 6px; cursor: pointer; }
+.kayit-sonuc { font-size: 1rem; color: var(--g1, #f0d98a); font-style: italic; }
+.kayit-sonuc.yeni { animation: kayitPuls 1.4s ease-out; }
+@keyframes kayitPuls { 0% { transform: scale(.85); opacity: 0; text-shadow: 0 0 0 transparent; } 30% { transform: scale(1.08); opacity: 1; text-shadow: 0 0 16px rgba(240,196,106,.9); } 100% { transform: none; text-shadow: 0 0 0 transparent; } }
+#kursu { z-index: 30; }
+html[class*="ui-"] #kursu { inset: 0; margin: auto; width: min(88%, 340px); height: fit-content; max-height: calc(100% - 16px); padding: 24px 18px 14px; gap: 8px; }
+html[class*="ui-"] #kursu h2 { font-weight: 400; margin-bottom: 2px; }
+.kursu-list { list-style: none; margin: 0; padding: 0; width: 100%; overflow-y: auto; min-height: 0; flex: 0 1 auto; }
+.kursu-list li { display: grid; grid-template-columns: 26px 1fr auto; column-gap: 8px; align-items: baseline; padding: 5px 4px; border-bottom: 1px solid rgba(240,217,138,.16); text-align: left; }
+.kursu-list li:last-child { border-bottom: 0; }
+.kursu-list .rk { font-size: .95rem; color: var(--g2, #C9A227); text-align: center; }
+.kursu-list .nm { font-size: .95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kursu-list .pn { font-size: .95rem; color: var(--g1, #f0d98a); font-variant-numeric: tabular-nums; }
+.kursu-list .mt { grid-column: 2 / 4; font-size: .66rem; opacity: .6; letter-spacing: .04em; line-height: 1.2; }
+.kursu-list .r1 .rk, .kursu-list .r1 .pn { color: #ffd45e; text-shadow: 0 0 8px rgba(255,212,94,.55); }
+.kursu-list .r2 .rk, .kursu-list .r2 .pn { color: #d6dbe2; }
+.kursu-list .r3 .rk, .kursu-list .r3 .pn { color: #d79a62; }
+.kursu-list .r1 .rk, .kursu-list .r2 .rk, .kursu-list .r3 .rk { font-weight: bold; }
+.kursu-list li.yeni { background: rgba(240,196,106,.14); border-radius: 4px; }
+.kursu-bos { font-style: italic; opacity: .85; padding: 18px 6px; }
+html[class*="ui-"] #over { padding: 22px 20px 12px; gap: 8px; }
+html[class*="ui-"] #over .menu-hero { margin: 2px 0; }
+html[class*="ui-"] #over .small { padding: 6px; }
+html[class*="ui-"] #over .alt { padding: 8px 12px; min-height: 36px; }
+.kayit[hidden], .kayit-sonuc[hidden], .kursu-bos[hidden], .overlay .alt[hidden] { display: none; }
