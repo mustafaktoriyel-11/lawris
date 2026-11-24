@@ -607,7 +607,7 @@ html.ui-mix #menu h1, html.ui-2 #menu h1 { font-size: clamp(1.55rem, 8.4vw, 2.6r
 
 /* ===== Açılış: aydınlık Roma tapınağı (Gemini) — açık gökyüzüne uygun koyu mürekkep tonları ===== */
 html.ui-mix #menu, html.ui-2 #menu {
-  background: url("img/acilis-tapinak.webp") center bottom -16vh / cover no-repeat, #8abcdc;
+  background: url("img/acilis-tapinak.webp") center bottom -16vh / cover no-repeat, #76c2f2;
   --g1: #6B1F24; --g2: #B8862B; --glow: rgba(255,236,190,.55); --hair: rgba(107,31,36,.35); --ink: #3B2016;
 }
 html.ui-mix #menu h1, html.ui-2 #menu h1 {
@@ -634,7 +634,7 @@ html.ui-mix #menu a { color: #5A3324; text-shadow: 0 0 6px rgba(255,245,225,.8);
 html.ui-mix #menu .mascot-badge svg { filter: drop-shadow(0 4px 8px rgba(60,30,10,.35)); }
 @media (min-aspect-ratio: 56/100) {
   html.ui-mix #menu {
-    background: linear-gradient(180deg, #88bcdb 0%, #88bcdb 18%, #a3c9db 32%, #cfd6d4 48%, #e2d3b8 55%, #d6bb9c 68%, #c3a38c 82%, #9a7f74 100%);
+    background: linear-gradient(180deg, #76c2f2 0%, #76c2f2 18%, #93cdee 32%, #cfd6d4 48%, #e2d3b8 55%, #d6bb9c 68%, #c3a38c 82%, #9a7f74 100%);
   }
   html.ui-mix #menu::before { background-image: url("img/acilis-tapinak.webp"); top: 17vh; }
 }

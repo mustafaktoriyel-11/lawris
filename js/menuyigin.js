@@ -1,7 +1,9 @@
 // Lex Stack - ana menü "attract mode": oyunun gerçek parçaları gökten süzülür, dönüp hedef sütuna yönelir,
 // plazadaki yığına oturur; dolan satır altın ışıkla silinir. Yığın önbellekte (statik tuval), düşen parça
 // ayrı bir tuvalde kirli-dikdörtgenle çizilir; hareket yokken hiç çizim yapılmaz.
-import { TYPES, cellsOf, sizeOf, hasCell, getSprite, getMarbleSprite, MERMER } from './pieces.js';
+import { TYPES, cellsOf, sizeOf, hasCell, getSprite, getMarbleSprite } from './pieces.js';
+// Menü bir vitrin: parçalar renkli kalır (mermer dönüşümü yalnız oyunda)
+const MERMER = false;
 
 const menu = document.getElementById('menu');
 const mk = (cls) => { const e = document.createElement('canvas'); e.className = 'deco menu-yigin ' + cls; e.setAttribute('aria-hidden', 'true'); menu.appendChild(e); return e; };
