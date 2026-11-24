@@ -29,6 +29,8 @@ let state = 'menu'; // menu | play | pause | over
 let piece = null, queue = [], held = null, holdUsed = false;
 let score = 0, rows = 0, level = 0, best = 0;
 let lockMs = 0, resets = 0, lowestY = 0;
+let flashInfo = null, pvMs = 0;
+const announced = new WeakSet();
 let doubleLeft = 0, slowMs = 0, acc = 0, last = 0;
 
 best = skor.enIyi();
@@ -38,7 +40,14 @@ function newPiece() {
   for (const t of TYPES) { r -= WEIGHTS[t]; if (r < 0) { type = t; break; } }
   return { type, rot: 0, x: 0, y: 0, golden: Math.random() < GOLD_CHANCE, id: 0 };
 }
-function refill() { while (queue.length < QUEUE_LEN) queue.push(newPiece()); }
+function announce(p) {
+  if (p && p.golden && !announced.has(p)) { announced.add(p); music.chime(); }
+}
+function refill() {
+  while (queue.length < QUEUE_LEN) queue.push(newPiece());
+  queue.forEach(announce);
+}
+const hasGoldenView = () => queue.some((p) => p.golden) || (held && held.golden);
 function drawQueue() {
   prevCvs.forEach((cv, i) => renderer.drawPreview(cv, queue[i]));
   renderer.drawPreview(holdCv, held);
@@ -47,6 +56,7 @@ function drawQueue() {
 // parçayı tepeye yerleştirir; sığmazsa oyun biter
 function place(p) {
   piece = p;
+  announce(piece);
   piece.id = nextId();
   piece.rot = 0;
   piece.x = Math.floor((COLS - sizeOf(piece.type, 0).w) / 2);
@@ -146,8 +156,9 @@ function applyGolden(p) {
 }
 
 function lockPiece() {
-  board.lock(piece);
-  if (piece.golden) applyGolden(piece);
+  const wasGold = piece.golden;
+  board.lock({ ...piece, golden: false });   // etkisini gösterince söner
+  if (wasGold) { flashInfo = { id: piece.id, t0: performance.now() }; applyGolden(piece); }
   const full = board.fullRows();
   if (full.length) {
     board.removeRows(full);
@@ -203,11 +214,12 @@ const act = {
   hold() {
     if (state !== 'play' || !piece || holdUsed) return;
     const cur = { type: piece.type, golden: piece.golden };
+    if (announced.has(piece)) announced.add(cur);
     let nx;
     if (held) nx = held;
     else { refill(); nx = queue.shift(); refill(); }
     held = cur; holdUsed = true;
-    place({ type: nx.type, golden: nx.golden, rot: 0, x: 0, y: 0, id: 0 });
+    place(nx);
   },
   pause() {
     if (state === 'play') { state = 'pause'; $('pause').hidden = false; music.pause(); }
@@ -337,7 +349,8 @@ function frame(t) {
     }
     if ($('status').textContent !== '' || slowMs > 0) hud();
   }
-  renderer.draw({ board, piece: state === 'menu' ? null : piece, ghostY: piece ? ghostY() : 0 });
+  if (state !== 'menu' && hasGoldenView() && t - pvMs > 33) { pvMs = t; drawQueue(); }
+  renderer.draw({ board, piece: state === 'menu' ? null : piece, ghostY: piece ? ghostY() : 0, flash: flashInfo });
   requestAnimationFrame(frame);
 }
 

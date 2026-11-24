@@ -340,6 +340,22 @@ export const music = {
     try { localStorage.setItem(LS_KEY, muted ? 'off' : 'on'); } catch (_) { /* yoksay */ }
     if (master && ctx) master.gain.setTargetAtTime(muted ? 0 : 0.12, ctx.currentTime, 0.05);
   },
+  // Altın parça duyurusu: yumuşak, parlak iki parçalı çınlama
+  chime() {
+    if (muted || !ctx || ctx.state !== 'running') return;
+    try {
+      const t = ctx.currentTime + 0.01;
+      for (const [f, v, d, off, type] of [[1318.5, 0.5, 0.65, 0, 'sine'], [1976, 0.32, 0.6, 0.06, 'triangle'], [2637, 0.12, 0.4, 0.06, 'sine']]) {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = type; o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t + off);
+        g.gain.linearRampToValueAtTime(v, t + off + 0.008);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + off + d);
+        o.connect(g); g.connect(master);
+        o.start(t + off); o.stop(t + off + d + 0.05);
+      }
+    } catch (_) { /* yoksay */ }
+  },
   // Satır silme: yumuşak tahta tokmak darbesi
   knock() {
     if (muted || !ctx || ctx.state !== 'running') return;

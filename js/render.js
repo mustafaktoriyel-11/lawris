@@ -1,11 +1,40 @@
 // Lawris - çizim
 import { COLS, ROWS } from './board.js';
 import { THEME as TH } from './theme.js';
-import { getSprite, hasCell, sizeOf, COLORS as C } from './pieces.js';
+import { getSprite, hasCell, sizeOf, cellsOf, COLORS as C } from './pieces.js';
 
 const TOP = 1.7;     // alınlık yüksekliği (hücre)
 const BOTTOM = 0.5;  // kaide
 const COLW = 1;      // sütun genişliği (hücre)
+const REDUCED = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+const SWEEP_CYCLE = 1.8, SWEEP_DUR = 1.3, FLASH_MS = 400;
+const ease = (x) => (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
+
+// Altın parça: sprite çevresinde nabızlı ışıltı + hücre maskesine kırpılmış çapraz parıltı süpürmesi
+function goldFx(c, sprite, ox, oy, cells, s, t, blur) {
+  const reduced = REDUCED.matches;
+  const pulse = reduced ? 0.85 : 0.8 + 0.2 * Math.sin((t * Math.PI * 2) / 1.2);
+  c.save();
+  c.shadowColor = 'rgba(255,215,110,' + (0.75 * pulse).toFixed(3) + ')';
+  c.shadowBlur = blur * s;
+  c.drawImage(sprite, ox, oy);
+  c.restore();
+  if (reduced) return;
+  const ph = (t % SWEEP_CYCLE) / SWEEP_DUR;
+  if (ph >= 1) return;
+  const w = sprite.width, h = sprite.height, a = (38 * Math.PI) / 180;
+  const dx = Math.cos(a), dy = Math.sin(a), bw = 0.6 * s;
+  const ext = w * dx + h * dy, u = -ext / 2 - bw + ease(ph) * (ext + 2 * bw);
+  const cx = ox + w / 2, cy = oy + h / 2;
+  const g = c.createLinearGradient(cx + dx * (u - bw / 2), cy + dy * (u - bw / 2), cx + dx * (u + bw / 2), cy + dy * (u + bw / 2));
+  g.addColorStop(0, 'rgba(255,244,200,0)'); g.addColorStop(0.5, 'rgba(255,247,215,0.55)'); g.addColorStop(1, 'rgba(255,244,200,0)');
+  c.save();
+  c.beginPath();
+  for (const [x, y] of cells) c.rect(ox + x * s, oy + y * s, s, s);
+  c.clip();
+  c.fillStyle = g; c.fillRect(ox, oy, w, h);
+  c.restore();
+}
 const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 
 export class Renderer {
@@ -48,8 +77,13 @@ export class Renderer {
         c.strokeStyle = 'rgba(243,235,211,0.28)'; c.lineWidth = Math.max(1, s * 0.06);
         c.strokeRect(this.bx + p.x * s + 1, this.by + g.ghostY * s + 1, sz.w * s - 2, sz.h * s - 2);
       }
-      c.drawImage(getSprite(p.type, p.rot, p.golden, s), this.bx + p.x * s, this.by + p.y * s);
+      const sp = getSprite(p.type, p.rot, p.golden, s);
+      if (p.golden) goldFx(c, sp, this.bx + p.x * s, this.by + p.y * s, cellsOf(p.type, p.rot), s, performance.now() / 1000, 0.35);
+      else c.drawImage(sp, this.bx + p.x * s, this.by + p.y * s);
     }
+    // altın parça etkisini gösterince: kilit hücrelerinde kısa altın sönme
+    this.flashAge = g.flash ? performance.now() - g.flash.t0 : Infinity;
+    this.flashId = g.flash ? g.flash.id : 0;
   }
 
   drawCell(c, board, cell, q, r) {
@@ -61,6 +95,9 @@ export class Renderer {
       return;
     }
     c.drawImage(getSprite(cell.type, cell.rot, cell.golden, s), cell.lx * s, cell.ly * s, s, s, x, y, s, s);
+    if (cell.id === this.flashId && this.flashAge < FLASH_MS) {
+      c.fillStyle = 'rgba(255,214,102,' + (0.65 * (1 - this.flashAge / FLASH_MS)).toFixed(3) + ')'; c.fillRect(x, y, s, s);
+    }
     // kopmuş kenarlar
     for (let d = 0; d < 4; d++) {
       const [dx, dy] = DIRS[d];
@@ -119,8 +156,10 @@ export class Renderer {
     c.clearRect(0, 0, cv.width, cv.height);
     if (!piece) return;
     const sz = sizeOf(piece.type, 0);
-    const s = Math.max(2, Math.floor(Math.min(cv.width / sz.w, cv.height / sz.h, cv.width / 3.4) * 0.94));
+    const s = Math.max(2, Math.floor(Math.min(cv.width / sz.w, cv.height / sz.h, cv.width / 3.4) * (piece.golden ? 0.8 : 0.94)));
     const img = getSprite(piece.type, 0, piece.golden, s);
-    c.drawImage(img, Math.round((cv.width - sz.w * s) / 2), Math.round((cv.height - sz.h * s) / 2));
+    const ox = Math.round((cv.width - sz.w * s) / 2), oy = Math.round((cv.height - sz.h * s) / 2);
+    if (piece.golden) goldFx(c, img, ox, oy, cellsOf(piece.type, 0), s, performance.now() / 1000, 0.3);
+    else c.drawImage(img, ox, oy);
   }
 }
