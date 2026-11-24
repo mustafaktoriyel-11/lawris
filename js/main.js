@@ -213,9 +213,14 @@ const act = {
   rotate() {
     if (state !== 'play') return;
     const nr = (piece.rot + 1) & 3;
-    const kicks = [[0, 0], [-1, 0], [1, 0], [-2, 0], [2, 0], [0, -1], [-1, -1], [1, -1]];
+    // Parça kendi merkezi etrafında döner (sol üst köşe değil); sonra yakın konumlar denenir
+    const o = sizeOf(piece.type, piece.rot), n = sizeOf(piece.type, nr);
+    const bx = piece.x + Math.floor((o.w - n.w) / 2), by = piece.y + Math.floor((o.h - n.h) / 2);
+    const kicks = [[0, 0], [-1, 0], [1, 0], [0, -1], [-1, -1], [1, -1], [-2, 0], [2, 0], [0, 1], [-1, 1], [1, 1],
+      [0, -2], [-2, -1], [2, -1], [-1, -2], [1, -2], [-2, -2], [2, -2]];
     for (const [dx, dy] of kicks) {
-      if (piece.y + dy >= 0 && !board.collides(piece, piece.x + dx, piece.y + dy, nr)) { piece.x += dx; piece.y += dy; piece.rot = nr; moved(); return; }
+      const x = bx + dx, y = by + dy;
+      if (y >= 0 && !board.collides(piece, x, y, nr)) { piece.x = x; piece.y = y; piece.rot = nr; moved(); return; }
     }
   },
   drop() {
