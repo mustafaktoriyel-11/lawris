@@ -5,6 +5,7 @@ import { Renderer } from './render.js';
 import { setLevelColors, tickColors } from './theme.js';
 import { initInput } from './input.js';
 import { music } from './music.js';
+import { sfx } from './sfx.js';
 import * as skor from './skor.js';
 import { initRehber } from './rehber.js';
 import { aslanHukum, aslanSeviye, kediSoyle, kediMenu, kediOver, maskotReset } from './maskot.js';
@@ -175,11 +176,12 @@ function updateTension() {
   music.setTension(Math.max(0, Math.min(1, (height - 0.45 * ROWS) / (0.4 * ROWS))));
 }
 
-function lockPiece() {
-  const wasGold = piece.golden;
+function lockPiece(hard) {
+  const wasGold = piece.golden, ltype = piece.type;
   board.lock({ ...piece, golden: false });   // etkisini gösterince söner
   if (wasGold) { flashInfo = { id: piece.id, t0: performance.now() }; applyGolden(piece); }
   const full = board.fullRows();
+  if (!full.length) { if (!hard) sfx.lock(ltype); }   // satır silinmiyorsa tok yerleşme sesi (hard: whoosh+thud ayrıca çalındı)
   if (full.length) {
     burst({ rows: full });
     board.removeRows(full);
@@ -189,9 +191,9 @@ function lockPiece() {
     score += pts; rows += n;
     flash('Hüküm!');
     if (n >= 2) aslanHukum(n);
-    if (!wasGold) music.knock();   // altın etkinin kendi sesi varken ikinci darbe yığılmasın
+    sfx.lineClear(n, level);
     const nl = Math.min(LEVELS.length - 1, Math.floor(rows / 8));
-    if (nl > level) { level = nl; music.setLevel(level); aslanSeviye(LEVELS[level]); setLevelColors(level); }
+    if (nl > level) { level = nl; music.setLevel(level); aslanSeviye(LEVELS[level]); setLevelColors(level); sfx.levelUp(level, 0.45); }
   }
   piece = null;
   updateTension();
@@ -212,8 +214,8 @@ function moved() {
 }
 
 const act = {
-  left() { if (state === 'play' && !board.collides(piece, piece.x - 1, piece.y)) { piece.x--; moved(); } },
-  right() { if (state === 'play' && !board.collides(piece, piece.x + 1, piece.y)) { piece.x++; moved(); } },
+  left() { if (state === 'play' && !board.collides(piece, piece.x - 1, piece.y)) { piece.x--; moved(); sfx.move(); } },
+  right() { if (state === 'play' && !board.collides(piece, piece.x + 1, piece.y)) { piece.x++; moved(); sfx.move(); } },
   down() {
     if (state !== 'play') return;
     if (!grounded()) { piece.y++; fell(); score += 1; acc = 0; hud(); }
@@ -228,7 +230,7 @@ const act = {
       [0, -2], [-2, -1], [2, -1], [-1, -2], [1, -2], [-2, -2], [2, -2]];
     for (const [dx, dy] of kicks) {
       const x = bx + dx, y = by + dy;
-      if (y >= 0 && !board.collides(piece, x, y, nr)) { piece.x = x; piece.y = y; piece.rot = nr; moved(); return; }
+      if (y >= 0 && !board.collides(piece, x, y, nr)) { piece.x = x; piece.y = y; piece.rot = nr; moved(); sfx.rotate(); return; }
     }
   },
   drop() {
@@ -236,7 +238,8 @@ const act = {
     let n = 0;
     while (!board.collides(piece, piece.x, piece.y + 1)) { piece.y++; n++; }
     score += n * 2;
-    lockPiece();
+    sfx.hardDrop(piece.type, n);
+    lockPiece(true);
   },
   hold() {
     if (state !== 'play' || !piece || holdUsed) return;
@@ -246,6 +249,7 @@ const act = {
     if (held) nx = held;
     else { refill(); nx = queue.shift(); refill(); }
     held = cur; holdUsed = true;
+    sfx.hold();
     place(nx);
   },
   pause() {
@@ -344,7 +348,9 @@ window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('kursu'
 
 function gameOver() {
   state = 'over';
-  music.fadeOut(); music.setTension(0);
+  music.fadeOut(1.0); music.setTension(0);
+  sfx.gameOver();
+  music.startMenu(2800);   // sting bitince menü müziği (Tekrar oyna başlatırsa iptal olur)
   if (score > best) {
     best = score;
     try { localStorage.setItem('lawris.best', String(best)); } catch (_) { /* yoksay */ }
@@ -413,7 +419,7 @@ function toMenu() {
   state = 'menu'; piece = null;
   for (const id of ['over', 'pause', 'kursu', 'rehber']) { const el = $(id); if (el) el.hidden = true; }
   board.reset(); setLevelColors(0, true);
-  music.fadeOut(); music.setTension(0); maskotReset(); kediMenu();
+  music.startMenu(); music.setTension(0); maskotReset(); kediMenu();
   $('menuBest').textContent = best;
   $('menu').hidden = false;
 }
@@ -421,16 +427,39 @@ $('overMenu').addEventListener('click', toMenu);
 $('pauseMenu').addEventListener('click', toMenu);
 $('resume').addEventListener('click', () => act.pause());
 $('pauseBtn').addEventListener('click', () => act.pause());
-function showMute() {
-  const b = $('muteBtn'), m = music.isMuted();
-  b.textContent = m ? '\u266A\u0338' : '\u266A';
-  b.classList.toggle('off', m);
-  b.setAttribute('aria-pressed', String(!m));
-  b.setAttribute('aria-label', m ? 'Müziği aç' : 'Müziği kapat');
+// Müzik / efekt düğmeleri (HUD + açılış ekranı); durum localStorage'da (music.js)
+function showSnd() {
+  const mm = music.isMuted(), sm = music.isSfxMuted();
+  document.querySelectorAll('[data-snd]').forEach((b) => {
+    const isMusic = b.dataset.snd === 'music', off = isMusic ? mm : sm;
+    b.classList.toggle('off', off);
+    b.setAttribute('aria-pressed', String(!off));
+    b.setAttribute('aria-label', isMusic ? (off ? 'Müziği aç' : 'Müziği kapat') : (off ? 'Efektleri aç' : 'Efektleri kapat'));
+  });
 }
-$('muteBtn').addEventListener('click', () => { music.setMuted(!music.isMuted()); showMute(); });
-showMute();
-document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') act.pause(); });
+document.querySelectorAll('[data-snd]').forEach((b) => b.addEventListener('click', () => {
+  if (b.dataset.snd === 'music') music.setMuted(!music.isMuted());
+  else { music.setSfxMuted(!music.isSfxMuted()); if (!music.isSfxMuted()) sfx.ui(); }
+  showSnd();
+}));
+showSnd();
+// İlk kullanıcı hareketi: ses bağlamını aç; menüdeysek menü müziğini başlat (tarayıcılar otomatik çalmayı engeller)
+let gestured = false;
+function firstGesture() {
+  if (gestured) return;
+  gestured = true;
+  ['pointerdown', 'keydown', 'touchstart'].forEach((ev) => window.removeEventListener(ev, firstGesture, true));
+  music.init();
+  if (state === 'menu') music.startMenu();
+}
+['pointerdown', 'keydown', 'touchstart'].forEach((ev) => window.addEventListener(ev, firstGesture, true));
+// Arayüz tıkı: tek belge dinleyicisi (yakalama evresi; oyun içi hareket düğmeleri kendi sesini çalar)
+document.addEventListener('click', (e) => {
+  const el = e.target.closest && e.target.closest('button, [role="button"], .chip');
+  if (!el || el.disabled || el.hasAttribute('data-act')) return;
+  sfx.ui();
+}, true);
+document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') act.pause(); music.setHidden(document.hidden); });
 window.addEventListener('resize', layoutSoon);
 window.addEventListener('orientationchange', () => { layoutSoon(); setTimeout(layout, 300); });
 if (typeof ResizeObserver === 'function') new ResizeObserver(layoutSoon).observe($('stage'));

@@ -120,21 +120,30 @@ const TRIM = 0.1;                  // gergin müzikte genel seviye payı (tepe s
 const R = {};        // katman rampaları: ad -> {v0, v1, t0, t1}
 const layers = { str: null, org: null };   // kalıcı osilatör katmanları (tembel oluşur)
 let muted = false, running = false, paused = false;
+let sfxMuted = false, hidden = false, mode = 'game';   // mode: 'menu' | 'game'
+let duckG = null, holdG = null, sfxIn = null, sfxMaster = null, bassLp = null, menuTm = null;
+const LS_SFX = 'lawris.sfx';
+const MUSIC_GAIN = 0.12;   // müzik veriyolu
+const SFX_GAIN = 0.38;     // efekt veriyolu (müzikten belirgin yüksek; hepsi aynı sınırlayıcıdan geçer)
+const MENU_VOL = 0.6;      // menü müziği: oyun müziğinden daha kısık
 try { muted = localStorage.getItem(LS_KEY) === 'off'; } catch (_) { muted = false; }
+try { sfxMuted = localStorage.getItem(LS_SFX) === 'off'; } catch (_) { sfxMuted = false; }
 
 function build() {
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) return false;
   try { ctx = new AC({ latencyHint: 'playback' }); } catch (_) { ctx = new AC(); }   // büyük tampon: cızırtıya karşı
-  master = ctx.createGain(); master.gain.value = muted ? 0 : 0.12;
+  master = ctx.createGain(); master.gain.value = muted ? 0 : MUSIC_GAIN;
   const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = LP_LO; lp.Q.value = 0.4; mainLp = lp;
   // sınırlayıcı: müzik + efekt üst üste binince kırpılma (cızırtı) olmasın
   const lim = ctx.createDynamicsCompressor();
   lim.threshold.value = -6; lim.knee.value = 6; lim.ratio.value = 12; lim.attack.value = 0.003; lim.release.value = 0.2;
-  lp.connect(master); master.connect(lim); lim.connect(ctx.destination);
-  fade = ctx.createGain(); fade.gain.value = 1;
+  duckG = ctx.createGain(); holdG = ctx.createGain();   // duckG: büyük efektlerde müziği kıs; holdG: duraklatma
+  lp.connect(duckG); duckG.connect(holdG); holdG.connect(master); master.connect(lim); lim.connect(ctx.destination);
+  buildSfxBus(lim);
+  fade = null;
   bus = ctx.createGain();
-  fade.connect(bus); bus.connect(lp);
+  bus.connect(lp);
   // basit geri beslemeli gecikme = oda yankısı
   const dly = ctx.createDelay(1); dly.delayTime.value = 0.29;
   const fb = ctx.createGain(); fb.gain.value = 0.3;
@@ -143,11 +152,45 @@ function build() {
   const send = ctx.createGain(); send.gain.value = 0.35;
   bus.connect(send); send.connect(dly); dly.connect(dlp); dlp.connect(dhp); dhp.connect(fb); fb.connect(dly); dlp.connect(lp);
   sendG = send; fbG = fb; dlyLp = dlp;
-  // bas yolu: yumuşak alçak geçiren
-  bassBus = ctx.createGain(); bassBus.gain.value = 1;
-  const blp = ctx.createBiquadFilter(); blp.type = 'lowpass'; blp.frequency.value = 380; blp.Q.value = 0.5;
-  bassBus.connect(blp); blp.connect(fade);
   return true;
+}
+
+// Efekt veriyolu: yumuşak sınırlama (tanh) + kısa oda yankısı + kendi seviyesi
+function buildSfxBus(lim) {
+  sfxIn = ctx.createGain(); sfxIn.gain.value = 1;
+  const sh = ctx.createWaveShaper(), n = 1024, k = 1.7, c = new Float32Array(n);
+  for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; c[i] = Math.tanh(k * x) / Math.tanh(k); }
+  sh.curve = c; sh.oversample = '2x';
+  sfxMaster = ctx.createGain(); sfxMaster.gain.value = sfxMuted ? 0 : SFX_GAIN;
+  sfxIn.connect(sh); sh.connect(sfxMaster); sfxMaster.connect(lim);
+  // üretilmiş dürtü yanıtı: ~0.4 sn sönen gürültü (tek kanal, hafif karanlık)
+  const len = Math.floor(ctx.sampleRate * 0.4), ir = ctx.createBuffer(1, len, ctx.sampleRate), d = ir.getChannelData(0);
+  let lpv = 0;
+  for (let i = 0; i < len; i++) { lpv += ((Math.random() * 2 - 1) - lpv) * 0.35; d[i] = lpv * Math.pow(1 - i / len, 2.6); }
+  const cv = ctx.createConvolver(); cv.buffer = ir;
+  const rs = ctx.createGain(); rs.gain.value = 0.2;
+  const rlp = ctx.createBiquadFilter(); rlp.type = 'lowpass'; rlp.frequency.value = 3800;
+  sfxIn.connect(rs); rs.connect(cv); cv.connect(rlp); rlp.connect(sfxMaster);
+}
+
+// Oturum: her müzik başlangıcı (menü / oyun) kendi solma düğümünü alır; eskisi ~1 sn'de söner (çapraz solma)
+function newSession(target, inDur) {
+  const t = ctx.currentTime;
+  const old = { fade, bass: bassBus, blp: bassLp, str: layers.str, org: layers.org };
+  if (old.fade) {
+    old.fade.gain.cancelScheduledValues(t); old.fade.gain.setValueAtTime(Math.max(old.fade.gain.value, 0.0001), t);
+    old.fade.gain.linearRampToValueAtTime(0.0001, t + inDur);
+  }
+  layers.str = null; layers.org = null;
+  fade = ctx.createGain(); fade.gain.setValueAtTime(0.0001, t); fade.gain.linearRampToValueAtTime(target, t + inDur);
+  fade.connect(bus);
+  bassBus = ctx.createGain(); bassBus.gain.value = 1;
+  bassLp = ctx.createBiquadFilter(); bassLp.type = 'lowpass'; bassLp.frequency.value = 380; bassLp.Q.value = 0.5;
+  bassBus.connect(bassLp); bassLp.connect(fade);
+  setTimeout(() => {
+    for (const l of [old.str, old.org]) if (l) l.stop();
+    try { if (old.fade) old.fade.disconnect(); if (old.bass) old.bass.disconnect(); if (old.blp) old.blp.disconnect(); } catch (_) { /* yoksay */ }
+  }, (inDur + 0.5) * 1000);
 }
 
 // Kısa ömürlü osilatör: sayaçlı, bitince düğümleri serbest bırakır
@@ -346,7 +389,8 @@ function scheduleStep(t, s, b) {
   const idx = sec.pattern[s];
   // Pizzicato/klavsen: seyrekleştirme (Yargıtay'da birkaç nota) - ana vuruşlar hep çalar
   const pm = sec.plkMul || 1;   // köprüde seyrek
-  if (s === 0 || (s % 4 === 0 && pm === 1) || Math.random() < plk * 0.8 * pm) pluck(t + rnd(0.008), chord[idx], accent * (0.85 + Math.random() * 0.3) * (0.55 + 0.45 * plk));
+  const mk = mode === 'menu' ? 0.45 : 1;   // menü: seyrek klavsen, tema + pad öne çıkar
+  if (s === 0 || (s % 4 === 0 && pm === 1 && mk === 1) || Math.random() < plk * 0.8 * pm * mk) pluck(t + rnd(0.008), chord[idx], accent * (0.85 + Math.random() * 0.3) * (0.55 + 0.45 * plk));
   // Gerginlik: yüksek tehlikede arpejde fazladan ara nota
   if (tn > 0.6 && s % 2 === 0 && pm === 1 && Math.random() < Math.min(1, (tn - 0.6) / 0.3) * 0.75) pluck(t + beat * 0.5 + rnd(0.006), chord[sec.pattern[(s + 5) % 8]], 0.38);
   // Gerginlik: her vuruşta alçak nabız (0.4 üstünde belirir); 1. ve 3. vuruşta bas katmanı zaten çalıyorsa atla
@@ -362,7 +406,7 @@ function scheduleStep(t, s, b) {
   }
   if (s === 0) {
     const barDur = beat * 8, pk = val('pad', t);
-    const pmul = sec.padMul || 1, pk2 = pk * pmul;
+    const pmul = (sec.padMul || 1) * (mode === 'menu' ? 1.5 : 1), pk2 = pk * pmul;
     pad(t, chord[1], barDur, pk2); pad(t, chord[2], barDur, pk2); pad(t, chord[0] - 12, barDur, pk2);
     if (tn > 0.75) trem(t, chord[3] + 12, barDur, (tn - 0.75) / 0.25);
     // Tema: A ve A' bölümlerinde sabit lider ezgi (3. derecede genişletilmiş değerler)
@@ -386,7 +430,7 @@ function scheduleStep(t, s, b) {
   }
 }
 
-const tempoK = () => LV[Math.min(MAX_LEVEL, curLevel)].tempo * (1 + 0.08 * tens);   // tehlike: +%0..8 tempo (yumuşak)
+const tempoK = () => LV[Math.min(MAX_LEVEL, curLevel)].tempo * (1 + 0.08 * tens) * (mode === 'menu' ? 0.82 : 1);   // tehlike: +%0..8 tempo (yumuşak)
 
 // Yumuşatılmış tehlike değerini now'a kadar ilerlet (üstel yaklaşım)
 function tensStep(now) {
@@ -499,54 +543,107 @@ const SFX = {
 
 function stopTimer() { if (timer) { clearInterval(timer); timer = null; } }
 
+function resetPlayback() {
+  const now = ctx.currentTime;
+  stopTimer();
+  paused = false; running = true;
+  level = 0; curLevel = 0; step = 0; bar = 0; pendingFade = null;
+  tensTarget = 0; tens = 0; tensT = now;
+  mainLp.frequency.cancelScheduledValues(now); mainLp.frequency.setValueAtTime(LP_LO, now);
+  bus.gain.cancelScheduledValues(now); bus.gain.setValueAtTime(1, now);
+  holdG.gain.cancelScheduledValues(now); holdG.gain.setValueAtTime(1, now);
+  resetRamps(0);
+  for (const [n, p] of [['send', sendG.gain], ['fb', fbG.gain], ['dlf', dlyLp.frequency]]) { p.cancelScheduledValues(now); p.setValueAtTime(LV[0][n], now); }
+  if (!hidden) ctx.resume();
+  nextT = now + 0.15;
+  timer = setInterval(tick, TICK_MS);
+}
+// Sesin hazır olup olmadığı (efekt açık, sayfa görünür); askıdaki bağlam ilk harekette açılır
+const sfxReady = () => !!ctx && !sfxMuted && !hidden && ctx.state !== 'closed';
+
 export const music = {
-  // Kullanıcı hareketi içinde çağrılmalı (Oyna / Tekrar oyna)
+  // Kullanıcı hareketi içinde çağrılmalı (ilk dokunuş, Oyna / Tekrar oyna)
   init() {
     try {
       if (!ctx && !build()) return;
-      if (ctx.state === 'suspended' && !paused) ctx.resume();
+      if (ctx.state === 'suspended' && !hidden) ctx.resume();
     } catch (_) { /* yoksay */ }
   },
+  // Oyun müziği: menüden (ya da sessizlikten) ~1 sn çapraz solmayla girer
   start() {
     try {
       if (!ctx) this.init();
       if (!ctx) return;
-      stopTimer();
-      paused = false; running = true;
-      level = 0; curLevel = 0; step = 0; bar = 0; pendingFade = null;
-      tensTarget = 0; tens = 0; tensT = ctx.currentTime;
-      mainLp.frequency.cancelScheduledValues(ctx.currentTime); mainLp.frequency.setValueAtTime(LP_LO, ctx.currentTime);
-      bus.gain.cancelScheduledValues(ctx.currentTime); bus.gain.setValueAtTime(1, ctx.currentTime);
-      killLayers(); resetRamps(0);
-      const now = ctx.currentTime;
-      for (const [n, p] of [['send', sendG.gain], ['fb', fbG.gain], ['dlf', dlyLp.frequency]]) { p.cancelScheduledValues(now); p.setValueAtTime(LV[0][n], now); }
-      ctx.resume();
-      fade.gain.cancelScheduledValues(ctx.currentTime);
-      fade.gain.setValueAtTime(0.0001, ctx.currentTime);
-      fade.gain.linearRampToValueAtTime(1, ctx.currentTime + 1.5);
-      nextT = ctx.currentTime + 0.15;
-      timer = setInterval(tick, TICK_MS);
+      clearTimeout(menuTm); menuTm = null;
+      mode = 'game';
+      newSession(1, 1.0);
+      resetPlayback();
     } catch (_) { /* yoksay */ }
   },
+  // Menü müziği: daha yavaş, kısık, gerilimsiz; zaten çalıyorsa dokunmaz. delayMs: oyun bitişi sesinden sonra girmek için
+  startMenu(delayMs = 0) {
+    clearTimeout(menuTm); menuTm = null;
+    if (delayMs > 0) { menuTm = setTimeout(() => { menuTm = null; this.startMenu(0); }, delayMs); return; }
+    try {
+      if (!ctx) this.init();
+      if (!ctx) return;
+      if (running && mode === 'menu') return;
+      mode = 'menu';
+      newSession(MENU_VOL, running ? 1.0 : 1.6);
+      resetPlayback();
+    } catch (_) { /* yoksay */ }
+  },
+  cancelMenu() { clearTimeout(menuTm); menuTm = null; },
+  get mode() { return running ? mode : 'off'; },
+  // Duraklatma: bağlamı askıya almadan (arayüz tıkları çalsın diye) zamanlayıcıyı durdurup müziği kıs
   pause() {
     paused = true;
-    try { if (ctx && running) ctx.suspend(); } catch (_) { /* yoksay */ }
+    try {
+      if (!ctx || !running) return;
+      stopTimer();
+      const t = ctx.currentTime;
+      holdG.gain.cancelScheduledValues(t); holdG.gain.setValueAtTime(holdG.gain.value, t); holdG.gain.linearRampToValueAtTime(0.0001, t + 0.25);
+    } catch (_) { /* yoksay */ }
   },
   resume() {
     paused = false;
-    try { if (ctx && running) ctx.resume(); } catch (_) { /* yoksay */ }
+    try {
+      if (!ctx || !running) return;
+      const t = ctx.currentTime;
+      holdG.gain.cancelScheduledValues(t); holdG.gain.setValueAtTime(Math.max(holdG.gain.value, 0.0001), t); holdG.gain.linearRampToValueAtTime(1, t + 0.3);
+      stopTimer(); nextT = t + 0.1; timer = setInterval(tick, TICK_MS);
+    } catch (_) { /* yoksay */ }
   },
-  fadeOut() {
+  // Sayfa gizlenince bağlamı gerçekten askıya al (pil), görününce aç
+  setHidden(h) {
+    hidden = !!h;
+    try { if (ctx) { if (hidden) ctx.suspend(); else ctx.resume(); } } catch (_) { /* yoksay */ }
+  },
+  fadeOut(dur = 1.2) {
     if (!ctx || !running) return;
     running = false; stopTimer();
     try {
       const t = ctx.currentTime;
       fade.gain.cancelScheduledValues(t);
-      fade.gain.setValueAtTime(fade.gain.value, t);
-      fade.gain.linearRampToValueAtTime(0.0001, t + 2);
-      setTimeout(() => { if (!running) killLayers(); }, 2300);
+      fade.gain.setValueAtTime(Math.max(fade.gain.value, 0.0001), t);
+      fade.gain.linearRampToValueAtTime(0.0001, t + dur);
+      setTimeout(() => { if (!running) killLayers(); }, (dur + 0.3) * 1000);
     } catch (_) { /* yoksay */ }
   },
+  // Büyük efektlerde müziği kıs (varsayılan -6 dB, ~0.4 sn)
+  duck(amount = 0.5, hold = 0.25) {
+    if (!ctx || !duckG) return;
+    try {
+      const t = ctx.currentTime, g = duckG.gain;
+      g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(amount, t + 0.03);
+      g.setValueAtTime(amount, t + 0.03 + hold); g.linearRampToValueAtTime(1, t + 0.03 + hold + 0.25);
+    } catch (_) { /* yoksay */ }
+  },
+  // efekt kitaplığı (sfx.js) için ortak ses çekirdeği
+  core() {
+    return ctx && sfxIn ? { ctx, out: sfxIn, noise: noiseBuffer, tone: sfxTone, noiseTo: sfxNoise, hz } : null;
+  },
+  sfxReady,
   // Bekleyen seviye; bir sonraki ölçü başında çapraz solmayla uygulanır (start öncesi/duraklatılmışken de güvenli)
   setLevel(i) { const n = Number(i); level = Number.isFinite(n) ? Math.max(0, Math.min(MAX_LEVEL, Math.floor(n))) : 0; },
   // Tehlike 0..1 (yığın yüksekliği); atak ~1.5 sn, gevşeme ~3 sn. Çalmıyorken yalnızca hedefi saklar.
@@ -559,27 +656,33 @@ export const music = {
   setMuted(m) {
     muted = !!m;
     try { localStorage.setItem(LS_KEY, muted ? 'off' : 'on'); } catch (_) { /* yoksay */ }
-    if (master && ctx) master.gain.setTargetAtTime(muted ? 0 : 0.12, ctx.currentTime, 0.05);
+    if (master && ctx) master.gain.setTargetAtTime(muted ? 0 : MUSIC_GAIN, ctx.currentTime, 0.05);
+  },
+  isSfxMuted() { return sfxMuted; },
+  setSfxMuted(m) {
+    sfxMuted = !!m;
+    try { localStorage.setItem(LS_SFX, sfxMuted ? 'off' : 'on'); } catch (_) { /* yoksay */ }
+    if (sfxMaster && ctx) sfxMaster.gain.setTargetAtTime(sfxMuted ? 0 : SFX_GAIN, ctx.currentTime, 0.03);
   },
   // Altın parça duyurusu: yumuşak, parlak iki parçalı çınlama
   chime() {
-    if (muted || !ctx || ctx.state !== 'running') return;
+    if (!sfxReady() || !sfxIn) return;
     try {
       const t = ctx.currentTime + 0.01;
-      for (const [f, v, d, off, type] of [[1318.5, 0.5, 0.65, 0, 'sine'], [1976, 0.32, 0.6, 0.06, 'triangle'], [2637, 0.12, 0.4, 0.06, 'sine']]) {
+      for (const [f, v, d, off, type] of [[1318.5, 0.5, 0.75, 0, 'sine'], [1976, 0.32, 0.7, 0.06, 'triangle'], [2637, 0.14, 0.5, 0.06, 'sine'], [659.3, 0.22, 0.9, 0, 'sine'], [3951, 0.05, 0.35, 0.1, 'sine']]) {
         const o = ctx.createOscillator(), g = ctx.createGain();
         o.type = type; o.frequency.value = f;
         g.gain.setValueAtTime(0.0001, t + off);
         g.gain.linearRampToValueAtTime(v, t + off + 0.008);
         g.gain.exponentialRampToValueAtTime(0.0001, t + off + d);
-        o.connect(g); g.connect(master);
+        o.connect(g); g.connect(sfxIn);
         o.start(t + off); o.stop(t + off + d + 0.05);
       }
     } catch (_) { /* yoksay */ }
   },
   // Satır silme: yumuşak tahta tokmak darbesi
   knock() {
-    if (muted || !ctx || ctx.state !== 'running') return;
+    if (!sfxReady() || !sfxIn) return;
     try {
       const t = ctx.currentTime + 0.01;
       const len = Math.floor(ctx.sampleRate * 0.08);
@@ -588,25 +691,25 @@ export const music = {
       const n = ctx.createBufferSource(); n.buffer = buf;
       const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 900; bp.Q.value = 1.2;
       const ng = ctx.createGain(); ng.gain.value = 0.9;
-      n.connect(bp); bp.connect(ng); ng.connect(master);
+      n.connect(bp); bp.connect(ng); ng.connect(sfxIn);
       const o = ctx.createOscillator(); o.type = 'sine';
       o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(65, t + 0.12);
       const og = ctx.createGain();
       og.gain.setValueAtTime(0.0001, t); og.gain.linearRampToValueAtTime(0.7, t + 0.004); og.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
-      o.connect(og); og.connect(master);
+      o.connect(og); og.connect(sfxIn);
       n.start(t); o.start(t); o.stop(t + 0.25);
     } catch (_) { /* yoksay */ }
   },
   // Altın etki sesi (kind: tokmak|kilic|kalem|paragraf|sutun|kanun|terazi); vol 0..1
   sfx(kind, vol = 1) {
-    if (muted || !ctx || ctx.state !== 'running' || !SFX[kind] || sfxLive >= 3) return;
+    if (!sfxReady() || !sfxIn || !SFX[kind] || sfxLive >= 3) return;
     try {
-      const out = ctx.createGain(); out.gain.value = Math.max(0, Math.min(1, vol)) * 0.9;
-      out.connect(master); sfxLive++;
+      const out = ctx.createGain(); out.gain.value = Math.max(0, Math.min(1, vol)) * 0.6;
+      out.connect(sfxIn); sfxLive++;
       SFX[kind](out, ctx.currentTime + 0.01);
       setTimeout(() => { sfxLive = Math.max(0, sfxLive - 1); try { out.disconnect(); } catch (_) { /* yoksay */ } }, 1100);
     } catch (_) { /* yoksay */ }
   },
   // Rehber demosu için: yalnızca ses zaten çalışıyorsa ve kapalı değilse (asla sesi başlatmaz)
-  isLive() { return !muted && !!ctx && ctx.state === 'running'; },
+  isLive() { return sfxReady() && ctx.state === 'running'; },
 };

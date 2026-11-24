@@ -11,8 +11,7 @@ body { overflow: hidden; user-select: none; -webkit-user-select: none; }
 #nextBox { flex-direction: row; gap: 4px; }
 #next { width: 38px; height: 38px; }
 #pauseBtn { flex: 0 0 28px; font: bold 12px Georgia, serif; background: var(--panel, #253058); color: #C9A227; border: 1px solid #8C6F12; border-radius: 6px; padding: 0; }
-#muteBtn { flex: 0 0 28px; font: bold 14px Georgia, serif; background: var(--panel, #253058); color: #C9A227; border: 1px solid #8C6F12; border-radius: 6px; padding: 0; margin-left: 6px; }
-#muteBtn.off { opacity: .55; }
+#muteBtn, #sfxBtn { flex: 0 0 28px; font: bold 14px Georgia, serif; background: var(--panel, #253058); color: #C9A227; border: 1px solid #8C6F12; border-radius: 6px; padding: 0; margin-left: 6px; }
 #stage { flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; }
 #board { display: block; touch-action: none; cursor: default; outline: none; }
 .overlay { position: absolute; inset: 0; background: color-mix(in srgb, var(--bg, #1B2340) 93%, transparent); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 20px; z-index: 5; }
@@ -523,9 +522,11 @@ html[class*="ui-"] #pad button.hld i { font-size: 1.3rem; }
   html.ui-mix #app .nx { flex-direction: row; gap: 4px; }
   html.ui-mix #nextBox .pv { flex-wrap: wrap; }
   html.ui-mix #app #holdBox { cursor: pointer; }
-  html.ui-mix #app #pauseBtn, html.ui-mix #app #muteBtn { grid-column: 3; grid-row: 2; width: calc(50% - 7px); height: 3.1rem; flex: none; margin: 0; border-radius: 16px; font-size: 1.15rem; }
+  html.ui-mix #app #pauseBtn, html.ui-mix #app #muteBtn, html.ui-mix #app #sfxBtn { grid-column: 3; grid-row: 2; width: calc((100% - 20px) / 3); height: 3.1rem; flex: none; margin: 0; border-radius: 16px; font-size: 1.15rem; }
   html.ui-mix #app #pauseBtn { justify-self: start; }
-  html.ui-mix #app #muteBtn { justify-self: end; }
+  html.ui-mix #app #muteBtn { justify-self: center; }
+  html.ui-mix #app #sfxBtn { justify-self: end; }
+  html.ui-mix #app .snd svg { width: 1.45rem; height: 1.45rem; }
   html.ui-mix #app #hud button:hover { background: rgba(239,220,154,.16); }
   html.ui-mix #kbdHelp { grid-column: 3; grid-row: 3; align-self: start; flex-direction: column; gap: 6px; padding: 12px 16px; font-size: .78rem; line-height: 1.6; color: #e8d3ae; opacity: .75; border: 1px dashed rgba(201,162,39,.35); border-radius: 14px; }
   html.ui-mix #kbdHelp b { font: 400 .72rem Georgia, serif; font-variant: small-caps; letter-spacing: .18em; opacity: .8; }
@@ -543,4 +544,34 @@ html[class*="ui-"] #pad button.hld i { font-size: 1.3rem; }
 }
 @media (min-aspect-ratio: 11/10) and (min-width: 700px) and (min-height: 480px) and (pointer: fine) {
   html.ui-mix #kbdHelp { display: flex; }
+}
+
+
+/* ===== Ses düğmeleri (müzik / efekt): satır içi SVG, kapalıyken eğik çizgi ===== */
+.snd svg { width: 18px; height: 18px; display: block; margin: auto; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.snd svg circle.ic { fill: currentColor; stroke: none; }
+.snd .slash { display: none; stroke-width: 2; }
+.snd.off .slash { display: block; }
+.snd.off { opacity: .6; }
+.snd.off .w1, .snd.off .w2 { opacity: .35; }
+#hud .snd { display: flex; align-items: center; justify-content: center; }
+.menu-snd { display: flex; gap: 8px; }
+html[class*="ui-"] #menu > .menu-snd { position: absolute; z-index: 3; top: calc(10px + env(safe-area-inset-top)); right: 10px; }
+.menu-snd .snd { width: 40px; height: 40px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;
+  color: #e8d3ae; background: rgba(255,255,255,.07); border: 1px solid rgba(240,196,106,.3); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.menu-snd .snd svg { width: 20px; height: 20px; }
+.menu-snd .snd:hover { background: rgba(239,220,154,.16); }
+.menu-snd .snd:focus-visible { outline: 2px solid #f0c46a; outline-offset: 2px; }
+/* dar telefon (<=400px): üst çubukta altı düğme + dört kutu sığsın */
+@media (max-width: 400px) {
+  html.ui-mix #app #hud { padding: 0 5px 0 10px; }
+  html.ui-mix #app #hud .box { padding: 0 7px; }
+  html.ui-mix #app #hud button { flex: 0 0 32px; height: 32px; margin-left: 3px; }
+  html.ui-mix #app .snd svg { width: 16px; height: 16px; }
+  html.ui-mix #app #hud .lbl { letter-spacing: .02em; font-size: .54rem; }
+  html.ui-mix #app #hud #hold, html.ui-mix #app #hud #next { width: 32px; height: 32px; }
+  html.ui-mix #app #hud #next2, html.ui-mix #app #hud #next3 { width: 15px; height: 15px; }
+  html.ui-mix #app #hud .box { padding: 0 6px; }
+  html.ui-mix #app #hud #nextBox { padding-right: 3px; gap: 3px; }
+  html.ui-mix #app #hud #nextBox .lbl { width: 38px; }
 }
