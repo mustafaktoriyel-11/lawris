@@ -1,7 +1,7 @@
 // Lex Stack - ana menü "attract mode": oyunun gerçek parçaları gökten süzülür, dönüp hedef sütuna yönelir,
 // plazadaki yığına oturur; dolan satır altın ışıkla silinir. Yığın önbellekte (statik tuval), düşen parça
 // ayrı bir tuvalde kirli-dikdörtgenle çizilir; hareket yokken hiç çizim yapılmaz.
-import { TYPES, cellsOf, sizeOf, getSprite } from './pieces.js';
+import { TYPES, cellsOf, sizeOf, hasCell, getSprite, getMarbleSprite, MERMER } from './pieces.js';
 
 const menu = document.getElementById('menu');
 const mk = (cls) => { const e = document.createElement('canvas'); e.className = 'deco menu-yigin ' + cls; e.setAttribute('aria-hidden', 'true'); menu.appendChild(e); return e; };
@@ -12,6 +12,7 @@ const COLS = 9, ROWS = 5, SURE_ROT = 0.12;
 
 let W = 0, H = 0, s = 28, DPR = 1, bx = 0, bw = 0, by = 0, zt = 0, sx0 = 0, sy0 = 0, sw0 = 0, sh0 = 0, ledge = 7;
 let grid = [], kirli = true, filtre = null, fly = null, clr = null, fade = null, bekle = 0.4, son = 0, gizliydi = false;
+let lock = null, pid = 0;
 let ui = [], uiT = 0, parts = [], dirty = [], up = null, tIdle = 0, hazir = false;
 
 const bosSatir = () => Array(COLS).fill(null);
@@ -26,7 +27,8 @@ function carpar(cs, x, y) {
 }
 const yukseklik = () => { for (let y = 0; y < ROWS; y++) if (grid[y].some(Boolean)) return ROWS - y; return 0; };
 function koy(t, r, g, x, y) {
-  cellsOf(t, r).forEach(([cx, cy]) => { if (y + cy >= 0) grid[y + cy][x + cx] = { t, r, g, cx, cy }; });
+  const id = ++pid;
+  cellsOf(t, r).forEach(([cx, cy]) => { if (y + cy >= 0) grid[y + cy][x + cx] = { t, r, g, cx, cy, id }; });
 }
 // Aday konumların puanı: satır tamamlama +, delik/yükseklik -
 function enIyi(types) {
@@ -86,7 +88,7 @@ function kur() {
   fxCv.width = Math.round(W * DPR); fxCv.height = Math.round(H * DPR); fxCv.style.width = W + 'px'; fxCv.style.height = H + 'px';
   stc.setTransform(DPR, 0, 0, DPR, -sx0 * DPR, -sy0 * DPR);
   c.setTransform(DPR, 0, 0, DPR, 0, 0);
-  fly = null; clr = null; up = null; dirty = []; parts = [];
+  fly = null; lock = null; clr = null; up = null; dirty = []; parts = [];
   stCv.style.opacity = 1; fade = null;
   measureUI(); kirli = true; hazir = true;
   return true;
@@ -100,9 +102,30 @@ function measureUI() {
 const uiKesisir = (x, y, R) => ui.some(([a, b, cc, d]) => x + R > a && x - R < cc && y + R > b && y - R < d);
 
 // ---------- Statik yığın (önbellek) ----------
+const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+function kesik(ctx, X, Y, d) {
+  // kısmen silinmiş parçanın düz kesik kenarı (oyundaki cutEdge ile aynı)
+  const t = Math.max(1, s * 0.055);
+  const strip = (o, th) => {
+    if (d === 0) ctx.fillRect(X, Y + o, s, th); else if (d === 2) ctx.fillRect(X, Y + s - o - th, s, th);
+    else if (d === 3) ctx.fillRect(X + o, Y, th, s); else ctx.fillRect(X + s - o - th, Y, th, s);
+  };
+  ctx.save(); ctx.beginPath(); ctx.rect(X, Y, s, s); ctx.clip();
+  ctx.fillStyle = 'rgba(250,247,238,0.5)'; strip(t, 1.2); ctx.fillStyle = '#7A7263'; strip(0, t);
+  ctx.restore();
+}
 function hucre(ctx, q, gx, gy) {
-  const S = Math.round(s * DPR), spr = getSprite(q.t, q.r, q.g, S);
-  ctx.drawImage(spr, q.cx * S, q.cy * S, S, S, bx + gx * s, zt + gy * s, s, s);
+  const S = Math.round(s * DPR), X = bx + gx * s, Y = zt + gy * s;
+  const spr = MERMER ? getMarbleSprite(q.t, q.r, S) : getSprite(q.t, q.r, q.g, S);
+  ctx.drawImage(spr, q.cx * S, q.cy * S, S, S, X, Y, s, s);
+  if (!MERMER) return;
+  for (let d = 0; d < 4; d++) {
+    const [dx, dy] = DIRS[d];
+    if (!hasCell(q.t, q.r, q.cx + dx, q.cy + dy)) continue;
+    const n = grid[gy + dy] && grid[gy + dy][gx + dx];
+    if (n && n.id === q.id) continue;
+    kesik(ctx, X, Y, d);
+  }
 }
 function hucreler(ctx, f) {
   for (let y = 0; y < ROWS; y++) if (!f || f(y)) for (let x = 0; x < COLS; x++) if (grid[y][x]) hucre(ctx, grid[y][x], x, y);
@@ -153,6 +176,7 @@ function uret() {
   const hm = Math.max(w, h) * s, cy0 = -hm / 2 - 8, cyT = zt + (p.y + h / 2) * s, total = cyT - cy0;
   const cyEnd = zt - 6 - hm / 2, fEnd = clamp((cyEnd - cy0) / total, 0.3, 0.95);
   const S = Math.round(s * DPR); for (let k = 0; k < 4; k++) getSprite(p.t, k, altin, S);
+  if (MERMER) getMarbleSprite(p.t, p.r, S);
   fly = { t: p.t, g: altin, r: p.r, x: p.x, y: p.y, w, h, nrot, r0: (p.r - nrot) & 3, rotK: 0, rotT: -1, cx0: bx + (xs + w / 2) * s, cxT: bx + (p.x + w / 2) * s,
     cy0, cyT, total, u: 0, fEnd, hm, alpha: 1, ph: Math.random() * 6, v: Math.max(240, H / 2.7), cx: 0, cy: cy0 };
 }
@@ -169,6 +193,7 @@ function adim(dt) {
 }
 function indi(f) {
   koy(f.t, f.r, f.g, f.x, f.y); kirli = true; fly = null; bekle = 0.35;
+  if (MERMER && !azHareket) lock = { t: f.t, r: f.r, g: f.g, x: f.x, y: f.y, w: f.w, h: f.h, a: 0 };
   if (f.g) for (let i = 0; i < 14; i++) parts.push({ x: bx + (f.x + rnd(0, f.w)) * s, y: zt + (f.y + rnd(0, f.h)) * s, vx: rnd(-60, 60), vy: rnd(-110, -20), t: 0, L: rnd(0.45, 0.8) });
   dirty.push([sx0 - 4, sy0 - 4, sw0 + 8, sh0 + 8]);
   sonraki();
@@ -234,7 +259,7 @@ function satirEfekt(dt) {
   const k = clr; k.t += dt;
   const y = zt + k.y * s, T = k.t;
   if (T >= 0.2 && k.k === 0) { // satırı gizle, üstünü ayrı tuvale al
-    k.k = 1; grid[k.y] = bosSatir();
+    k.k = 1; lock = null; grid[k.y] = bosSatir();
     up = document.createElement('canvas'); up.width = stCv.width; up.height = stCv.height;
     const u = up.getContext('2d'); u.setTransform(DPR, 0, 0, DPR, -sx0 * DPR, -sy0 * DPR);
     hucreler(u, (r) => r < k.y); filtre = (r) => r > k.y; kirli = true;
@@ -258,6 +283,17 @@ function kareCiz(dt, now) {
   for (const d of dirty) c.clearRect(d[0], d[1], d[2], d[3]);
   dirty.length = 0;
   if (fly) { hayalet(fly, now); parcaCiz(fly, now); }
+  if (lock) {
+    const L = lock; L.a += dt; const k = Math.min(1, L.a / 0.25);
+    if (k >= 1) { lock = null; dirty.push([bx + L.x * s - 4, zt + L.y * s - 4, L.w * s + 8, L.h * s + 8]); }
+    else {
+      const S = Math.round(s * DPR), spr = getSprite(L.t, L.r, L.g, S), cs = cellsOf(L.t, L.r);
+      c.save(); c.globalAlpha = 1 - ease(k);
+      for (const [qx, qy] of cs) c.drawImage(spr, qx * S, qy * S, S, S, bx + (L.x + qx) * s, zt + (L.y + qy) * s, s, s);
+      c.restore();
+      dirty.push([bx + L.x * s - 4, zt + L.y * s - 4, L.w * s + 8, L.h * s + 8]);
+    }
+  }
   if (clr) satirEfekt(dt);
   if (parts.length) {
     parts = parts.filter((p) => (p.t += dt) < p.L);
@@ -281,7 +317,7 @@ function kare(now) {
   if (fade) { fade.t += dt; if (fade.t >= 0.65) { tohum(); stCv.style.opacity = 1; fade = null; bekle = 0.5; } }
   else if (!clr && !fly) { bekle -= dt; if (bekle <= 0) uret(); }
   if (fly) adim(dt);
-  const aktif = fly || clr || parts.length || dirty.length;
+  const aktif = fly || clr || lock || parts.length || dirty.length;
   if (kirli) statikCiz();
   if (aktif) kareCiz(dt, now);
 }
@@ -292,7 +328,8 @@ function basla() {
   // sprite'ları boşta ısıt (ilk düşüşte takılma olmasın)
   const S = Math.round(s * DPR), isit = []; for (const t of TYPES) for (let k = 0; k < 4; k++) isit.push([t, k, false]);
   isit.push(['sutun', 0, true], ['sutun', 1, true], ['kanun', 0, true]);
-  const adimIsit = () => { const q = isit.shift(); if (q) { getSprite(q[0], q[1], q[2], S); setTimeout(adimIsit, 16); } };
+  if (MERMER) for (const t of TYPES) for (let k = 0; k < 4; k++) isit.push([t, k, 'm']);
+  const adimIsit = () => { const q = isit.shift(); if (q) { if (q[2] === 'm') getMarbleSprite(q[0], q[1], S); else getSprite(q[0], q[1], q[2], S); setTimeout(adimIsit, 16); } };
   setTimeout(adimIsit, 200);
   requestAnimationFrame(kare);
 }

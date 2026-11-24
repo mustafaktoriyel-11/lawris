@@ -1,5 +1,5 @@
 // Lex Stack - rehber "Altın parçalar" kartındaki canlı mini gösterim (7x6 tahta, Sütun ve Kanun döngüsü)
-import { cellsOf, sizeOf, getSprite, COLORS as C } from './pieces.js';
+import { cellsOf, sizeOf, hasCell, getSprite, getMarbleSprite, getPlainMarble, MERMER, COLORS as C } from './pieces.js';
 import { THEME as TH } from './theme.js';
 import { goldFx } from './render.js';
 import { music } from './music.js';
@@ -14,6 +14,9 @@ const SCENES = {
   kanun: { rot: 0, x: 2, y: 2, st: ['.......', '.......', '.......', 'w.....s', 'ggr.rgg', 'sgrrrgs'] },
 };
 const ease2 = (x) => x * x;
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)');
+const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+let gid = 0;
 
 const buildGrid = (st) => st.map((row) => [...row].map((ch) => (COL[ch] ? { flat: COL[ch] } : null)));
 const removeRows = (grid, rows) => {
@@ -64,7 +67,8 @@ export function createDemo(canvas, nameEl, textEl) {
     const { type, sc, grid, cells } = scene;
     const abs = cells.map(([cx, cy]) => [sc.x + cx, sc.y + cy]);
     if (music.isLive()) music.sfx(type, 0.5);
-    cells.forEach(([cx, cy], i) => { const [x, y] = abs[i]; if (y >= 0 && y < ROWS) grid[y][x] = { type, rot: sc.rot, lx: cx, ly: cy }; });
+    const id = ++gid;
+    cells.forEach(([cx, cy], i) => { const [x, y] = abs[i]; if (y >= 0 && y < ROWS) grid[y][x] = { type, rot: sc.rot, lx: cx, ly: cy, id, t0: now }; });
     switch (type) {
       case 'sutun': {
         const cols = new Map();
@@ -81,9 +85,22 @@ export function createDemo(canvas, nameEl, textEl) {
     }
   }
 
-  function drawCell(cell, x, y) {
+  function cutEdge(px, py, d) {
+    const t = Math.max(1, s * 0.055);
+    const strip = (o, th) => {
+      if (d === 0) c.fillRect(px, py + o, s, th); else if (d === 2) c.fillRect(px, py + s - o - th, s, th);
+      else if (d === 3) c.fillRect(px + o, py, th, s); else c.fillRect(px + s - o - th, py, th, s);
+    };
+    c.save(); c.beginPath(); c.rect(px, py, s, s); c.clip();
+    c.fillStyle = 'rgba(250,247,238,0.5)'; strip(t, 1.2); c.fillStyle = '#7A7263'; strip(0, t);
+    c.restore();
+  }
+
+  function drawCell(cell, x, y, now) {
     const px = x * s, py = y * s;
-    if (cell.plain) {
+    if (MERMER && (cell.plain || cell.flat)) {
+      c.drawImage(getPlainMarble(s, cell.flat ? x * 3 + y : x + y * 2), px, py);
+    } else if (cell.plain) {
       c.fillStyle = C.marble; c.fillRect(px, py, s, s);
       c.strokeStyle = C.marbleD; c.lineWidth = Math.max(1, s * 0.06); c.strokeRect(px + 0.5, py + 0.5, s - 1, s - 1);
       c.beginPath(); c.moveTo(px + s * 0.2, py + s * 0.7); c.lineTo(px + s * 0.5, py + s * 0.45); c.lineTo(px + s * 0.8, py + s * 0.3); c.stroke();
@@ -92,7 +109,21 @@ export function createDemo(canvas, nameEl, textEl) {
       c.fillStyle = 'rgba(255,255,255,0.12)'; c.fillRect(px, py, s, Math.max(1, s * 0.12));
       c.strokeStyle = 'rgba(0,0,0,0.45)'; c.lineWidth = Math.max(1, s * 0.06); c.strokeRect(px + 0.5, py + 0.5, s - 1, s - 1);
     } else {
-      c.drawImage(getSprite(cell.type, cell.rot, false, s), cell.lx * s, cell.ly * s, s, s, px, py, s, s);
+      const col = getSprite(cell.type, cell.rot, false, s);
+      if (MERMER) {
+        const m = getMarbleSprite(cell.type, cell.rot, s), k = Math.min(1, (now - cell.t0) / 250);
+        if (k < 1 && !REDUCED.matches) {
+          c.drawImage(col, cell.lx * s, cell.ly * s, s, s, px, py, s, s);
+          c.globalAlpha = k * k * (3 - 2 * k); c.drawImage(m, cell.lx * s, cell.ly * s, s, s, px, py, s, s); c.globalAlpha = 1;
+        } else c.drawImage(m, cell.lx * s, cell.ly * s, s, s, px, py, s, s);
+        for (let d = 0; d < 4; d++) {
+          const [dx, dy] = DIRS[d];
+          if (!hasCell(cell.type, cell.rot, cell.lx + dx, cell.ly + dy)) continue;
+          const n = scene.grid[y + dy] && scene.grid[y + dy][x + dx];
+          if (n && n.id === cell.id) continue;
+          cutEdge(px, py, d);
+        }
+      } else c.drawImage(col, cell.lx * s, cell.ly * s, s, s, px, py, s, s);
     }
   }
 
@@ -111,7 +142,7 @@ export function createDemo(canvas, nameEl, textEl) {
     for (let y = 0; y <= ROWS; y++) { c.moveTo(0, y * s + 0.5); c.lineTo(COLS * s, y * s + 0.5); }
     c.stroke();
     if (!scene.done && el >= FX_AT) { scene.done = true; apply(t); }
-    scene.grid.forEach((row, y) => row.forEach((cell, x) => { if (cell) drawCell(cell, x, y); }));
+    scene.grid.forEach((row, y) => row.forEach((cell, x) => { if (cell) drawCell(cell, x, y, t); }));
     // düşen altın parça
     if (!scene.done) {
       const { type, sc, sz, cells } = scene, p = Math.min(1, el / DROP_MS), top = -sz.h, y = top + (sc.y - top) * ease2(p);
