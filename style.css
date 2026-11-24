@@ -597,3 +597,34 @@ html.ui-mix #menu h1, html.ui-2 #menu h1 { font-size: clamp(1.55rem, 8.4vw, 2.6r
 /* Menünün altındaki canlı parça yığını */
 #menu > .menu-yigin { position: absolute; left: 0; bottom: calc(40px + env(safe-area-inset-bottom)); pointer-events: none; z-index: 0;
   -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 45%); mask-image: linear-gradient(180deg, transparent 0, #000 45%); }
+
+/* ===== Açılış: aydınlık Roma tapınağı (Gemini) — açık gökyüzüne uygun koyu mürekkep tonları ===== */
+html.ui-mix #menu, html.ui-2 #menu {
+  background: url("img/acilis-tapinak.webp") center bottom -16vh / cover no-repeat, linear-gradient(180deg, #86bbdb, #9cc6da 60%, #b9cdd6);
+  --g1: #6B1F24; --g2: #B8862B; --glow: rgba(255,236,190,.55); --hair: rgba(107,31,36,.35); --ink: #3B2016;
+}
+html.ui-mix #menu h1, html.ui-2 #menu h1 {
+  color: #6B1F24; text-shadow: 0 1px 0 rgba(255,246,220,.9), 0 0 18px rgba(255,248,230,.85), 0 0 2px rgba(184,134,43,.6);
+}
+html.ui-mix .rule { background: linear-gradient(90deg, transparent, #B8862B, transparent); box-shadow: none; }
+html.ui-mix #menu .tag { color: var(--ink); opacity: .9; text-shadow: 0 0 10px rgba(255,250,235,.9); }
+html.ui-mix #menu .menu-best { color: var(--ink); }
+html.ui-mix #menu .menu-best b { color: #6B1F24; text-shadow: 0 0 10px rgba(255,250,235,.9); }
+html.ui-mix #menu button.big {
+  color: #FFF6DE; background: linear-gradient(180deg, #8E2A30, #5E1A1F); border: 1.5px solid #D9A93A;
+  box-shadow: 0 6px 18px rgba(80,30,20,.35), inset 0 1px 0 rgba(255,220,170,.35); text-shadow: 0 1px 0 rgba(0,0,0,.35);
+}
+html.ui-mix #menu .alt { color: var(--ink); border-bottom-color: rgba(107,31,36,.4); opacity: 1; text-shadow: 0 0 8px rgba(255,250,235,.9); }
+html.ui-mix #menu .menu-links .dot { background: #B8862B; box-shadow: none; }
+html.ui-mix #menu .menu-hero .bubble { background: rgba(255,250,238,.92); color: var(--ink); border-color: rgba(184,134,43,.55); }
+html.ui-mix #menu .menu-hero .bubble::before { background: rgba(255,250,238,.92); border-color: rgba(184,134,43,.55); }
+html.ui-mix #menu .lang-sw, html.ui-mix #menu .menu-snd .snd { color: #4A2418; background: rgba(255,252,244,.55); border-color: rgba(107,31,36,.3); }
+html.ui-mix #menu .lang-sw button[aria-pressed="true"] { background: rgba(107,31,36,.85); color: #FFF3D6; box-shadow: none; }
+html.ui-mix #menu a { color: #5A3324; text-shadow: 0 0 6px rgba(255,245,225,.8); }
+html.ui-mix #menu .mascot-badge svg { filter: drop-shadow(0 4px 8px rgba(60,30,10,.35)); }
+@media (min-aspect-ratio: 56/100) {
+  html.ui-mix #menu {
+    background: linear-gradient(180deg, #88bcdb 0%, #88bcdb 18%, #a3c9db 32%, #cfd6d4 48%, #e2d3b8 55%, #d6bb9c 68%, #c3a38c 82%, #9a7f74 100%);
+  }
+  html.ui-mix #menu::before { background-image: url("img/acilis-tapinak.webp"); top: 17vh; }
+}
