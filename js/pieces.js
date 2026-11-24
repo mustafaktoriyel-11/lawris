@@ -42,7 +42,7 @@ const C = {
   ink: '#F3EBD3', steel: '#888780', steelD: '#5F5E5A',
 };
 const PAL = {
-  tokmak: { main: '#9A6433', dark: '#4E2F18', acc: C.gold },
+  tokmak: { main: '#3B2C2A', dark: '#16100F', acc: '#E0B23A' },
   terazi: { main: '#A9B0BA', dark: '#5C6470', acc: '#7A5E10', pivot: C.gold },
   sutun: { main: C.marble, dark: C.marbleD, acc: C.marbleD },
   // Roma yasa levhasi: sicak travertin / kumtasi, bronz perçinler
@@ -91,18 +91,38 @@ function dTokmak(c, s, P) {
     c.stroke();
   }
   c.restore();
-  c.fillStyle = A;
-  // başlık: ortalanmış, dolgun fıçı biçimi; uçlarda kalın kapaklar
-  rr(c, 0.66 * s, 0.26 * s, 1.68 * s, 0.48 * s, 0.16 * s); c.fill();
-  rr(c, 0.5 * s, 0.2 * s, 0.26 * s, 0.6 * s, 0.1 * s); c.fill();
-  rr(c, 2.24 * s, 0.2 * s, 0.26 * s, 0.6 * s, 0.1 * s); c.fill();
-  c.fillStyle = D; c.fillRect(0.86 * s, 0.26 * s, 0.05 * s, 0.48 * s); c.fillRect(2.09 * s, 0.26 * s, 0.05 * s, 0.48 * s);
-  c.globalAlpha = 0.35; c.fillRect(0.9 * s, 0.34 * s, 1.2 * s, 0.07 * s); c.globalAlpha = 1;
-  // sap: hafif incelen, bilezikli, topuzlu
-  c.fillStyle = A; rr(c, 1.34 * s, 0.7 * s, 0.32 * s, 0.12 * s, 0.04 * s); c.fill();
-  c.beginPath(); c.moveTo(1.39 * s, 0.8 * s); c.lineTo(1.61 * s, 0.8 * s); c.lineTo(1.58 * s, 2.42 * s); c.lineTo(1.42 * s, 2.42 * s); c.closePath(); c.fill();
-  c.fillStyle = D; c.fillRect(1.4 * s, 2.08 * s, 0.2 * s, 0.05 * s);
-  c.fillStyle = A; c.beginPath(); c.ellipse(1.5 * s, 2.55 * s, 0.17 * s, 0.15 * s, 0, 0, Math.PI * 2); c.fill();
+  // Tokmak: parlak metal altın (gradyan + ince kontur + parlama), plakaya hafif gölge düşürür
+  const tone = (hex, t) => { const n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+    const f = (v) => Math.round(t >= 0 ? v + (255 - v) * t : v * (1 + t));
+    return `rgb(${f(r)},${f(g)},${f(b)})`; };
+  const sekil = (p) => {
+    p.beginPath();
+    rrp(p, 0.66 * s, 0.26 * s, 1.68 * s, 0.48 * s, 0.16 * s);
+    rrp(p, 0.5 * s, 0.2 * s, 0.26 * s, 0.6 * s, 0.1 * s);
+    rrp(p, 2.24 * s, 0.2 * s, 0.26 * s, 0.6 * s, 0.1 * s);
+    rrp(p, 1.34 * s, 0.7 * s, 0.32 * s, 0.12 * s, 0.04 * s);
+    p.moveTo(1.39 * s, 0.8 * s); p.lineTo(1.61 * s, 0.8 * s); p.lineTo(1.58 * s, 2.42 * s); p.lineTo(1.42 * s, 2.42 * s); p.closePath();
+    p.moveTo(1.67 * s, 2.55 * s); p.ellipse(1.5 * s, 2.55 * s, 0.17 * s, 0.15 * s, 0, 0, Math.PI * 2);
+  };
+  // gölge
+  c.save(); c.translate(0.04 * s, 0.06 * s); sekil(c); c.fillStyle = 'rgba(0,0,0,.38)'; c.fill(); c.restore();
+  // gövde: dikey metal gradyan
+  const g = c.createLinearGradient(0, 0.2 * s, 0, 0.8 * s);
+  g.addColorStop(0, tone(A, 0.55)); g.addColorStop(0.45, tone(A, 0.12)); g.addColorStop(1, tone(A, -0.35));
+  sekil(c); c.fillStyle = g; c.fill();
+  const gh = c.createLinearGradient(1.36 * s, 0, 1.64 * s, 0);
+  gh.addColorStop(0, tone(A, -0.3)); gh.addColorStop(0.4, tone(A, 0.5)); gh.addColorStop(1, tone(A, -0.35));
+  c.save(); c.beginPath(); c.rect(1.3 * s, 0.82 * s, 0.4 * s, 1.9 * s); c.clip(); sekil(c); c.fillStyle = gh; c.fill(); c.restore();
+  c.lineWidth = Math.max(1, s * 0.035); c.strokeStyle = tone(A, -0.62); sekil(c); c.stroke();
+  // bilezikler ve parlama
+  c.fillStyle = tone(A, -0.55); c.fillRect(0.86 * s, 0.27 * s, 0.05 * s, 0.46 * s); c.fillRect(2.09 * s, 0.27 * s, 0.05 * s, 0.46 * s); c.fillRect(1.41 * s, 2.08 * s, 0.18 * s, 0.05 * s);
+  c.fillStyle = 'rgba(255,255,240,.75)'; rr(c, 0.95 * s, 0.32 * s, 1.1 * s, 0.06 * s, 0.03 * s); c.fill();
+  c.fillStyle = 'rgba(255,255,240,.55)'; c.beginPath(); c.ellipse(1.45 * s, 2.5 * s, 0.06 * s, 0.04 * s, 0, 0, Math.PI * 2); c.fill();
+}
+// rr'nin yol ekleyen hâli (beginPath yapmaz; birden çok şekil tek yolda birleşir)
+function rrp(c, x, y, w, h, r) {
+  c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
 }
 function dSutun(c, s, P) {
   const lw = Math.max(1, s * 0.04);
