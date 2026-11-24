@@ -10,9 +10,9 @@ const BOTTOM = 0.5;  // kaide
 const COLW = 1;      // sütun genişliği (hücre)
 const REDUCED = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
 const SWEEP_CYCLE = 1.8, SWEEP_DUR = 1.3, FLASH_MS = 400;
-const PERSIST = 0.4;       // renkli sürümün kalıcı opaklığı (açığa çıkan bölgede)
+const PERSIST = 0.55;       // renkli sürümün kalıcı opaklığı (açığa çıkan bölgede)
 const FEATHER = 1.2;       // kalıcı bölgenin üst kenar yumuşatması (hücre)
-const SWEEP_MS = 950, SHIM_MS = 700, BAND_FEATHER = 1.5;
+const SWEEP_MS = 1150, SHIM_MS = 700, BAND_FEATHER = 1.5;
 const easeOut = (x) => 1 - Math.pow(1 - x, 3);
 const smooth = (x) => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
 const ease = (x) => (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
@@ -61,7 +61,7 @@ export class Renderer {
     if (REDUCED.matches) return;
     // Kullanıcı isteği: ışık bütün tahtadan geçer, yapı tümüyle renkli görünür (silinen satır sayısı kadar biraz daha uzun)
     const n = Math.abs(row1 - row0) + 1;
-    this.flashes.push({ lv: levelFade().b, y0: 0, y1: ROWS - 1, fe: 0, dur: SWEEP_MS + 120 * Math.min(3, n - 1), t0: performance.now(), amp: 0.95 });
+    this.flashes.push({ lv: levelFade().b, y0: 0, y1: ROWS - 1, fe: 0, dur: SWEEP_MS + 120 * Math.min(3, n - 1), t0: performance.now(), amp: 1.0 });
     if (this.flashes.length > 6) this.flashes.shift();
   }
   // Seviye tamamlanınca kısa tüm-sahne parıltısı
@@ -101,8 +101,9 @@ export class Renderer {
       const t = this.bctx;
       for (const f of fl) {
         const k = (now - f.t0) / f.dur; if (k < 0 || k >= 1) continue;
-        const fe = f.fe * s, y0 = f.y0 * s - fe, y1 = (f.y1 + 1) * s + fe, hf = 1.6 * s, front = easeOut(k) * (bw + hf * 1.5);
-        const env = k < 0.45 ? 1 : 1 - smooth((k - 0.45) / 0.55);
+        const fe = f.fe * s, y0 = f.y0 * s - fe, y1 = (f.y1 + 1) * s + fe, hf = 1.6 * s; const tt = now - f.t0, sweepK = f.shim ? k : Math.min(1, tt / 520), front = easeOut(sweepK) * (bw + hf * 1.5);
+        // tam renk: ~120ms yumuşak giriş, ~350ms tam opak bekleme, sonra yumuşak çıkış
+        const env = f.shim ? (k < 0.45 ? 1 : 1 - smooth((k - 0.45) / 0.55)) : Math.min(smooth(tt / 120), 1 - smooth((tt - 470) / Math.max(1, f.dur - 470)));
         const shape = () => {   // dikey bant (yumuşak üst/alt)
           t.globalCompositeOperation = 'source-over'; t.globalAlpha = 1; t.clearRect(0, 0, bw, bh);
           if (fe > 0) { const g = t.createLinearGradient(0, y0, 0, y1), q = fe / (y1 - y0); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(q, '#000'); g.addColorStop(1 - q, '#000'); g.addColorStop(1, 'rgba(0,0,0,0)'); t.fillStyle = g; } else t.fillStyle = '#000';
@@ -126,9 +127,9 @@ export class Renderer {
       const t = this.bctx;
       for (const [f, k, front, hf, shape] of streaks) {
         shape();
-        const g = t.createLinearGradient(front - hf, 0, front + 0.3 * s, 0); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.75, '#000'); g.addColorStop(1, 'rgba(0,0,0,0)'); t.fillStyle = g; t.fillRect(0, 0, bw, bh);
+        const g = t.createLinearGradient(front - 0.7 * s, 0, front + 0.25 * s, 0); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.8, '#000'); g.addColorStop(1, 'rgba(0,0,0,0)'); t.fillStyle = g; t.fillRect(0, 0, bw, bh);
         t.globalCompositeOperation = 'source-in'; t.fillStyle = 'rgb(255,214,108)'; t.fillRect(0, 0, bw, bh);
-        c.globalCompositeOperation = 'lighter'; c.globalAlpha = alpha * 0.5 * (1 - k * 0.7); c.drawImage(this.band, this.bx, this.by); c.globalCompositeOperation = 'source-over';
+        c.globalCompositeOperation = 'lighter'; c.globalAlpha = alpha * 0.4; c.drawImage(this.band, this.bx, this.by); c.globalCompositeOperation = 'source-over';
         if (f.shim) { c.globalAlpha = alpha * 0.14 * Math.sin(Math.PI * k); c.fillStyle = '#FFE6A0'; c.fillRect(this.bx, this.by, bw, bh); }
       }
     }
