@@ -2,8 +2,8 @@
 // "Mahkeme kütüphanesi" havası: klavsen/pizzicato arpejler + yumuşak pad, Re majör / la minör renkleri.
 const LS_KEY = 'lawris.music';
 const BASE_BPM = 90;
-const LOOKAHEAD = 0.1;   // sn
-const TICK_MS = 25;
+const LOOKAHEAD = 0.3;   // sn (tablette ana iş parçacığı yoğunken kesinti olmasın diye geniş)
+const TICK_MS = 50;
 
 // Akorlar (MIDI, alttan üste 4 ses)
 const C = {
@@ -70,10 +70,13 @@ try { muted = localStorage.getItem(LS_KEY) === 'off'; } catch (_) { muted = fals
 function build() {
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) return false;
-  ctx = new AC();
+  try { ctx = new AC({ latencyHint: 'playback' }); } catch (_) { ctx = new AC(); }   // büyük tampon: cızırtıya karşı
   master = ctx.createGain(); master.gain.value = muted ? 0 : 0.12;
   const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3800; lp.Q.value = 0.4;
-  lp.connect(master); master.connect(ctx.destination);
+  // sınırlayıcı: müzik + efekt üst üste binince kırpılma (cızırtı) olmasın
+  const lim = ctx.createDynamicsCompressor();
+  lim.threshold.value = -6; lim.knee.value = 6; lim.ratio.value = 12; lim.attack.value = 0.003; lim.release.value = 0.2;
+  lp.connect(master); master.connect(lim); lim.connect(ctx.destination);
   fade = ctx.createGain(); fade.gain.value = 1;
   bus = ctx.createGain();
   fade.connect(bus); bus.connect(lp);
@@ -279,7 +282,7 @@ const tempoK = () => LV[Math.min(MAX_LEVEL, curLevel)].tempo;
 function tick() {
   if (!ctx || !running) return;
   while (nextT < ctx.currentTime + LOOKAHEAD) {
-    scheduleStep(Math.max(nextT, ctx.currentTime), step, bar);
+    scheduleStep(Math.max(nextT, ctx.currentTime + 0.03), step, bar);   // geç kalan nota hemen değil, kısa payla başlasın (tık sesi olmasın)
     nextT += 60 / (BASE_BPM * tempoK()) / 2;
     if (++step >= 8) { step = 0; bar = (bar + 1) % TOTAL_BARS; }
   }
