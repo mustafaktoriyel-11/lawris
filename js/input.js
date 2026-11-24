@@ -12,6 +12,8 @@ export function initInput(a, canvas, getCell) {
   window.addEventListener('keydown', (e) => {
     const t = e.target;
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    if (t && t.closest && t.closest('#rehber:not([hidden])')) return;
+    if (document.querySelector('#rehber:not([hidden])')) return;
     const n = KEYS[e.key];
     if (!n) return;
     e.preventDefault();

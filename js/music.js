@@ -9,8 +9,11 @@ const TICK_MS = 25;
 const C = {
   D: [50, 57, 62, 66], A: [52, 57, 61, 64], Bm: [50, 54, 59, 62], Fsm: [49, 54, 57, 61],
   G: [50, 55, 59, 62], Em: [52, 55, 59, 64], Am: [52, 57, 60, 64], Dm: [50, 57, 62, 65],
-  C: [52, 55, 60, 64], A7: [52, 55, 61, 64],
+  C: [52, 55, 60, 64], A7: [52, 55, 61, 64], Fs7: [54, 58, 61, 64],
 };
+// Akor kökleri (pitch class) - bas hattı için
+const ROOT = { D: 2, A: 9, Bm: 11, Fsm: 6, G: 7, Em: 4, Am: 9, Dm: 2, C: 0, A7: 9, Fs7: 6 };
+const bassMidi = (name) => 38 + ((ROOT[name] - 2) % 12 + 12) % 12;
 // 3 bölüm x 8 ölçü = 24 ölçülük döngü (A / B / A')
 const SECTIONS = [
   { // A: Pachelbel benzeri
@@ -29,12 +32,38 @@ const SECTIONS = [
     melody: { 0: [[0, 81, 3], [4, 78, 2], [6, 76, 2]], 1: [[0, 76, 4], [4, 73, 4]], 3: [[0, 78, 2], [2, 76, 2], [4, 73, 4]], 4: [[0, 74, 3], [4, 71, 2], [6, 74, 2]], 6: [[0, 76, 3], [4, 79, 2], [6, 78, 2]], 7: [[0, 73, 3], [4, 74, 4]] },
   },
 ];
+// İstinaf: akraba minör (Si minör) renkli sürüm - aynı melodi ailesi, aynı gam notaları
+const MINOR = [
+  { chords: ['Bm', 'G', 'D', 'A', 'Bm', 'G', 'Em', 'Fs7'], pattern: [0, 2, 1, 3, 2, 3, 1, 2],
+    melody: { 0: SECTIONS[0].melody[0], 2: SECTIONS[0].melody[2], 4: SECTIONS[0].melody[4], 6: SECTIONS[0].melody[6] } },
+  { chords: ['Em', 'Bm', 'G', 'D', 'Em', 'G', 'A', 'Fs7'], pattern: [0, 3, 1, 2, 1, 3, 2, 3],
+    melody: { 1: SECTIONS[1].melody[1], 3: SECTIONS[1].melody[3], 5: SECTIONS[1].melody[5] } },
+  { chords: ['Bm', 'G', 'D', 'A', 'Em', 'G', 'Em', 'Fs7'], pattern: [0, 2, 3, 1, 2, 3, 2, 1],
+    melody: { 0: SECTIONS[2].melody[0], 3: SECTIONS[2].melody[3], 4: SECTIONS[2].melody[4], 6: SECTIONS[2].melody[6] } },
+];
 const TOTAL_BARS = SECTIONS.length * 8;
+const XF = 2.4;          // seviye geçişi çapraz solma süresi (sn); en kısa ölçüden (~2.42 sn) kısa
+const MAX_LEVEL = 3;
+const MAX_OSC = 40;      // aynı anda canlı kısa ömürlü osilatör sınırı (mobil CPU)
+// Mahkeme derecesine göre katman hedefleri
+const LV = [
+  { bass: 0, bassx: 0, str: 0,    org: 0, pad: 1,   plk: 1,   mel: 1,   send: 0.35, fb: 0.30, dlf: 1800, tempo: 1 },
+  { bass: 1, bassx: 0, str: 1,    org: 0, pad: 1,   plk: 1,   mel: 1,   send: 0.37, fb: 0.30, dlf: 1800, tempo: 1 },
+  { bass: 1, bassx: 0, str: 1,    org: 0, pad: 1,   plk: 1,   mel: 1,   send: 0.38, fb: 0.31, dlf: 1800, tempo: 1.05 },
+  { bass: 1, bassx: 1, str: 0.55, org: 1, pad: 0.5, plk: 0.4, mel: 0.8, send: 0.5,  fb: 0.42, dlf: 1500, tempo: 1.1 },
+];
 const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
 const rnd = (a) => (Math.random() * 2 - 1) * a;
 
 let ctx = null, fade = null, bus = null, master = null;
-let timer = null, nextT = 0, step = 0, bar = 0, level = 0;
+let timer = null, nextT = 0, step = 0, bar = 0;
+let level = 0;       // istenen (bekleyen) seviye - setLevel yazar
+let curLevel = 0;    // çalan seviye - yalnızca ölçü başında güncellenir
+let live = 0;        // canlı kısa ömürlü osilatör sayısı
+let pendingFade = null;
+let bassBus = null, sendG = null, fbG = null, dlyLp = null;
+const R = {};        // katman rampaları: ad -> {v0, v1, t0, t1}
+const layers = { str: null, org: null };   // kalıcı osilatör katmanları (tembel oluşur)
 let muted = false, running = false, paused = false;
 try { muted = localStorage.getItem(LS_KEY) === 'off'; } catch (_) { muted = false; }
 
@@ -52,57 +81,200 @@ function build() {
   const dly = ctx.createDelay(1); dly.delayTime.value = 0.29;
   const fb = ctx.createGain(); fb.gain.value = 0.3;
   const dlp = ctx.createBiquadFilter(); dlp.type = 'lowpass'; dlp.frequency.value = 1800;
+  const dhp = ctx.createBiquadFilter(); dhp.type = 'highpass'; dhp.frequency.value = 180; // geri beslemede çamurlaşmayı önler
   const send = ctx.createGain(); send.gain.value = 0.35;
-  bus.connect(send); send.connect(dly); dly.connect(dlp); dlp.connect(fb); fb.connect(dly); dlp.connect(lp);
+  bus.connect(send); send.connect(dly); dly.connect(dlp); dlp.connect(dhp); dhp.connect(fb); fb.connect(dly); dlp.connect(lp);
+  sendG = send; fbG = fb; dlyLp = dlp;
+  // bas yolu: yumuşak alçak geçiren
+  bassBus = ctx.createGain(); bassBus.gain.value = 1;
+  const blp = ctx.createBiquadFilter(); blp.type = 'lowpass'; blp.frequency.value = 380; blp.Q.value = 0.5;
+  bassBus.connect(blp); blp.connect(fade);
   return true;
 }
 
+// Kısa ömürlü osilatör: sayaçlı, bitince düğümleri serbest bırakır
+function osc(type, f, t0, t1, dest) {
+  const o = ctx.createOscillator(); o.type = type; o.frequency.value = f;
+  o.connect(dest); live++;
+  o.onended = () => { live--; try { o.disconnect(); } catch (_) { /* yoksay */ } };
+  o.start(t0); o.stop(t1);
+  return o;
+}
+
 function pluck(t, midi, vel) {
+  if (live > MAX_OSC - 2) return;
   const f = hz(midi), g = ctx.createGain(), lp = ctx.createBiquadFilter();
   lp.type = 'lowpass'; lp.frequency.setValueAtTime(Math.min(4200, f * 5), t); lp.frequency.exponentialRampToValueAtTime(Math.max(500, f * 1.3), t + 0.5);
   const peak = 0.34 * vel, dec = 0.8 + Math.random() * 0.4;
   g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(peak, t + 0.006);
   g.gain.exponentialRampToValueAtTime(0.0001, t + dec);
-  const o1 = ctx.createOscillator(); o1.type = 'triangle'; o1.frequency.value = f;
-  const o2 = ctx.createOscillator(); o2.type = 'sawtooth'; o2.frequency.value = f; o2.detune.value = 4;
   const g2 = ctx.createGain(); g2.gain.value = 0.12;
-  o1.connect(lp); o2.connect(g2); g2.connect(lp); lp.connect(g); g.connect(fade);
-  o1.start(t); o2.start(t); o1.stop(t + dec + 0.05); o2.stop(t + dec + 0.05);
+  const o1 = osc('triangle', f, t, t + dec + 0.05, lp);
+  const o2 = osc('sawtooth', f, t, t + dec + 0.05, g2); o2.detune.value = 4;
+  g2.connect(lp); lp.connect(g); g.connect(fade);
+  o2.addEventListener('ended', () => { try { g.disconnect(); lp.disconnect(); g2.disconnect(); } catch (_) { /* yoksay */ } });
 }
 
-function pad(t, midi, dur) {
+function pad(t, midi, dur, k) {
+  if (k < 0.02 || live > MAX_OSC - 4) return;
   const g = ctx.createGain(), f = hz(midi);
-  const a = 1.1, peak = 0.05;
+  const a = 1.1, peak = 0.05 * k;
   g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(peak, t + a);
   g.gain.setValueAtTime(peak, t + dur - 0.2); g.gain.linearRampToValueAtTime(0.0001, t + dur + 1.2);
   [-6, 6].forEach((d, i) => {
-    const o = ctx.createOscillator(); o.type = i ? 'sine' : 'triangle'; o.frequency.value = f; o.detune.value = d;
-    o.connect(g); o.start(t); o.stop(t + dur + 1.3);
+    const o = osc(i ? 'sine' : 'triangle', f, t, t + dur + 1.3, g); o.detune.value = d;
+    if (i) o.addEventListener('ended', () => { try { g.disconnect(); } catch (_) { /* yoksay */ } });
   });
   g.connect(fade);
 }
 
+// Bas: sinüs + üçgen, çok alçak seviye (bassBus alçak geçiren)
+function bassNote(t, midi, dur, vol) {
+  if (vol < 0.02 || live > MAX_OSC - 2) return;
+  const f = hz(midi), g = ctx.createGain();
+  const peak = 0.15 * vol;
+  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(peak, t + 0.03);
+  g.gain.setValueAtTime(peak * 0.8, t + dur * 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  const g3 = ctx.createGain(); g3.gain.value = 0.35;
+  osc('sine', f, t, t + dur + 0.05, g);
+  const o2 = osc('triangle', f, t, t + dur + 0.05, g3);
+  g3.connect(g); g.connect(bassBus);
+  o2.addEventListener('ended', () => { try { g.disconnect(); g3.disconnect(); } catch (_) { /* yoksay */ } });
+}
+
+// ---- Katman rampaları (ölçü sınırında çapraz solma) ----
+function val(name, t) {
+  const r = R[name]; if (!r) return 0;
+  if (t >= r.t1) return r.v1;
+  if (t <= r.t0) return r.v0;
+  return r.v0 + (r.v1 - r.v0) * (t - r.t0) / (r.t1 - r.t0);
+}
+function paramOf(name) {
+  if (name === 'send') return sendG && sendG.gain;
+  if (name === 'fb') return fbG && fbG.gain;
+  if (name === 'dlf') return dlyLp && dlyLp.frequency;
+  if (name === 'str' || name === 'org') return layers[name] && layers[name].out.gain;
+  return null;
+}
+function ramp(name, to, t, dur) {
+  const from = val(name, t);
+  R[name] = { v0: from, v1: to, t0: t, t1: t + dur };
+  const p = paramOf(name);
+  if (p) { p.cancelScheduledValues(t); p.setValueAtTime(Math.max(from, 0.0001), t); p.linearRampToValueAtTime(Math.max(to, 0.0001), t + dur); }
+}
+function resetRamps(lv) {
+  for (const k of ['bass', 'bassx', 'str', 'org', 'pad', 'plk', 'mel', 'send', 'fb', 'dlf']) R[k] = { v0: LV[lv][k], v1: LV[lv][k], t0: 0, t1: 0 };
+}
+
+// ---- Kalıcı katmanlar: yaylı (testere dalgaları) ve org (toplamsal sinüsler) ----
+function makeLayer(kind, t, chord) {
+  const out = ctx.createGain(); out.gain.value = 0.0001;
+  const oscs = [];   // {o, off}
+  if (kind === 'str') {
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; lp.Q.value = 0.3;
+    lp.connect(out);
+    [1, 2, 3].forEach((ci) => [-7, 7].forEach((d) => {
+      const o = ctx.createOscillator(); o.type = 'sawtooth'; o.detune.value = d;
+      const vg = ctx.createGain(); vg.gain.value = 0.018;
+      o.connect(vg); vg.connect(lp); oscs.push({ o, ci, mul: 1 });
+    }));
+  } else {
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2400; lp.Q.value = 0.3;
+    lp.connect(out);
+    [1, 2, 3].forEach((ci) => [1, 2, 3, 4].forEach((h) => {
+      const o = ctx.createOscillator(); o.type = 'sine';
+      const vg = ctx.createGain(); vg.gain.value = 0.02 / (h === 1 ? 1 : h * 0.55);
+      o.connect(vg); vg.connect(lp); oscs.push({ o, ci, mul: h });
+    }));
+  }
+  out.connect(fade);
+  const L = {
+    out, oscs, tc: kind === 'str' ? 0.12 : 0.04,
+    set(tt, ch, first) {
+      for (const v of oscs) {
+        const f = hz(ch[v.ci]) * v.mul;
+        if (first) v.o.frequency.setValueAtTime(f, tt); else v.o.frequency.setTargetAtTime(f, tt, L.tc);
+      }
+    },
+    stop() {
+      for (const v of oscs) { try { v.o.stop(); v.o.disconnect(); } catch (_) { /* yoksay */ } }
+      try { out.disconnect(); } catch (_) { /* yoksay */ }
+    },
+  };
+  L.set(t, chord, true);
+  for (const v of oscs) v.o.start(t);
+  return L;
+}
+function killLayers() {
+  for (const k of ['str', 'org']) if (layers[k]) { layers[k].stop(); layers[k] = null; }
+}
+function scheduleCleanup(name) {
+  const chk = () => {
+    const r = R[name], L = layers[name];
+    if (!L || !r || r.v1 !== 0) return;                       // yeniden yükseltildi / zaten yok
+    if (!ctx || ctx.currentTime < r.t1 + 0.1) { setTimeout(chk, 600); return; }   // duraklatılmış olabilir
+    L.stop(); layers[name] = null;
+  };
+  setTimeout(chk, (XF + 0.5) * 1000);
+}
+
+// Ölçü başında: bekleyen seviyeyi uygula (armoni takımı + çapraz solma)
+function applyLevel(t) {
+  if (curLevel === level) return;
+  curLevel = level;
+  const T = LV[curLevel], chordNow = null; void chordNow;
+  for (const k of ['bass', 'bassx', 'pad', 'plk', 'mel', 'send', 'fb', 'dlf']) ramp(k, T[k], t, XF);
+  pendingFade = T;
+}
+
+
 function scheduleStep(t, s, b) {
-  const sec = SECTIONS[Math.floor(b / 8)], bi = b % 8;
-  const chord = C[sec.chords[bi]], beat = 60 / (BASE_BPM * tempoK()) / 2;
+  if (s === 0) applyLevel(t);
+  const sets = curLevel === 2 ? MINOR : SECTIONS;
+  const sec = sets[Math.floor(b / 8)], bi = b % 8;
+  const chordName = sec.chords[bi], chord = C[chordName], beat = 60 / (BASE_BPM * tempoK()) / 2;
+  if (s === 0) {
+    // kalıcı katmanlar: oluştur / akor değiştir / hedefe ramp
+    const T = LV[curLevel];
+    for (const k of ['str', 'org']) {
+      if (T[k] > 0 && !layers[k]) layers[k] = makeLayer(k, t, chord);
+      else if (layers[k]) layers[k].set(t, chord, false);
+      if (layers[k] && pendingFade) {
+        ramp(k, T[k], t, XF);
+        if (T[k] === 0) scheduleCleanup(k);
+      }
+    }
+    pendingFade = null;
+  }
+  const plk = val('plk', t), mel = val('mel', t);
   const accent = s % 4 === 0 ? 1 : s % 2 === 0 ? 0.85 : 0.7;
   const idx = sec.pattern[s];
-  pluck(t + rnd(0.008), chord[idx], accent * (0.85 + Math.random() * 0.3));
+  // Pizzicato/klavsen: seyrekleştirme (Yargıtay'da birkaç nota) - ana vuruşlar hep çalar
+  if (s % 4 === 0 || Math.random() < plk * 0.8) pluck(t + rnd(0.008), chord[idx], accent * (0.85 + Math.random() * 0.3) * (0.55 + 0.45 * plk));
+  // İstinaf: daha hareketli arpej (ara 16'lık notalar)
+  if (curLevel === 2 && s % 2 === 1 && Math.random() < 0.5) pluck(t + beat * 0.5 + rnd(0.006), chord[sec.pattern[(s + 3) % 8]], 0.4);
+  // Bas: 1. ve 3. vuruşta kök; Yargıtay'da oktav + beşli katlanır
+  const bv = val('bass', t);
+  if (bv > 0.02 && (s === 0 || s === 4)) {
+    const root = bassMidi(chordName), bx = val('bassx', t);
+    bassNote(t, root, beat * 4, bv);
+    if (bx > 0.02) bassNote(t, s === 0 ? root + 12 : root + 7, beat * 4, bx * 0.7);
+  }
   if (s === 0) {
-    const barDur = beat * 8;
-    pad(t, chord[1], barDur); pad(t, chord[2], barDur); pad(t, chord[0] - 12, barDur);
+    const barDur = beat * 8, pk = val('pad', t);
+    pad(t, chord[1], barDur, pk); pad(t, chord[2], barDur, pk); pad(t, chord[0] - 12, barDur, pk);
     const notes = sec.melody[bi];
     if (notes && Math.random() > 0.15) {
       for (const [pos, m, len] of notes) {
         const mt = t + pos * beat + rnd(0.012);
-        pluck(mt, m, 0.9 + Math.random() * 0.2);
-        if (len >= 4) pluck(mt + beat * 0.02, m + 12, 0.18);
+        pluck(mt, m, (0.9 + Math.random() * 0.2) * mel);
+        if (len >= 4) pluck(mt + beat * 0.02, m + 12, 0.18 * mel);
       }
     }
   }
 }
 
-const tempoK = () => 1 + Math.min(3, level) * (0.1 / 3);
+const tempoK = () => LV[Math.min(MAX_LEVEL, curLevel)].tempo;
 
 function tick() {
   if (!ctx || !running) return;
@@ -129,7 +301,10 @@ export const music = {
       if (!ctx) return;
       stopTimer();
       paused = false; running = true;
-      level = 0; step = 0; bar = 0;
+      level = 0; curLevel = 0; step = 0; bar = 0; pendingFade = null;
+      killLayers(); resetRamps(0);
+      const now = ctx.currentTime;
+      for (const [n, p] of [['send', sendG.gain], ['fb', fbG.gain], ['dlf', dlyLp.frequency]]) { p.cancelScheduledValues(now); p.setValueAtTime(LV[0][n], now); }
       ctx.resume();
       fade.gain.cancelScheduledValues(ctx.currentTime);
       fade.gain.setValueAtTime(0.0001, ctx.currentTime);
@@ -154,14 +329,16 @@ export const music = {
       fade.gain.cancelScheduledValues(t);
       fade.gain.setValueAtTime(fade.gain.value, t);
       fade.gain.linearRampToValueAtTime(0.0001, t + 2);
+      setTimeout(() => { if (!running) killLayers(); }, 2300);
     } catch (_) { /* yoksay */ }
   },
-  setLevel(i) { level = Math.max(0, i | 0); },
+  // Bekleyen seviye; bir sonraki ölçü başında çapraz solmayla uygulanır (start öncesi/duraklatılmışken de güvenli)
+  setLevel(i) { const n = Number(i); level = Number.isFinite(n) ? Math.max(0, Math.min(MAX_LEVEL, Math.floor(n))) : 0; },
   isMuted() { return muted; },
   setMuted(m) {
     muted = !!m;
     try { localStorage.setItem(LS_KEY, muted ? 'off' : 'on'); } catch (_) { /* yoksay */ }
-    if (master) master.gain.setTargetAtTime(muted ? 0 : 0.12, ctx.currentTime, 0.05);
+    if (master && ctx) master.gain.setTargetAtTime(muted ? 0 : 0.12, ctx.currentTime, 0.05);
   },
   // Satır silme: yumuşak tahta tokmak darbesi
   knock() {

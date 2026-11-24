@@ -6,6 +6,7 @@ import { setLevelColors, tickColors } from './theme.js';
 import { initInput } from './input.js';
 import { music } from './music.js';
 import * as skor from './skor.js';
+import { initRehber } from './rehber.js';
 import { aslanHukum, aslanSeviye, kediSoyle, kediMenu, kediOver, maskotReset } from './maskot.js';
 
 const LEVELS = ['Sulh', 'Asliye', 'İstinaf', 'Yargıtay'];
@@ -83,9 +84,9 @@ function applyGolden(p) {
   const cells = cellsOf(p.type, p.rot);
   switch (p.type) {
     case 'tokmak': {
-      const low = p.y + Math.max(...cells.map((c) => c[1]));
-      board.removeRows([low]); score += 150;
-      toast('Altın Tokmak: dokunduğu en alt satır silindi.');
+      const ys = new Set(cells.map((c) => p.y + c[1]));
+      board.removeRows([...ys].filter((y) => y >= 0 && y < ROWS)); score += 150;
+      toast('Altın Tokmak: hüküm verildi, değdiği satırlar silindi.');
       break;
     }
     case 'sutun': {
@@ -110,11 +111,13 @@ function applyGolden(p) {
       break;
     }
     case 'kilic': {
-      const bl = [cells[4], cells[5]];
-      if (bl[0][0] === bl[1][0]) board.clearColumn(p.x + bl[0][0]);
-      else board.removeRows([p.y + bl[0][1]]);
-      score += 150;
-      toast('Kılıç hükmü kesti: bıçağın sütunu temizlendi.');
+      // son iki hücre bıçaktır (döndürmede sıra korunur)
+      const ys = cells.slice(4, 6).map((c) => p.y + c[1]);
+      const set = new Set(ys);
+      const below = Math.max(...ys) + 1;
+      if (below < ROWS) set.add(below);
+      board.removeRows([...set].filter((y) => y >= 0 && y < ROWS)); score += 150;
+      toast('Altın Kılıç: kılıç indi, namlunun kestiği satırlar silindi.');
       break;
     }
   }
@@ -191,7 +194,7 @@ function start() {
   score = 0; rows = 0; level = 0; doubleLeft = 0; slowMs = 0;
   setLevelColors(0, true);
   next = null; piece = null;
-  for (const id of ['menu', 'over', 'pause']) $(id).hidden = true;
+  for (const id of ['menu', 'over', 'pause', 'rehber']) $(id).hidden = true;
   state = 'play';
   spawn();
   hud();
@@ -321,7 +324,7 @@ $('again').addEventListener('click', start);
 // Ana menüye dönüş
 function toMenu() {
   state = 'menu'; piece = null;
-  for (const id of ['over', 'pause', 'kursu']) { const el = $(id); if (el) el.hidden = true; }
+  for (const id of ['over', 'pause', 'kursu', 'rehber']) { const el = $(id); if (el) el.hidden = true; }
   board.reset(); setLevelColors(0, true);
   music.fadeOut(); maskotReset(); kediMenu();
   $('menuBest').textContent = best;
@@ -345,6 +348,7 @@ window.addEventListener('resize', layout);
 window.addEventListener('orientationchange', () => setTimeout(layout, 150));
 
 initInput(act, canvas, () => renderer.cellCss);
+initRehber({ onStart: start });
 $('best').textContent = best;
 $('menuBest').textContent = best;
 kediMenu();

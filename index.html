@@ -128,7 +128,7 @@
       <p class="tag">Davaları istifle, satırlara hüküm ver.</p>
       <p class="menu-best">En iyi <b id="menuBest">0</b></p>
       <button id="play" class="big">Oyna</button>
-      <button id="kursuBtn" class="alt" type="button">Şeref kürsüsü</button>
+      <div class="menu-links"><button id="kursuBtn" class="alt" type="button">Şeref kürsüsü</button><i class="dot" aria-hidden="true"></i><button id="rehberBtn" class="alt" type="button">Nasıl oynanır</button></div>
       <p class="small">Klavye: ← → hareket, ↑/X döndür, ↓ yavaş in, Boşluk düşür, P duraklat</p>
       <a href="privacy.html">Gizlilik</a>
     </section>
@@ -159,6 +159,33 @@
       <p id="kursuBos" class="kursu-bos" hidden>Henüz hüküm yok. İlk davayı sen aç!</p>
       <button id="kursuKapat" class="big" type="button">Kapat</button>
       <button id="kursuTemizle" class="alt" type="button">Listeyi temizle</button>
+    </section>
+    <section id="rehber" class="overlay" hidden role="dialog" aria-modal="true" aria-labelledby="rehberBaslik">
+      <button id="rehberX" class="rh-x" type="button" aria-label="Kapat">&times;</button>
+      <h2 id="rehberBaslik">Nasıl oynanır</h2>
+      <div class="menu-hero rh-hero"><div class="mascot-badge"><svg viewBox="0 0 120 120" aria-hidden="true"><use href="#mf-kedi"/></svg></div><div class="bubble" id="rehberBubble"></div></div>
+      <div id="rehberTrack" class="rh-track" tabindex="0">
+        <article class="rh-card" data-i="0"><h3>Kontroller</h3><ul class="rh-keys">
+            <li><i>◀</i><i>▶</i><span>Hareket</span></li>
+            <li><i>⟳</i><span>Döndür</span></li>
+            <li><i>▼</i><span>Yavaş in</span></li>
+            <li><i>⤓</i><span>Düşür</span></li>
+          </ul>
+          <p>Tahtada parmağını kaydır: sağa/sola sürükle taşır, aşağı sürükle yavaş indirir, dokun döndürür, hızlıca aşağı çek düşürür.</p>
+          <p class="rh-kbd">Klavye: ← → hareket, ↑/X döndür, ↓ yavaş in, Boşluk düşür, P duraklat.</p>
+          <p class="rh-note">Parça yere değince yarım saniye daha kaydırabilirsin.</p></article>
+        <article class="rh-card" data-i="1"><h3>Parçalar</h3><div class="rh-pieces"><figure><canvas data-t="sutun" aria-hidden="true"></canvas><figcaption>Sütun</figcaption></figure><figure><canvas data-t="tokmak" aria-hidden="true"></canvas><figcaption>Tokmak</figcaption></figure><figure><canvas data-t="kanun" aria-hidden="true"></canvas><figcaption>Kanun</figcaption></figure><figure><canvas data-t="terazi" aria-hidden="true"></canvas><figcaption>Terazi</figcaption></figure><figure><canvas data-t="paragraf" aria-hidden="true"></canvas><figcaption>Paragraf</figcaption></figure><figure><canvas data-t="kilic" aria-hidden="true"></canvas><figcaption>Kılıç</figcaption></figure></div>
+          <p>Her parça bir hukuk sembolü; dolu satırlar silinir, buna hüküm denir.</p></article>
+        <article class="rh-card" data-i="2"><h3>Altın parçalar</h3><p>Yaklaşık her 12 parçadan biri altın çıkar.</p>
+          <ul class="rh-gold"><li><canvas data-t="sutun" data-g="1" aria-hidden="true"></canvas><span><b>Sütun</b> Altındaki boşlukları mermerle doldurur.</span></li><li><canvas data-t="tokmak" data-g="1" aria-hidden="true"></canvas><span><b>Tokmak</b> Değdiği 3 satırı siler, +150 puan.</span></li><li><canvas data-t="kanun" data-g="1" aria-hidden="true"></canvas><span><b>Kanun</b> Sonraki 3 satır silmede puan x2.</span></li><li><canvas data-t="terazi" data-g="1" aria-hidden="true"></canvas><span><b>Terazi</b> +250 puan, 10 sn yavaş düşüş.</span></li><li><canvas data-t="paragraf" data-g="1" aria-hidden="true"></canvas><span><b>Paragraf</b> İtiraz! En üst satırı kaldırır.</span></li><li><canvas data-t="kilic" data-g="1" aria-hidden="true"></canvas><span><b>Kılıç</b> Kestiği satırları ve altındakini siler, +150.</span></li></ul></article>
+        <article class="rh-card" data-i="3"><h3>Mahkemeler</h3><ol class="rh-courts"><li>Sulh</li><li>Asliye</li><li>İstinaf</li><li>Yargıtay</li></ol>
+          <p>Her 8 satırda bir üst mahkemeye çıkarsın.</p>
+          <p>Üst mahkemede her satır daha çok puan: Yargıtay'da 4 katı.</p>
+          <p>Aynı anda birden çok satır sil, aslan hükmünü okusun!</p>
+          <p class="rh-note">Duruşma süresi sayılır; en iyilerin Şeref kürsüsüne yazılır.</p></article>
+      </div>
+      <div class="rh-dots" id="rehberDots" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div class="rh-nav"><button id="rehberGeri" class="alt" type="button">Geri</button><button id="rehberIleri" class="mini" type="button">İleri</button></div>
     </section>
   </main>
   <nav id="pad">

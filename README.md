@@ -11,12 +11,12 @@ Lawris, hukuk temalı, düşen bloklu bir bulmaca oyunudur. Tahta 11 sütun x 18
 - Her 8 satırda mahkeme yükselir: Sulh, Asliye, İstinaf, Yargıtay (Yargıtay'da hız artmaya devam eder).
 - Puan etiketi "İçtihat puanı"dır; bir sonraki parça "Sıradaki dava" kutusunda görünür.
 - Yaklaşık %8 ihtimalle gelen **altın** parçalar yerleştiğinde özel etki yapar:
-  - Tokmak: dokunduğu en alt satırı siler.
+  - Tokmak: değdiği 3 satırın tamamını siler, +150 puan.
   - Sütun: altındaki boş hücreleri mermerle doldurur.
   - Terazi: bonus puan verir, 10 sn yerçekimini yavaşlatır.
   - Kanun: sonraki 3 satır silmede puan iki katı.
   - Paragraf: yığının en üst satırını kaldırır (itiraz).
-  - Kılıç: bıçağının bulunduğu sütundaki tüm blokları siler (yatay duruyorsa bıçağın satırını).
+  - Kılıç: bıçağın kestiği satırları (dikeyse 2, yataysa 1) ve bıçağın hemen altındaki satırı siler, +150 puan.
 
 ## Kontroller
 

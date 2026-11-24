@@ -2,7 +2,7 @@
 const CACHE = 'lawris-v1';
 const CORE = ['./', 'index.html', 'style.css', 'manifest.webmanifest', 'privacy.html',
   'js/main.js', 'js/board.js', 'js/pieces.js', 'js/render.js', 'js/input.js', 'js/theme.js',
-  'js/music.js', 'js/maskot.js', 'js/skor.js', 'img/acilis-adliye.webp', 'icons/icon.svg'];
+  'js/music.js', 'js/maskot.js', 'js/skor.js', 'js/rehber.js', 'img/acilis-adliye.webp', 'icons/icon.svg'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE)).catch(() => {}));
