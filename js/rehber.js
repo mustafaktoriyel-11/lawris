@@ -1,5 +1,6 @@
 // Lawris - "Nasıl oynanır" rehberi (4 kaydırmalı kart)
 import { getSprite, sizeOf } from './pieces.js';
+import { createDemo } from './demo.js';
 
 const LINES = [
   'Önce kontrolleri öğren, sonra kürsü senin!',
@@ -18,6 +19,9 @@ export function initRehber({ onStart }) {
   let idx = 0, opener = null;
 
   const isOpen = () => !root.hidden;
+  const demo = createDemo($('demoCv'), $('demoName'), $('demoText'));
+  const demoSync = () => demo.setActive(isOpen() && idx === 2);
+  $('rhGold').addEventListener('click', (e) => { const b = e.target.closest('[data-p]'); if (b) { demo.goto(b.dataset.p); demoSync(); } });
 
   function drawSprites() {
     const d = Math.min(3, window.devicePixelRatio || 1);
@@ -49,6 +53,7 @@ export function initRehber({ onStart }) {
     $('rehberBubble').textContent = LINES[idx];
     ileri.textContent = idx === cards.length - 1 ? 'Başla' : 'İleri';
     geri.style.visibility = idx === 0 ? 'hidden' : 'visible';
+    demoSync();
   }
 
   let tm = 0;
@@ -71,7 +76,7 @@ export function initRehber({ onStart }) {
   }
   function close(start) {
     if (root.hidden) return;
-    root.hidden = true;
+    root.hidden = true; demoSync();
     try { localStorage.setItem(KEY, '1'); } catch (_) { /* yoksay */ }
     if (start) { onStart(); return; }
     if (opener && !opener.closest('[hidden]')) opener.focus({ preventScroll: true });
@@ -87,7 +92,7 @@ export function initRehber({ onStart }) {
     else if (e.key === 'ArrowRight') { e.preventDefault(); show(idx + 1, true); }
     else if (e.key === 'ArrowLeft') { e.preventDefault(); show(idx - 1, true); }
   });
-  window.addEventListener('resize', () => { if (isOpen()) { drawSprites(); show(idx, false); } });
+  window.addEventListener('resize', () => { if (isOpen()) { drawSprites(); show(idx, false); demo.resize(); } });
 
   $('rehberBtn').addEventListener('click', (e) => open(e.currentTarget));
 

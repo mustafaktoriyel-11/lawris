@@ -107,12 +107,22 @@ function ghostY() {
   return y;
 }
 
+// Altın Kanun: puanın yanında "x2" rozeti (DOM; hareket azaltılmışsa gösterilmez)
+function x2Badge() {
+  if (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const host = $('score').parentElement, el = document.createElement('span');
+  el.className = 'x2pop'; el.textContent = '\u00D72'; el.setAttribute('aria-hidden', 'true');
+  host.appendChild(el);
+  el.addEventListener('animationend', () => el.remove());
+  setTimeout(() => el.remove(), 1500);
+}
+
 function applyGolden(p) {
   const cells = cellsOf(p.type, p.rot);
   switch (p.type) {
     case 'tokmak': {
       const ys = new Set(cells.map((c) => p.y + c[1]));
-      { const rs = [...ys].filter((y) => y >= 0 && y < ROWS); burst({ rows: rs, gold: true }); board.removeRows(rs); } score += 150;
+      { const rs = [...ys].filter((y) => y >= 0 && y < ROWS); burst({ rows: rs, gold: true, kind: 'tokmak' }); board.removeRows(rs); } score += 150;
       toast('Altın Tokmak: hüküm verildi, değdiği satırlar silindi.');
       break;
     }
@@ -120,7 +130,7 @@ function applyGolden(p) {
       const cols = new Map();
       for (const [cx, cy] of cells) cols.set(p.x + cx, Math.max(cols.get(p.x + cx) ?? -1, p.y + cy));
       for (const [x, y] of cols) board.fillPlain(x, y + 1);
-      burst({ cols: [...cols.keys()], from: Math.min(...cols.values()) + 1, gold: true });
+      burst({ cols: [...cols.keys()], from: Math.min(...cols.values()) + 1, gold: true, kind: 'sutun' });
       toast('Altın Sütun: altındaki boşluklar mermerle dolduruldu.');
       break;
     }
@@ -129,18 +139,18 @@ function applyGolden(p) {
       toast('Altın Terazi: +250 puan, yerçekimi 10 sn yavaş.');
       break;
     case 'kanun':
-      doubleLeft = 3;
+      doubleLeft = 3; x2Badge();
       toast('Altın Kanun: sonraki 3 satır silmede puan iki katı.');
       break;
     case 'paragraf': {
       const t = board.topRow();
-      if (t >= 0) { burst({ rows: [t], gold: true }); board.removeRows([t]); }
+      if (t >= 0) { burst({ rows: [t], gold: true, kind: 'paragraf' }); board.removeRows([t]); }
       toast('Altın Paragraf: itiraz! En üst satır kaldırıldı.');
       break;
     }
     case 'kalem': {
       const y = board.fullestRow();
-      if (y >= 0) { burst({ rows: [y], gold: true }); board.fillRowPlain(y); }
+      if (y >= 0) { burst({ rows: [y], gold: true, kind: 'kalem' }); board.fillRowPlain(y); }
       score += 100;
       toast('Altın Kalem: karar imzalandı, en dolu satır tamamlandı.');
       break;
@@ -151,7 +161,7 @@ function applyGolden(p) {
       const set = new Set(ys);
       const below = Math.max(...ys) + 1;
       if (below < ROWS) set.add(below);
-      { const rs = [...set].filter((y) => y >= 0 && y < ROWS); burst({ rows: rs, gold: true }); board.removeRows(rs); } score += 150;
+      { const rs = [...set].filter((y) => y >= 0 && y < ROWS); burst({ rows: rs, gold: true, kind: 'kilic' }); board.removeRows(rs); } score += 150;
       toast('Altın Kılıç: kılıç indi, namlunun kestiği satırlar silindi.');
       break;
     }
@@ -354,7 +364,7 @@ function frame(t) {
     if ($('status').textContent !== '' || slowMs > 0) hud();
   }
   if (state !== 'menu' && hasGoldenView() && t - pvMs > 33) { pvMs = t; drawQueue(); }
-  renderer.draw({ board, piece: state === 'menu' ? null : piece, ghostY: piece ? ghostY() : 0, flash: flashInfo, bursts });
+  renderer.draw({ board, piece: state === 'menu' ? null : piece, ghostY: piece ? ghostY() : 0, flash: flashInfo, bursts, slow: slowMs > 0 });
   requestAnimationFrame(frame);
 }
 

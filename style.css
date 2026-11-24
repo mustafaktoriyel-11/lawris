@@ -367,10 +367,15 @@ html[class*="ui-"] #rehber h2 { font-weight: 400; font-size: 1.35rem; margin: 0;
 .rh-pieces figure { flex: 0 0 calc(25% - 6px); margin: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 5px 2px 4px; background: rgba(8,2,3,.3); border: 1px solid rgba(240,217,138,.2); border-radius: 8px; }
 .rh-pieces canvas { width: 60px; height: 58px; display: block; }
 .rh-pieces figcaption { font-size: .85rem; color: var(--g1, #f0d98a); }
-.rh-gold { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-.rh-gold li { display: flex; align-items: center; gap: 10px; padding: 3px 8px; background: rgba(8,2,3,.3); border: 1px solid rgba(240,217,138,.2); border-radius: 8px; text-align: left; font-size: .8125rem; line-height: 1.25; }
-.rh-gold canvas { width: 38px; height: 36px; flex: 0 0 38px; display: block; }
-.rh-gold b { font-weight: 400; color: var(--g1, #f0d98a); margin-right: 3px; }
+.rh-demo { display: flex; align-items: center; justify-content: center; gap: 10px; text-align: left; }
+.rh-demo canvas { flex: 0 0 auto; display: block; border: 1px solid var(--g2, #C9A227); border-radius: 3px; box-shadow: 0 0 10px rgba(240,196,106,.18); background: #14091a; }
+.rh-cap { display: flex; flex-direction: column; gap: 3px; flex: 1 1 0; min-width: 0; min-height: 4.2em; justify-content: center; font-size: .82rem; line-height: 1.3; }
+.rh-cap b { font: 400 1.05rem Georgia, serif; font-variant: small-caps; letter-spacing: .12em; color: var(--g1, #f0d98a); }
+.rh-gold { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.rh-gold button { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 0; padding: 2px 2px 3px; background: rgba(8,2,3,.3); border: 1px solid rgba(240,217,138,.2); border-radius: 8px; color: var(--g1, #f0d98a); font: inherit; font-size: .75rem; line-height: 1.15; cursor: pointer; }
+.rh-gold button.on { border-color: var(--g2, #C9A227); background: rgba(240,196,106,.14); box-shadow: 0 0 6px rgba(240,196,106,.35); }
+.rh-gold button:focus-visible { outline: 2px solid var(--g2, #C9A227); outline-offset: 1px; }
+.rh-gold canvas { width: 34px; height: 28px; display: block; pointer-events: none; }
 .rh-courts { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 2px 0; }
 .rh-courts li { font-size: .85rem; padding: 5px 9px; border: 1px solid var(--g2, #C9A227); border-radius: 999px; color: var(--g1, #f0d98a); }
 .rh-courts li { position: relative; }
@@ -414,8 +419,12 @@ html[class*="ui-"] #pad button.hld i { font-size: 1.3rem; }
   .rh-pieces { gap: 5px; }
   .rh-pieces figure { padding: 3px 2px 2px; }
   .rh-pieces canvas { height: 50px; }
-  .rh-gold li { padding: 2px 6px; gap: 8px; font-size: .78rem; line-height: 1.2; }
-  .rh-gold canvas { width: 34px; height: 30px; flex-basis: 34px; }
+  .rh-gold canvas { height: 26px; }
   .rh-keys li { padding: 6px; }
 }
 @media (max-height: 760px) { .rh-card p { font-size: .8rem; line-height: 1.3; } }
+
+/* Altın Kanun: puan yanında x2 rozeti */
+#hud .box:first-child { position: relative; }
+.x2pop { position: absolute; right: 2px; top: 16px; pointer-events: none; z-index: 5; font: 700 1.25rem/1 Georgia, serif; color: #F2C94C; text-shadow: 0 0 8px rgba(255,214,110,.9), 0 1px 0 rgba(0,0,0,.6); transform-origin: 50% 50%; animation: x2pop .9s ease-out forwards; }
+@keyframes x2pop { 0% { transform: scale(.6); opacity: 0; } 25% { transform: scale(1.15); opacity: 1; } 45% { transform: scale(1); opacity: 1; } 100% { transform: scale(1); opacity: 0; } }

@@ -2,6 +2,7 @@
 import { COLS, ROWS } from './board.js';
 import { THEME as TH } from './theme.js';
 import { getSprite, hasCell, sizeOf, cellsOf, COLORS as C } from './pieces.js';
+import { drawBurst, BURST_MS, shakeX, drawCalm } from './fx.js';
 
 const TOP = 1.7;     // alınlık yüksekliği (hücre)
 const BOTTOM = 0.5;  // kaide
@@ -11,7 +12,7 @@ const SWEEP_CYCLE = 1.8, SWEEP_DUR = 1.3, FLASH_MS = 400;
 const ease = (x) => (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
 
 // Altın parça: sprite çevresinde nabızlı ışıltı + hücre maskesine kırpılmış çapraz parıltı süpürmesi
-function goldFx(c, sprite, ox, oy, cells, s, t, blur) {
+export function goldFx(c, sprite, ox, oy, cells, s, t, blur) {
   const reduced = REDUCED.matches;
   const pulse = reduced ? 0.85 : 0.8 + 0.2 * Math.sin((t * Math.PI * 2) / 1.2);
   c.save();
@@ -40,7 +41,7 @@ const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 export class Renderer {
   constructor(canvas) {
     this.cv = canvas; this.ctx = canvas.getContext('2d');
-    this.s = 20; this.dpr = 1;
+    this.s = 20; this.dpr = 1; this.calm = 0; this.calmT = 0;
   }
 
   resize(wCss, hCss) {
@@ -58,6 +59,8 @@ export class Renderer {
   draw(g) {
     const c = this.ctx, s = this.s, W = this.cv.width, H = this.cv.height;
     c.fillStyle = TH.bg; c.fillRect(0, 0, W, H);
+    const nowT = performance.now(), sx = g.bursts && g.bursts.length ? shakeX(g.bursts, nowT, s) : 0;
+    c.save(); if (sx) c.translate(sx, 0);
     this.drawFrame(c, s, W, H);
     // ızgara
     c.strokeStyle = TH.grid; c.lineWidth = 1; c.beginPath();
@@ -85,27 +88,20 @@ export class Renderer {
     this.flashAge = g.flash ? performance.now() - g.flash.t0 : Infinity;
     this.flashId = g.flash ? g.flash.id : 0;
     if (g.bursts && g.bursts.length) this.drawBursts(c, g.bursts);
+    // Terazi: yavaşlama süresince sakin ışıma; bitince 0.5 sn'de söner
+    const dtc = this.calmT ? Math.min(100, nowT - this.calmT) : 0; this.calmT = nowT;
+    this.calm = Math.max(0, Math.min(1, this.calm + (g.slow ? dtc : -dtc) / 500));
+    drawCalm(c, { bx: this.bx, by: this.by, cols: COLS, rows: ROWS, s }, this.calm, nowT / 1000);
+    c.restore();
   }
 
-  // Satır silme / altın etki ışığı: etkilenen satır ve sütunlarda kısa bir ışık şeridi
+  // Satır silme / altın etki ışığı: ortak ışık şeridi + parçaya özgü imza (fx.js)
   drawBursts(c, list) {
-    const s = this.s, now = performance.now(), D = 650;
+    const now = performance.now(), geo = { bx: this.bx, by: this.by, cols: COLS, rows: ROWS, s: this.s };
     for (let i = list.length - 1; i >= 0; i--) {
-      const b = list[i], a = (now - b.t0) / D;
-      if (a >= 1) { list.splice(i, 1); continue; }
-      const k = 1 - a, col = b.gold ? '255,214,110' : '255,244,214';
-      c.save();
-      if (b.rows) for (const y of b.rows) {
-        const yy = this.by + y * s, g = c.createLinearGradient(0, yy, 0, yy + s);
-        g.addColorStop(0, `rgba(${col},0)`); g.addColorStop(0.5, `rgba(${col},${0.85 * k})`); g.addColorStop(1, `rgba(${col},0)`);
-        c.fillStyle = g; c.fillRect(this.bx, yy - s * 0.3 * a, COLS * s, s * (1 + 0.6 * a));
-      }
-      if (b.cols) for (const x of b.cols) {
-        const xx = this.bx + x * s, y0 = this.by + (b.from || 0) * s, g = c.createLinearGradient(xx, 0, xx + s, 0);
-        g.addColorStop(0, `rgba(${col},0)`); g.addColorStop(0.5, `rgba(${col},${0.75 * k})`); g.addColorStop(1, `rgba(${col},0)`);
-        c.fillStyle = g; c.fillRect(xx, y0, s, this.by + ROWS * s - y0);
-      }
-      c.restore();
+      const b = list[i], age = now - b.t0;
+      if (age >= BURST_MS) { list.splice(i, 1); continue; }
+      drawBurst(c, b, geo, age);
     }
   }
 
