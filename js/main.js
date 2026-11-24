@@ -207,11 +207,11 @@ function moved() {
 }
 
 const act = {
-  left() { if (state === 'play' && !board.collides(piece, piece.x - 1, piece.y)) { piece.x--; moved(); sfx.move(); } },
-  right() { if (state === 'play' && !board.collides(piece, piece.x + 1, piece.y)) { piece.x++; moved(); sfx.move(); } },
+  left() { if (state === 'play' && !board.collides(piece, piece.x - 1, piece.y)) { piece.x--; moved(); sfx.move(); renderer.kick(1); } },
+  right() { if (state === 'play' && !board.collides(piece, piece.x + 1, piece.y)) { piece.x++; moved(); sfx.move(); renderer.kick(1); } },
   down() {
     if (state !== 'play') return;
-    if (!grounded()) { piece.y++; fell(); score += 1; acc = 0; hud(); }
+    if (!grounded()) { piece.y++; fell(); score += 1; acc = 0; hud(); renderer.kick(2); }
   },
   rotate() {
     if (state !== 'play') return;
@@ -226,13 +226,14 @@ const act = {
       [0, -1], [-1, -1], [1, -1], [-2, -1], [2, -1], [0, -2], [-1, -2], [1, -2]];
     for (const [dx, dy] of kicks) {
       const x = bx + dx, y = by + dy;
-      if (y >= 0 && !board.collides(piece, x, y, nr)) { piece.x = x; piece.y = y; piece.rot = nr; piece.rx = rx; piece.ry = ry; moved(); sfx.rotate(); return; }
+      if (y >= 0 && !board.collides(piece, x, y, nr)) { piece.x = x; piece.y = y; piece.rot = nr; piece.rx = rx; piece.ry = ry; moved(); sfx.rotate(); renderer.kick(4); return; }
     }
   },
   drop() {
     if (state !== 'play') return;
-    let n = 0;
+    let n = 0; const y0 = piece.y;
     while (!board.collides(piece, piece.x, piece.y + 1)) { piece.y++; n++; }
+    if (n > 0) renderer.hardDropFx(piece, y0, piece.y);
     score += n * 2;
     sfx.hardDrop(piece.type, n);
     lockPiece(true);
@@ -382,7 +383,8 @@ function frame(t) {
     if ($('status').textContent !== '' || slowMs > 0) hud();
   }
   if (state !== 'menu' && hasGoldenView() && t - pvMs > 33) { pvMs = t; drawQueue(); }
-  renderer.draw({ board, piece: state === 'menu' ? null : piece, ghostY: piece ? ghostY() : 0, flash: flashInfo, bursts, slow: slowMs > 0 });
+  renderer.draw({ board, piece: state === 'menu' ? null : piece, ghostY: piece ? ghostY() : 0, flash: flashInfo, bursts, slow: slowMs > 0,
+    clock: playMs, f: piece && state !== 'menu' && !grounded() ? Math.min(1, acc / gravityMs()) : 0 });
   requestAnimationFrame(frame);
 }
 

@@ -54,6 +54,8 @@ const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 export class Renderer {
   constructor(canvas) {
     this.cv = canvas; this.ctx = canvas.getContext('2d');
+    this.vz = { id: -1, lx: 0, ly: 0, la: 0, lf: 0, ly0: 0, X: { v0: 0, t0: 0, dur: 1 }, Y: { v0: 0, t0: 0, dur: 1 }, A: { v0: 0, t0: 0, dur: 1 } };
+    this.pend = 0; this.trl = null; this.shk = 0;
     this.s = 20; this.dpr = 1; this.calm = 0; this.calmT = 0;
     this.prog = {}; this.progT = {}; this.flashes = []; this.lastT = 0;   // Roma'yı yeniden inşa: seviye başına gösterilen/hedef ilerleme (0..8 satır)
   }
@@ -188,13 +190,40 @@ export class Renderer {
     this.bx = this.s * COLW; this.by = this.s * TOP;
     this.bdrop = {}; this.comp = {}; this.mask = null;   // arka plan önbelleği (seviye başına), boyut değişince yeniden kurulur
   }
+  // görsel yumuşatma yardımcıları: 1=yatay, 2=yumuşak iniş, 4=dönüş (mantık değiştikten sonra main çağırır)
+  kick(bits) { this.pend |= bits; }
+  anim(a, clk) { const u = (clk - a.t0) / a.dur; if (!(u < 1)) return 0; if (u <= 0) return a.v0; const q = 1 - u; return a.v0 * q * q * q; }
+  hardDropFx(p, y0, y1) {
+    if (REDUCED.matches) return;
+    const cs = cellsOf(p.type, p.rot), t = [];
+    for (const [cx, cy] of cs) {
+      let e = t.find((k) => k[0] === cx);
+      if (!e) t.push(e = [cx, cy, cy]); else { e[1] = Math.min(e[1], cy); e[2] = Math.max(e[2], cy); }
+    }
+    this.trl = { t0: performance.now(), x: p.x, y0, y1, cols: t };
+    this.shk = performance.now();
+  }
+  drawTrail(c, s, now) {
+    const tr = this.trl; if (!tr) return;
+    const age = now - tr.t0;
+    if (age >= 150 || REDUCED.matches) { this.trl = null; return; }
+    const a = 1 - age / 150;
+    for (const [cx, top, bot] of tr.cols) {
+      const x = this.bx + (tr.x + cx) * s + s * 0.14, w = s * 0.72;
+      const ya = this.by + (tr.y0 + top) * s, yb = this.by + (tr.y1 + bot + 1) * s;
+      const gr = c.createLinearGradient(0, ya, 0, yb);
+      gr.addColorStop(0, 'rgba(255,225,140,0)'); gr.addColorStop(1, 'rgba(255,246,214,' + (0.6 * a).toFixed(3) + ')');
+      c.fillStyle = gr; c.fillRect(x, ya, w, yb - ya);
+    }
+  }
   get cellCss() { return this.s / this.dpr; }
 
   draw(g) {
     const c = this.ctx, s = this.s, W = this.cv.width, H = this.cv.height;
     c.fillStyle = TH.bg; c.fillRect(0, 0, W, H);
     const nowT = performance.now(), sx = g.bursts && g.bursts.length ? shakeX(g.bursts, nowT, s) : 0;
-    c.save(); if (sx) c.translate(sx, 0);
+    let sy = 0; if (this.shk) { const u = (nowT - this.shk) / 120; if (u >= 1 || REDUCED.matches) this.shk = 0; else sy = Math.sin(u * Math.PI * 3) * (1 - u) * 0.09 * s; }
+    c.save(); if (sx || sy) c.translate(sx, sy);
     this.drawFrame(c, s, W, H);
     // Roma mekân arka planı (ızgaranın arkasında; seviye geçişinde çapraz solma; renkli sürüm ilerlemeye göre açılır)
     {
@@ -231,11 +260,36 @@ export class Renderer {
     if (p) {
       const sz = sizeOf(p.type, p.rot);
       if (g.ghostY > p.y) this.drawGhost(c, p, g.ghostY, s);
-      const sp = getSprite(p.type, p.rot, p.golden, s);
-      c.save(); c.shadowColor = 'rgba(0,0,0,0.6)'; c.shadowBlur = s * 0.2; c.shadowOffsetY = s * 0.06; c.drawImage(sp, this.bx + p.x * s, this.by + p.y * s); c.restore();   // etrafa koyu gölge
-      if (p.golden) goldFx(c, sp, this.bx + p.x * s, this.by + p.y * s, cellsOf(p.type, p.rot), s, performance.now() / 1000, 0.35);
-      else c.drawImage(sp, this.bx + p.x * s, this.by + p.y * s);
+      const sp = getSprite(p.type, p.rot, p.golden, s), cs = cellsOf(p.type, p.rot);
+      // görsel yumuşatma: mantık tamsayı ızgarada kalır; yalnızca çizim konumu/açısı zamanla yumuşar
+      let mx = 0, my = 0;
+      for (let i = 0; i < cs.length; i++) { mx += cs[i][0] + 0.5; my += cs[i][1] + 0.5; }
+      mx /= cs.length; my /= cs.length;
+      const v = this.vz, clk = g.clock || 0, f = REDUCED.matches ? 0 : (g.f || 0);
+      const tx = p.x + mx, ty = p.y + my + f;
+      if (v.id !== p.id) { v.id = p.id; v.X.v0 = v.Y.v0 = v.A.v0 = 0; v.lf = 0; v.ly0 = p.y; this.pend = 0; }
+      const pd = this.pend; this.pend = 0;
+      if (!REDUCED.matches) {
+        if (pd & 4) {
+          v.X.v0 = v.lx - tx; v.X.t0 = clk; v.X.dur = 85; v.Y.v0 = v.ly - ty; v.Y.t0 = clk; v.Y.dur = 85;
+          v.A.v0 = Math.max(-Math.PI, v.la - Math.PI / 2); v.A.t0 = clk; v.A.dur = 85;
+        }
+        if (pd & 1) { v.X.v0 = v.lx - tx; v.X.t0 = clk; v.X.dur = 70; }
+        if (pd & 2) { v.Y.v0 = v.ly - ty; v.Y.t0 = clk; v.Y.dur = 45; }
+        else if (!(pd & 4) && f === 0 && v.lf > 0 && p.y === v.ly0) { v.Y.v0 = v.ly - ty; v.Y.t0 = clk; v.Y.dur = 60; }   // yere oturdu: sıçramadan yumuşakça otur
+      }
+      const ax = this.anim(v.X, clk), ay = this.anim(v.Y, clk), ang = this.anim(v.A, clk);
+      const vx = tx + ax, vy = ty + ay;
+      v.lx = vx; v.ly = vy; v.la = ang; v.lf = f; v.ly0 = p.y;
+      c.save(); c.translate(this.bx + vx * s, this.by + vy * s);
+      if (Math.abs(ang) > 1e-4) c.rotate(ang);
+      const dx = -mx * s, dy = -my * s;
+      c.save(); c.shadowColor = 'rgba(0,0,0,0.6)'; c.shadowBlur = s * 0.2; c.shadowOffsetY = s * 0.06; c.drawImage(sp, dx, dy); c.restore();   // etrafa koyu gölge
+      if (p.golden) goldFx(c, sp, dx, dy, cs, s, performance.now() / 1000, 0.35);
+      else c.drawImage(sp, dx, dy);
+      c.restore();
     }
+    this.drawTrail(c, s, nowT);
     // altın parça etkisini gösterince: kilit hücrelerinde kısa altın sönme
     this.flashAge = g.flash ? performance.now() - g.flash.t0 : Infinity;
     this.flashId = g.flash ? g.flash.id : 0;
