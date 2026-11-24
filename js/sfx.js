@@ -264,6 +264,14 @@ export const sfx = {
     if (n >= 3) music.duck(0.5, 0.3); else if (n === 2) music.duck(0.6, 0.15);
   },
   // Yeni mahkeme: dürüst kısa fanfar (4 nota) + davul
+  // Aşama atlama: iki notalı, yumuşak ve kısa (mekân değişimindeki fanfardan çok daha hafif)
+  stageUp() {
+    play('stage', 0.7, (A, o, t) => {
+      A.tone(o, t, 'sine', A.hz(76), A.hz(76), 0.006, 0.28, 0.07);
+      A.tone(o, t + 0.09, 'triangle', A.hz(83), A.hz(83), 0.006, 0.4, 0.06);
+      A.tone(o, t + 0.09, 'sine', A.hz(95), A.hz(95), 0.006, 0.3, 0.025);
+    }, { gap: 200 });
+  },
   levelUp(lvl = 1, delay = 0.3) {
     play('level', 1.8, (A, o, t0) => {
       const t = t0 + delay, r = 62 + [0, 2, 4, 7][Math.max(0, Math.min(3, lvl))] - 2;

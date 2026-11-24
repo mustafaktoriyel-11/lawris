@@ -1,8 +1,8 @@
 // Lex Stack - Roma mekân arka planları (seviye başına bir kez, ofscreen tuvale çizilir; render.js önbelleğe alır)
 // Her mekân iki sürümde çizilir (aynı geometri): sönük ton (zemin rengi üstünde düşük kontrast) ve TAM RENKLİ sürüm
 // ("Roma'yı yeniden inşa et": satır sildikçe renkli sürüm aşağıdan yukarı açığa çıkar).
-// Gün döngüsü: Forum sabah, Bazilika öğle, Curia gün batımı, Pantheon gece.
-const TINT = ['#FFEFD2', '#FFF6D8', '#FFD3AC', '#B4C2FF'];
+// Gün döngüsü (8 mekân): Forum şafak, Bazilika kuşluk, Rostra öğle, Tabularium öğleden sonra, Curia gün batımı, Capitolium altın saat, Palatium alacakaranlık, Pantheon gece.
+const TINT = ['#FFEFD2', '#FFF6D8', '#FFF0D0', '#F2E2B8', '#FFD3AC', '#FFE2A0', '#D4C0F8', '#B4C2FF'];
 
 function mk(w, h) {
   const cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(w)); cv.height = Math.max(1, Math.round(h));
@@ -140,7 +140,7 @@ function basilika(out, w, h, u, COL) {
 
 // ---------- 2. Curia Julia (Senato): gün batımı ----------
 function curia(out, w, h, u, COL) {
-  const P = (m, c) => (COL ? c : m), tint = TINT[2], fy = 16.2 * u, cx = w / 2;
+  const P = (m, c) => (COL ? c : m), tint = TINT[4], fy = 16.2 * u, cx = w / 2;
   const lw = Math.max(1, u * 0.055);
   if (COL) { out.fillStyle = vgrad(out, 0, fy, [[0, '#B9725A'], [0.5, '#DE9C78'], [1, '#EDB98C']]); out.fillRect(0, 0, w, h); }
   glow(out, cx, 13.5 * u, 8 * u, COL ? '255,176,96' : '255,170,90', COL ? 0.5 : 0.2);
@@ -210,7 +210,7 @@ function curia(out, w, h, u, COL) {
 
 // ---------- 3. Pantheon: gece ----------
 function pantheon(out, w, h, u, COL) {
-  const P = (m, c) => (COL ? c : m), tint = TINT[3], cx = w / 2, cy = 7.6 * u, R = 7.2 * u, r0 = 1.5 * u;
+  const P = (m, c) => (COL ? c : m), tint = TINT[7], cx = w / 2, cy = 7.6 * u, R = 7.2 * u, r0 = 1.5 * u;
   const rings = [r0, 2.3 * u, 3.3 * u, 4.5 * u, 5.8 * u, 7.2 * u], N = 16;
   if (COL) {
     out.fillStyle = vgrad(out, 0, h, [[0, '#232B66'], [0.6, '#2B3475'], [1, '#3B4486']]); out.fillRect(0, 0, w, h);
@@ -526,11 +526,325 @@ function pantheonC(c, w, h, u) {
   rr(c, 0, 16.4 * u - 0.05 * u, w, 0.12 * u, '#F2CC5C');
 }
 
-const DRAW = [forum, basilika, curia, pantheon];
-const DRAWC = [forumC, basilikaC, curiaC, pantheonC];
-const STRENGTH = [1, 0.8, 0.9, 0.8];   // sönük sürümde seviye başına genel şiddet
+// =====================================================================================================
+// YENİ MEKÂNLAR (2 Rostra, 3 Tabularium, 5 Capitolium, 6 Palatium): tek fresk çizimi; sönük sürüm bu çizimden türetilir
+// (gökyüzü hariç yapı, parlaklığa göre düşük saydamlıkta tek tonla boyanır: mevcut sönük mekânlarla aynı dil).
+// =====================================================================================================
+function mutedFrom(fn, tint, amp, extra) {
+  const t3 = [1, 3, 5].map((i) => parseInt(tint.slice(i, i + 2), 16));
+  return (out, w, h, u) => {
+    if (extra) extra(out, w, h, u, 0);
+    const cv = mk(w, h), c = cv.getContext('2d'); fn(c, w, h, u, false);
+    const id = c.getImageData(0, 0, cv.width, cv.height), d = id.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const a = d[i + 3]; if (!a) continue;
+      const L = (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) / 255, k = Math.max(0, Math.min(1, (L - 0.1) / 0.55)), s = k * k * (3 - 2 * k);
+      d[i] = t3[0]; d[i + 1] = t3[1]; d[i + 2] = t3[2]; d[i + 3] = a * amp * (0.2 + 0.8 * s);
+    }
+    c.putImageData(id, 0, 0); out.drawImage(cv, 0, 0);
+    if (extra) extra(out, w, h, u, 1);
+  };
+}
+// sıra sıra yontma taş (blok dizileri); ch = sıra yüksekliği
+function ashlar(c, x, y, w, h, ch, cA, cB, joint, lw) {
+  c.save(); c.beginPath(); c.rect(x, y, w, h); c.clip();
+  c.fillStyle = vgrad(c, y, y + h, [[0, cA], [1, cB]]); c.fillRect(x, y, w, h);
+  c.strokeStyle = joint; c.lineWidth = lw; let r = 0;
+  for (let yy = y; yy < y + h; yy += ch, r++) {
+    c.beginPath(); c.moveTo(x, yy); c.lineTo(x + w, yy); c.stroke();
+    const bw = ch * 2.2; c.beginPath(); for (let xx = x + (r % 2) * bw * 0.5; xx < x + w; xx += bw) { c.moveTo(xx, yy); c.lineTo(xx, yy + ch); } c.stroke();
+  }
+  c.restore();
+}
+function toga(c, sx, base, u, s, bodyCols) {   // togalı mermer heykel (ayak = base)
+  c.fillStyle = hgrad(c, sx - 0.36 * u * s, sx + 0.36 * u * s, bodyCols);
+  c.beginPath(); c.moveTo(sx - 0.16 * u * s, base - 1.9 * u * s); c.lineTo(sx + 0.16 * u * s, base - 1.9 * u * s); c.lineTo(sx + 0.38 * u * s, base - 0.15 * u * s); c.lineTo(sx - 0.38 * u * s, base - 0.15 * u * s); c.closePath(); c.fill();
+  c.fillStyle = bodyCols[1]; c.beginPath(); c.arc(sx, base - 2.15 * u * s, 0.2 * u * s, 0, 7); c.fill();
+}
+function pine2(c, x, gy, hh, u) {
+  c.strokeStyle = '#5A3418'; c.lineWidth = 0.18 * u; c.lineCap = 'round'; c.beginPath(); c.moveTo(x, gy); c.quadraticCurveTo(x - 0.1 * u, gy - hh * 0.5, x + 0.08 * u, gy - hh); c.stroke();
+  ell(c, x + 0.08 * u, gy - hh - 0.08 * u, 1.1 * u, 0.42 * u, '#1C6A33'); ell(c, x + 0.25 * u, gy - hh - 0.25 * u, 0.8 * u, 0.3 * u, '#33973F'); ell(c, x + 0.4 * u, gy - hh - 0.36 * u, 0.5 * u, 0.16 * u, '#5BB653');
+}
+function cypress2(c, x, gy, hh, ww, cols) {
+  c.fillStyle = hgrad(c, x - ww, x + ww, cols); c.beginPath(); c.moveTo(x, gy - hh); c.bezierCurveTo(x + ww * 1.3, gy - hh * 0.6, x + ww * 1.1, gy - hh * 0.1, x, gy); c.bezierCurveTo(x - ww * 1.1, gy - hh * 0.1, x - ww * 1.3, gy - hh * 0.6, x, gy - hh); c.fill();
+}
+
+// ---------- 2. Rostra: öğle ----------
+function rostraC(c, w, h, u, sky) {
+  const gy = 15.4 * u, cx = w / 2, lw = Math.max(1, u * 0.05);
+  if (sky) {
+    c.fillStyle = vgrad(c, 0, gy, [[0, '#1672DA'], [0.5, '#4FAEF0'], [1, '#C4E8FC']]); c.fillRect(0, 0, w, h);
+    glow(c, w * 0.8, 2.6 * u, 6 * u, '255,250,228', 0.85); glow(c, w * 0.8, 2.6 * u, 1.5 * u, '255,255,248', 0.95);
+    cloud(c, 1.6 * u, 2.0 * u, 0.9 * u, '#FFFFFF', 0.95); cloud(c, 6.2 * u, 4.4 * u, 0.7 * u, '#FFFFFF', 0.85); cloud(c, 3.6 * u, 0.9 * u, 0.55 * u, '#FFFFFF', 0.8);
+  }
+  // arka plan: Satürn tapınağı (altı İyon sütunu, alınlık), öğle ışığında krem taş
+  const tx0 = 1.7 * u, tx1 = 7.3 * u, cw = 0.5 * u, ctop = 7.3 * u, cb = 11.8 * u;
+  cyl(c, tx0 - 0.1 * u, ctop, tx1 - tx0 + 0.2 * u + cw, cb - ctop, [[0, '#3A2616'], [1, '#7A5632']]);   // cella gölgesi
+  for (let i = 0; i < 6; i++) {
+    const x = tx0 + i * ((tx1 - tx0) / 5);
+    cyl(c, x, ctop, cw, cb - ctop, [[0, '#C8A66A'], [0.35, '#F6E6B8'], [0.75, '#FFF6D8'], [1, '#E6CC90']]);
+    c.strokeStyle = 'rgba(120,85,40,0.35)'; c.lineWidth = lw; for (let k = 1; k < 4; k++) { c.beginPath(); c.moveTo(x + cw * k / 4, ctop + 0.1 * u); c.lineTo(x + cw * k / 4, cb); c.stroke(); }
+    cyl(c, x - 0.1 * u, ctop - 0.2 * u, cw + 0.2 * u, 0.22 * u, [[0, '#D6B676'], [1, '#FFF3CC']]);
+    ell(c, x + 0.04 * u, ctop - 0.12 * u, 0.1 * u, 0.1 * u, '#B8924E'); ell(c, x + cw - 0.04 * u, ctop - 0.12 * u, 0.1 * u, 0.1 * u, '#E8CE8C');
+  }
+  cyl(c, tx0 - 0.5 * u, ctop - 0.95 * u, tx1 - tx0 + cw + 1.0 * u, 0.75 * u, [[0, '#D6B676'], [0.5, '#FFF0C4'], [1, '#EBD296']]);   // arşitrav + friz
+  rr(c, tx0 - 0.5 * u, ctop - 0.38 * u, tx1 - tx0 + cw + 1.0 * u, 0.1 * u, 'rgba(90,55,20,0.45)');
+  rr(c, tx0 - 0.65 * u, ctop - 1.18 * u, tx1 - tx0 + cw + 1.3 * u, 0.24 * u, '#FFF6D6');
+  c.fillStyle = '#E4C888'; c.beginPath(); c.moveTo(tx0 - 0.65 * u, ctop - 1.18 * u); c.lineTo(cx + 0.25 * u, ctop - 2.95 * u); c.lineTo(tx1 + cw + 0.65 * u, ctop - 1.18 * u); c.closePath(); c.fill();   // tympanum
+  c.strokeStyle = '#FFF6D6'; c.lineWidth = u * 0.16; c.lineJoin = 'miter'; c.beginPath(); c.moveTo(tx0 - 0.65 * u, ctop - 1.18 * u); c.lineTo(cx + 0.25 * u, ctop - 2.95 * u); c.lineTo(tx1 + cw + 0.65 * u, ctop - 1.18 * u); c.stroke();
+  ell(c, cx + 0.25 * u, ctop - 1.75 * u, 0.28 * u, 0.28 * u, '#C9A227');
+  // onur sütunları: üstünde yaldızlı heykel
+  for (const hx of [0.5 * u, 8.5 * u]) {
+    const y0 = 3.9 * u;
+    cyl(c, hx - 0.26 * u, y0, 0.52 * u, cb - y0, [[0, '#B9B4A6'], [0.4, '#F2EEE2'], [1, '#FFFFFF']]);
+    for (let k = 0; k < 5; k++) rr(c, hx - 0.28 * u, y0 + 0.8 * u + k * 1.4 * u, 0.56 * u, 0.1 * u, 'rgba(120,110,90,0.5)');
+    cyl(c, hx - 0.4 * u, y0 - 0.25 * u, 0.8 * u, 0.28 * u, [[0, '#C9C2B0'], [1, '#FFFFFF']]);
+    cyl(c, hx - 0.3 * u, y0 - 0.45 * u, 0.6 * u, 0.22 * u, [[0, '#B8860B'], [1, '#FFE070']]);
+    toga(c, hx, y0 - 0.45 * u, u, 0.85, [[0, '#8A5C00'], [0.5, '#FFD54A'], [1, '#FFF0A0']]);
+    c.fillStyle = '#FFD54A'; c.fillRect(hx + 0.14 * u, y0 - 2.15 * u, 0.08 * u, 0.7 * u);   // kalkık kol
+  }
+  // kürsü (Rostra): kavisli, traverten, bronz gemi başları
+  const edge = (c2) => { c2.moveTo(-0.3 * u, 11.55 * u); c2.quadraticCurveTo(cx, 12.45 * u, w + 0.3 * u, 11.55 * u); };
+  c.beginPath(); c.moveTo(-0.3 * u, 11.3 * u); c.lineTo(w + 0.3 * u, 11.3 * u); c.lineTo(w + 0.3 * u, 11.55 * u); c.quadraticCurveTo(cx, 12.45 * u, -0.3 * u, 11.55 * u); c.closePath();
+  c.fillStyle = vgrad(c, 11.3 * u, 12.2 * u, [[0, '#F8E6B6'], [1, '#FFF8DE']]); c.fill();   // üst yüzey (aydınlık)
+  for (const sx of [2.0 * u, 7.0 * u]) { c.save(); toga(c, sx, 11.75 * u, u, 0.95, [[0, '#B9B4A6'], [0.5, '#F4F0E4'], [1, '#FFFFFF']]); c.restore(); }
+  c.save(); c.beginPath(); c.moveTo(-0.3 * u, 11.55 * u); c.quadraticCurveTo(cx, 12.45 * u, w + 0.3 * u, 11.55 * u); c.lineTo(w + 0.3 * u, gy); c.lineTo(-0.3 * u, gy); c.closePath(); c.clip();
+  ashlar(c, -0.3 * u, 11.3 * u, w + 0.6 * u, gy - 11.3 * u, 0.62 * u, '#EBCF98', '#C79E58', 'rgba(110,70,25,0.55)', lw * 1.2);
+  rr(c, -0.3 * u, 14.9 * u, w + 0.6 * u, 0.5 * u, 'rgba(90,50,20,0.28)');   // alt gölge
+  c.restore();
+  c.strokeStyle = '#FFF4D2'; c.lineWidth = 0.2 * u; c.beginPath(); edge(c); c.stroke();
+  c.strokeStyle = 'rgba(100,60,20,0.55)'; c.lineWidth = 0.08 * u; c.beginPath(); c.moveTo(-0.3 * u, 11.72 * u); c.quadraticCurveTo(cx, 12.62 * u, w + 0.3 * u, 11.72 * u); c.stroke();
+  for (let i = 0; i < 5; i++) {   // bronz rostra: gemi başı levhası + üç kanatlı mahmuz
+    const x = (0.9 + i * 1.8) * u, y = 12.45 * u + Math.sin((i / 4) * Math.PI) * 0.42 * u;
+    c.fillStyle = 'rgba(60,30,10,0.4)'; c.beginPath(); c.ellipse(x + 0.12 * u, y + 0.5 * u, 0.5 * u, 0.42 * u, 0, 0, 7); c.fill(); c.beginPath(); c.moveTo(x - 0.25 * u, y + 0.7 * u); c.lineTo(x + 0.4 * u, y + 0.7 * u); c.lineTo(x + 0.2 * u, y + 2.0 * u); c.closePath(); c.fill();
+    // mahmuz: üç üst üste kanat, aşağı ve öne
+    for (let k = 0; k < 3; k++) {
+      const yy = y + 0.55 * u + k * 0.32 * u, ww = (0.55 - k * 0.08) * u, ln = (1.0 - k * 0.2) * u;
+      c.fillStyle = hgrad(c, x - ww, x + ww, [[0, '#6B4310'], [0.4, '#E0A040'], [0.7, '#FFE08A'], [1, '#9A6420']]);
+      c.beginPath(); c.moveTo(x - ww, yy); c.lineTo(x + ww, yy); c.lineTo(x + ww * 0.25, yy + ln * 0.5); c.lineTo(x, yy + ln * 0.62); c.lineTo(x - ww * 0.25, yy + ln * 0.5); c.closePath(); c.fill();
+      c.strokeStyle = 'rgba(70,35,5,0.85)'; c.lineWidth = lw * 1.3; c.stroke();
+    }
+    // levha: yuvarlak köşeli bronz plaka + perçin
+    c.fillStyle = hgrad(c, x - 0.45 * u, x + 0.45 * u, [[0, '#6B4310'], [0.35, '#D9983A'], [0.65, '#FFD36A'], [1, '#9A6420']]);
+    c.beginPath(); c.moveTo(x - 0.46 * u, y + 0.1 * u); c.quadraticCurveTo(x, y - 0.1 * u, x + 0.46 * u, y + 0.1 * u); c.lineTo(x + 0.4 * u, y + 0.55 * u); c.lineTo(x - 0.4 * u, y + 0.55 * u); c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(70,35,5,0.85)'; c.lineWidth = lw * 1.5; c.stroke();
+    c.fillStyle = '#FFF0B0'; for (const dx of [-0.28, 0, 0.28]) { c.beginPath(); c.arc(x + dx * u, y + 0.25 * u, 0.05 * u, 0, 7); c.fill(); }
+  }
+  // zemin: forum traverteni, uzun gölgeler
+  c.fillStyle = vgrad(c, gy, h, [[0, '#F0D8A0'], [0.5, '#D9B570'], [1, '#B8884A']]); c.fillRect(0, gy, w, h - gy);
+  c.strokeStyle = 'rgba(110,70,25,0.45)'; c.lineWidth = lw * 1.2;
+  for (let i = 1; i < 6; i++) { const y = gy + i * i * 0.1 * u + i * 0.25 * u; c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); }
+  for (let i = -8; i <= 8; i++) { c.beginPath(); c.moveTo(cx + i * 0.8 * u, gy); c.lineTo(cx + i * 1.9 * u, h); c.stroke(); }
+  rr(c, 0, gy, w, 0.12 * u, 'rgba(255,245,200,0.8)');
+}
+
+// ---------- 3. Tabularium: öğleden sonra ----------
+function tabulariumC(c, w, h, u, sky) {
+  const gy = 15.6 * u, lw = Math.max(1, u * 0.05), cx = w / 2;
+  if (sky) {
+    c.fillStyle = vgrad(c, 0, 6 * u, [[0, '#5AA2E0'], [0.6, '#A8D0EE'], [1, '#F6E6B4']]); c.fillRect(0, 0, w, h);
+    glow(c, w * 0.85, 1.2 * u, 5.5 * u, '255,236,170', 0.8);
+    cloud(c, 2.0 * u, 1.6 * u, 0.8 * u, '#FFFFFF', 0.9); cloud(c, 6.6 * u, 3.0 * u, 0.6 * u, '#FFF6DC', 0.8);
+  }
+  // Capitolium yamacı: yeşil tepe, çam ve küçük terracotta çatılar
+  c.fillStyle = vgrad(c, 2.4 * u, 6 * u, [[0, '#6C9A42'], [1, '#3F6B2B']]);
+  c.beginPath(); c.moveTo(0, 5.8 * u); c.bezierCurveTo(2 * u, 4.2 * u, 5 * u, 3.4 * u, w, 2.6 * u); c.lineTo(w, 6 * u); c.lineTo(0, 6 * u); c.closePath(); c.fill();
+  for (const [rx, ry, rw] of [[1.0, 4.5, 1.6], [6.3, 3.4, 1.7]]) {
+    cyl(c, rx * u, ry * u, rw * u, 1.0 * u, [[0, '#C9A06A'], [1, '#F4DCA4']]);
+    c.fillStyle = '#C65A30'; c.beginPath(); c.moveTo((rx - 0.15) * u, ry * u); c.lineTo((rx + rw / 2) * u, (ry - 0.7) * u); c.lineTo((rx + rw + 0.15) * u, ry * u); c.closePath(); c.fill();
+    c.fillStyle = '#9A3E1E'; c.beginPath(); c.moveTo((rx - 0.15) * u, ry * u); c.lineTo((rx + rw / 2) * u, (ry - 0.7) * u); c.lineTo((rx + rw / 2) * u, ry * u); c.closePath(); c.fill();
+  }
+  pine2(c, 0.4 * u, 5.6 * u, 1.4 * u, u); pine2(c, 8.6 * u, 4.2 * u, 1.6 * u, u); pine2(c, 4.9 * u, 4.6 * u, 1.0 * u, u);
+  // üst kat: tüf bloklar, küçük kemerli pencereler
+  const top = 5.4 * u, mid = 8.1 * u;
+  ashlar(c, 0, top, w, mid - top, 0.5 * u, '#CDB083', '#A98E62', 'rgba(70,45,20,0.5)', lw * 1.2);
+  rr(c, 0, top - 0.25 * u, w, 0.3 * u, '#EBD6A6'); rr(c, 0, top - 0.25 * u, w, 0.08 * u, '#FFF3CC'); rr(c, 0, top + 0.05 * u, w, 0.14 * u, 'rgba(60,35,10,0.4)');
+  for (let i = 0; i < 5; i++) {
+    const wx = (0.55 + i * 1.8) * u, ww = 0.9 * u, wy = 7.6 * u;
+    sclip(c, () => archPath(c, wx, wy, ww, 1.7 * u)); c.fillStyle = vgrad(c, wy - 1.7 * u, wy, [[0, '#2A1608'], [1, '#8A5A2A']]); c.fillRect(wx, wy - 1.7 * u, ww, 1.7 * u);
+    c.fillStyle = 'rgba(255,214,130,0.55)'; for (let k = 0; k < 3; k++) c.fillRect(wx + 0.12 * u, wy - 1.0 * u + k * 0.42 * u, ww - 0.24 * u, 0.1 * u);
+    c.restore(); c.strokeStyle = '#F2DCA8'; c.lineWidth = lw * 2; c.beginPath(); archPath(c, wx, wy, ww, 1.7 * u); c.stroke();
+  }
+  // triglif-metop frizi
+  cyl(c, 0, mid, w, 0.72 * u, [[0, '#C9AC7C'], [0.5, '#EBD6A6'], [1, '#D7BC8C']]);
+  for (let x = 0.15 * u; x < w; x += 0.62 * u) { rr(c, x, mid + 0.1 * u, 0.2 * u, 0.5 * u, '#6B4A26'); rr(c, x + 0.06 * u, mid + 0.1 * u, 0.025 * u, 0.5 * u, '#E8D2A0'); rr(c, x + 0.12 * u, mid + 0.1 * u, 0.025 * u, 0.5 * u, '#E8D2A0'); }
+  rr(c, 0, mid + 0.72 * u, w, 0.2 * u, '#FFF1C8'); rr(c, 0, mid + 0.92 * u, w, 0.14 * u, 'rgba(60,35,10,0.45)');
+  // ana kemer sırası
+  const aT = mid + 1.0 * u, pw = 0.75 * u, aw = 2.0 * u, aH = 5.5 * u;
+  ashlar(c, 0, aT, w, gy - aT, 0.55 * u, '#C2A476', '#9C8058', 'rgba(60,38,16,0.55)', lw * 1.3);
+  for (let i = 0; i < 3; i++) {
+    const x = pw + i * (aw + pw);
+    sclip(c, () => archPath(c, x, gy, aw, aH));
+    c.fillStyle = vgrad(c, gy - aH, gy, [[0, '#1E1008'], [0.5, '#4A2A14'], [1, '#9A6430']]); c.fillRect(x, gy - aH, aw, aH);
+    // arşiv rafları: tomar nişleri, bronz tabletler
+    for (let r = 0; r < 6; r++) {
+      const sy = gy - 0.35 * u - r * 0.82 * u;
+      rr(c, x, sy, aw, 0.1 * u, '#8A5A26'); rr(c, x, sy + 0.1 * u, aw, 0.05 * u, 'rgba(0,0,0,0.5)');
+      for (let k = 0; k < 5; k++) {
+        const nx = x + 0.1 * u + k * 0.38 * u, ny = sy - 0.5 * u, ty = (r + k) % 3;
+        rr(c, nx, ny, 0.32 * u, 0.5 * u, 'rgba(10,4,0,0.55)');
+        if (ty === 0) { ell(c, nx + 0.16 * u, ny + 0.32 * u, 0.12 * u, 0.12 * u, '#F2E2B4'); rr(c, nx + 0.04 * u, ny + 0.3 * u, 0.24 * u, 0.04 * u, '#8A6A3A'); ell(c, nx + 0.1 * u, ny + 0.17 * u, 0.07 * u, 0.07 * u, '#E6D29A'); }
+        else if (ty === 1) { rr(c, nx + 0.03 * u, ny + 0.06 * u, 0.26 * u, 0.4 * u, '#C99A2A'); rr(c, nx + 0.06 * u, ny + 0.12 * u, 0.2 * u, 0.04 * u, '#7A5410'); rr(c, nx + 0.06 * u, ny + 0.22 * u, 0.2 * u, 0.04 * u, '#7A5410'); rr(c, nx + 0.06 * u, ny + 0.32 * u, 0.2 * u, 0.04 * u, '#7A5410'); }
+        else { for (const dx of [0.04, 0.17]) { rr(c, nx + dx * u, ny + 0.16 * u, 0.1 * u, 0.3 * u, '#EFD9A2'); ell(c, nx + (dx + 0.05) * u, ny + 0.16 * u, 0.05 * u, 0.03 * u, '#8A6A3A'); } }
+      }
+    }
+    const lg = c.createLinearGradient(0, gy - aH, 0, gy); lg.addColorStop(0, 'rgba(255,200,120,0)'); lg.addColorStop(1, 'rgba(255,214,140,0.35)'); c.fillStyle = lg; c.fillRect(x, gy - aH, aw, aH);
+    c.restore();
+    c.strokeStyle = '#F2DCA8'; c.lineWidth = u * 0.14; c.beginPath(); archPath(c, x - 0.07 * u, gy, aw + 0.14 * u, aH + 0.07 * u); c.stroke();
+    c.strokeStyle = 'rgba(70,40,15,0.75)'; c.lineWidth = lw * 1.4; c.beginPath(); archPath(c, x, gy, aw, aH); c.stroke();
+    // kilit taşı
+    c.fillStyle = '#EAD3A0'; c.beginPath(); c.moveTo(x + aw / 2 - 0.16 * u, gy - aH - 0.15 * u); c.lineTo(x + aw / 2 + 0.16 * u, gy - aH - 0.15 * u); c.lineTo(x + aw / 2 + 0.11 * u, gy - aH + 0.28 * u); c.lineTo(x + aw / 2 - 0.11 * u, gy - aH + 0.28 * u); c.closePath(); c.fill();
+  }
+  // payeler üzerinde yarım Dor sütunları
+  for (let i = 0; i < 4; i++) {
+    const px = i * (aw + pw) + pw / 2, cw2 = 0.5 * u, x = px - cw2 / 2, cT = gy - aH - 0.2 * u;
+    cyl(c, x, cT, cw2, gy - cT, [[0, '#A98A5C'], [0.4, '#E6CE9C'], [0.8, '#FFF0C8'], [1, '#D8BE8C']]);
+    c.strokeStyle = 'rgba(90,60,25,0.35)'; c.lineWidth = lw; for (let k = 1; k < 4; k++) { c.beginPath(); c.moveTo(x + cw2 * k / 4, cT + 0.1 * u); c.lineTo(x + cw2 * k / 4, gy); c.stroke(); }
+    cyl(c, x - 0.1 * u, cT - 0.12 * u, cw2 + 0.2 * u, 0.14 * u, [[0, '#C9AC7C'], [1, '#FFF3CC']]); cyl(c, x - 0.14 * u, cT - 0.26 * u, cw2 + 0.28 * u, 0.14 * u, [[0, '#D7BC8C'], [1, '#FFF8DC']]);
+    cyl(c, x - 0.1 * u, gy - 0.16 * u, cw2 + 0.2 * u, 0.16 * u, [[0, '#A98A5C'], [1, '#EAD3A0']]);
+  }
+  // öğleden sonra ışığı: yüzeye sıcak vurgu
+  c.save(); c.globalCompositeOperation = 'lighter'; glow(c, w * 0.9, 6 * u, 6 * u, '255,226,150', 0.22); c.restore();
+  // zemin: aşınmış basamak + kaldırım
+  rr(c, 0, gy, w, 0.28 * u, '#E8D2A0'); rr(c, 0, gy + 0.28 * u, w, 0.12 * u, 'rgba(60,35,10,0.45)');
+  c.fillStyle = vgrad(c, gy + 0.4 * u, h, [[0, '#D6BC88'], [1, '#A98A55']]); c.fillRect(0, gy + 0.4 * u, w, h - gy);
+  c.strokeStyle = 'rgba(90,60,25,0.45)'; c.lineWidth = lw * 1.2;
+  for (let i = 1; i < 5; i++) { const y = gy + 0.4 * u + i * i * 0.1 * u + i * 0.2 * u; c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); }
+  for (let i = -8; i <= 8; i++) { c.beginPath(); c.moveTo(cx + i * 0.8 * u, gy + 0.4 * u); c.lineTo(cx + i * 1.8 * u, h); c.stroke(); }
+}
+
+// ---------- 5. Capitolium: altın saat ----------
+function capitoliumC(c, w, h, u, sky) {
+  const gy = 15.6 * u, cx = w / 2, lw = Math.max(1, u * 0.05);
+  if (sky) {
+    c.fillStyle = vgrad(c, 0, gy, [[0, '#E08A32'], [0.45, '#FFC060'], [0.8, '#FFE49A'], [1, '#FFF3CC']]); c.fillRect(0, 0, w, h);
+    glow(c, cx, 6.5 * u, 8 * u, '255,236,170', 0.85); glow(c, cx, 6.5 * u, 2.4 * u, '255,252,225', 0.95);
+    cloud(c, 1.2 * u, 2.0 * u, 0.9 * u, '#FFD9A0', 0.9); cloud(c, 7.8 * u, 3.0 * u, 0.8 * u, '#FFC888', 0.9); cloud(c, 4.2 * u, 0.9 * u, 0.6 * u, '#FFE2B0', 0.8);
+    // güneş ışınları
+    c.save(); c.globalCompositeOperation = 'lighter'; for (let i = 0; i < 7; i++) { const a = -Math.PI * 0.95 + i * (Math.PI * 0.9 / 6), L = 11 * u; const g = c.createLinearGradient(cx, 6.5 * u, cx + Math.cos(a) * L, 6.5 * u + Math.sin(a) * L); g.addColorStop(0, 'rgba(255,240,180,0.28)'); g.addColorStop(1, 'rgba(255,240,180,0)'); c.fillStyle = g; c.beginPath(); c.moveTo(cx, 6.5 * u); c.lineTo(cx + Math.cos(a - 0.05) * L, 6.5 * u + Math.sin(a - 0.05) * L); c.lineTo(cx + Math.cos(a + 0.05) * L, 6.5 * u + Math.sin(a + 0.05) * L); c.fill(); } c.restore();
+  }
+  // yanlarda yamaç selvileri (koyu)
+  const cyc = [[0, '#0B3A1C'], [0.55, '#1B6E30'], [1, '#3E9A44']];
+  cypress2(c, 0.35 * u, gy, 6.6 * u, 0.42 * u, cyc); cypress2(c, 8.65 * u, gy, 7.4 * u, 0.46 * u, cyc); cypress2(c, 1.0 * u, gy, 4.2 * u, 0.34 * u, cyc); cypress2(c, 8.0 * u, gy, 4.8 * u, 0.36 * u, cyc);
+  // Jüpiter tapınağı: yüksek podyum, kırmızı-altın çatı, altın quadriga
+  const px0 = 0.6 * u, px1 = 8.4 * u, py = 12.2 * u, colB = py, colT = 7.9 * u;
+  // pediment
+  const pdY0 = 7.1 * u, pdY1 = 5.0 * u;
+  c.fillStyle = vgrad(c, pdY1, pdY0, [[0, '#B87832'], [1, '#E8B060']]); c.beginPath(); c.moveTo(px0 - 0.25 * u, pdY0); c.lineTo(cx, pdY1); c.lineTo(px1 + 0.25 * u, pdY0); c.closePath(); c.fill();   // tympanum (terracotta-altın)
+  c.fillStyle = '#7A3A1A'; for (const [fx, fy, fs] of [[cx, 6.2, 0.5], [cx - 1.4, 6.7, 0.32], [cx + 1.4, 6.7, 0.32]]) { c.beginPath(); c.arc(fx * u, fy * u - fs * u * 0.6, fs * u * 0.4, 0, 7); c.fill(); c.fillRect(fx * u - fs * u * 0.45, fy * u - fs * u * 0.3, fs * u * 0.9, fs * u * 0.7); }   // tympanum figürleri
+  c.strokeStyle = '#FFE070'; c.lineWidth = u * 0.28; c.lineJoin = 'miter'; c.beginPath(); c.moveTo(px0 - 0.25 * u, pdY0); c.lineTo(cx, pdY1); c.lineTo(px1 + 0.25 * u, pdY0); c.stroke();   // yaldızlı çatı kenarı
+  c.strokeStyle = '#B8860B'; c.lineWidth = u * 0.08; c.beginPath(); c.moveTo(px0 - 0.25 * u, pdY0 + 0.14 * u); c.lineTo(cx, pdY1 + 0.14 * u); c.lineTo(px1 + 0.25 * u, pdY0 + 0.14 * u); c.stroke();
+  c.fillStyle = '#FFE070'; for (let i = 0; i <= 12; i++) { const t = i / 12, ax = px0 - 0.25 * u + t * (cx - px0 + 0.25 * u), ay = pdY0 + t * (pdY1 - pdY0); for (const sx of [ax, 2 * cx - ax]) { c.beginPath(); c.arc(sx, ay - 0.3 * u, 0.1 * u, 0, 7); c.fill(); } }   // antefikslar
+  // yaldızlı çatı arkası (kiremit)
+  // entablatür
+  cyl(c, px0 - 0.25 * u, pdY0, px1 - px0 + 0.5 * u, 0.75 * u, [[0, '#D9A64E'], [0.5, '#FFE49A'], [1, '#E8BE6A']]);
+  rr(c, px0 - 0.25 * u, pdY0 + 0.75 * u, px1 - px0 + 0.5 * u, 0.12 * u, 'rgba(90,45,10,0.5)');
+  c.fillStyle = '#B8860B'; for (let x = px0; x < px1; x += 0.5 * u) c.fillRect(x, pdY0 + 0.25 * u, 0.14 * u, 0.3 * u);
+  // quadriga (zirvede, altın): araba solda, dört at sağa doğru şaha kalkmış
+  { const qx = cx, qy = pdY1 - 0.1 * u, gcol = [[0, '#6E4300'], [0.45, '#D79A10'], [0.75, '#FFD54A'], [1, '#FFF2A8']];
+    c.fillStyle = hgrad(c, qx - 1.4 * u, qx + 1.4 * u, gcol);
+    c.fillRect(qx - 1.3 * u, qy - 0.22 * u, 2.6 * u, 0.22 * u);                                         // kaide
+    c.beginPath(); c.moveTo(qx - 1.3 * u, qy - 0.22 * u); c.lineTo(qx - 1.3 * u, qy - 0.95 * u); c.lineTo(qx - 0.45 * u, qy - 0.95 * u); c.lineTo(qx - 0.25 * u, qy - 0.22 * u); c.closePath(); c.fill();   // araba gövdesi
+    c.beginPath(); c.arc(qx - 0.8 * u, qy - 0.5 * u, 0.3 * u, 0, 7); c.fill();                           // tekerlek
+    c.strokeStyle = 'rgba(90,50,0,0.85)'; c.lineWidth = lw * 1.3; c.beginPath(); c.arc(qx - 0.8 * u, qy - 0.5 * u, 0.2 * u, 0, 7); c.moveTo(qx - 1.0 * u, qy - 0.5 * u); c.lineTo(qx - 0.6 * u, qy - 0.5 * u); c.moveTo(qx - 0.8 * u, qy - 0.7 * u); c.lineTo(qx - 0.8 * u, qy - 0.3 * u); c.stroke();
+    c.fillStyle = hgrad(c, qx - 1.4 * u, qx + 1.4 * u, gcol);
+    c.fillRect(qx - 0.95 * u, qy - 1.75 * u, 0.22 * u, 0.85 * u); c.beginPath(); c.arc(qx - 0.84 * u, qy - 1.88 * u, 0.15 * u, 0, 7); c.fill(); c.fillRect(qx - 0.72 * u, qy - 2.2 * u, 0.07 * u, 0.55 * u);   // Jüpiter / Victoria figürü
+    for (let i = 0; i < 4; i++) {   // atlar
+      const hx = qx - 0.15 * u + i * 0.4 * u, hy = qy - 0.22 * u;
+      c.beginPath(); c.ellipse(hx + 0.22 * u, hy - 0.5 * u, 0.3 * u, 0.2 * u, -0.3, 0, 7); c.fill();                         // gövde
+      c.beginPath(); c.moveTo(hx + 0.35 * u, hy - 0.58 * u); c.lineTo(hx + 0.56 * u, hy - 1.15 * u); c.lineTo(hx + 0.8 * u, hy - 1.2 * u); c.lineTo(hx + 0.72 * u, hy - 1.02 * u); c.lineTo(hx + 0.58 * u, hy - 0.45 * u); c.closePath(); c.fill();   // boyun + baş
+      c.beginPath(); c.moveTo(hx + 0.4 * u, hy - 0.4 * u); c.lineTo(hx + 0.78 * u, hy - 0.62 * u); c.lineTo(hx + 0.8 * u, hy - 0.5 * u); c.lineTo(hx + 0.48 * u, hy - 0.3 * u); c.closePath(); c.fill();   // kalkık ön ayak
+      c.fillRect(hx + 0.06 * u, hy - 0.45 * u, 0.1 * u, 0.45 * u);
+    }
+    c.strokeStyle = 'rgba(90,50,0,0.5)'; c.lineWidth = lw; c.strokeRect(qx - 1.3 * u, qy - 0.22 * u, 2.6 * u, 0.22 * u); }
+  // cella gölgesi ve altı Korint sütunu
+  cyl(c, px0, colT, px1 - px0, colB - colT, [[0, '#6A3E22'], [1, '#B07C48']]);
+  for (let i = 0; i < 6; i++) {
+    const cw = 0.78 * u, x = px0 + 0.1 * u + i * ((px1 - px0 - 0.98 * u) / 5);
+    cyl(c, x, colT, cw, colB - colT, [[0, '#C8944A'], [0.3, '#F8DDA0'], [0.7, '#FFF6D8'], [1, '#EDCB86']]);
+    c.strokeStyle = 'rgba(120,70,25,0.4)'; c.lineWidth = lw; for (let k = 1; k < 5; k++) { c.beginPath(); c.moveTo(x + cw * k / 5, colT + 0.2 * u); c.lineTo(x + cw * k / 5, colB - 0.1 * u); c.stroke(); }
+    cyl(c, x - 0.1 * u, colT - 0.05 * u, cw + 0.2 * u, 0.4 * u, [[0, '#C99A3C'], [0.5, '#FFE27A'], [1, '#E8BC52']]);   // yaldızlı başlık
+    cyl(c, x - 0.08 * u, colB - 0.3 * u, cw + 0.16 * u, 0.3 * u, [[0, '#C89A5A'], [1, '#FFF0C8']]);
+  }
+  // podyum + merdiven
+  ashlar(c, px0 - 0.3 * u, py, px1 - px0 + 0.6 * u, gy - py, 0.62 * u, '#F2D79A', '#D2A460', 'rgba(110,65,20,0.5)', lw * 1.2);
+  cyl(c, px0 - 0.45 * u, py - 0.3 * u, px1 - px0 + 0.9 * u, 0.34 * u, [[0, '#E0B466'], [0.5, '#FFF0C0'], [1, '#EDCB86']]);
+  rr(c, px0 - 0.45 * u, py + 0.04 * u, px1 - px0 + 0.9 * u, 0.12 * u, 'rgba(90,50,15,0.5)');
+  const sw = 2.6 * u, sx = cx - sw / 2, steps = 6, sh = (gy - py) / steps;
+  for (let k = 0; k < steps; k++) { const yy = py + k * sh, inset = (steps - 1 - k) * 0.0; rr(c, sx - 0.15 * u * k * 0.3, yy, sw + 0.3 * u * k * 0.3, sh, k % 2 ? '#F6E3B0' : '#EBD08A'); rr(c, sx - 0.15 * u * k * 0.3, yy, sw + 0.3 * u * k * 0.3, 0.08 * u, 'rgba(255,248,215,0.9)'); rr(c, sx - 0.15 * u * k * 0.3, yy + sh - 0.1 * u, sw + 0.3 * u * k * 0.3, 0.1 * u, 'rgba(90,50,15,0.4)'); }
+  // yan akroter (altın meşale/tripod) ve zemin
+  c.fillStyle = vgrad(c, gy, h, [[0, '#F2D494'], [0.5, '#D9A850'], [1, '#B27A34']]); c.fillRect(0, gy, w, h - gy);
+  c.strokeStyle = 'rgba(110,65,20,0.45)'; c.lineWidth = lw * 1.2;
+  for (let i = 1; i < 5; i++) { const y = gy + i * i * 0.1 * u + i * 0.22 * u; c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); }
+  for (let i = -8; i <= 8; i++) { c.beginPath(); c.moveTo(cx + i * 0.8 * u, gy); c.lineTo(cx + i * 1.9 * u, h); c.stroke(); }
+  rr(c, 0, gy, w, 0.12 * u, 'rgba(255,248,200,0.8)');
+  c.save(); c.globalCompositeOperation = 'lighter'; glow(c, cx, py + 1.5 * u, 6 * u, '255,220,140', 0.22); c.restore();
+}
+
+// ---------- 6. Palatium: alacakaranlık ----------
+function palatiumC(c, w, h, u, sky) {
+  const gy = 15.6 * u, cx = w / 2, lw = Math.max(1, u * 0.05);
+  if (sky) {
+    c.fillStyle = vgrad(c, 0, gy, [[0, '#14145A'], [0.35, '#3E2C8C'], [0.7, '#9A4E9A'], [1, '#F29A86']]); c.fillRect(0, 0, w, h);
+    glow(c, w * 0.3, 11.5 * u, 7 * u, '255,170,130', 0.55);
+    c.fillStyle = '#FFFFFF'; for (const [sx, sy, sr] of [[0.8, 0.7, 0.07], [2.2, 1.9, 0.05], [3.6, 0.6, 0.06], [5.0, 1.5, 0.05], [6.6, 0.8, 0.07], [8.0, 2.0, 0.05], [7.2, 3.1, 0.045], [1.4, 3.4, 0.045], [4.4, 2.7, 0.04]]) star(c, sx * u, sy * u, sr * u);
+    c.fillStyle = '#FFF6D8'; c.beginPath(); c.arc(7.5 * u, 1.5 * u, 0.55 * u, 0, 7); c.fill(); c.fillStyle = '#3A2C8C'; c.beginPath(); c.arc(7.75 * u, 1.35 * u, 0.5 * u, 0, 7); c.fill();   // hilal
+    cloud(c, 2.4 * u, 6.4 * u, 0.9 * u, '#D0709A', 0.7); cloud(c, 7.6 * u, 8.0 * u, 0.8 * u, '#E08AA0', 0.7);
+  }
+  const wall = [[0, '#B8628A'], [0.5, '#E8A0A0'], [1, '#F6C8B0']], dark = [[0, '#1A0E30'], [1, '#5A2A48']];
+  // üç kat kemerli sıra (basamaklı teraslar)
+  const tier = (x0, x1, yT, yB, n, ah, roof) => {
+    const W = x1 - x0, pw = W / (n * 3.2 + n + 1) * 1.0, aw = (W - pw * (n + 1)) / n;
+    cyl(c, x0, yT, W, yB - yT, [[0, '#9A5080'], [0.5, '#E8A8A8'], [1, '#F8D2BC']]);
+    rr(c, x0 - 0.12 * u, yT - 0.2 * u, W + 0.24 * u, 0.22 * u, '#FBE4D0'); rr(c, x0 - 0.12 * u, yT + 0.02 * u, W + 0.24 * u, 0.1 * u, 'rgba(70,20,50,0.4)');
+    for (let i = 0; i < n; i++) {
+      const x = x0 + pw + i * (aw + pw);
+      sclip(c, () => archPath(c, x, yB, aw, ah));
+      c.fillStyle = vgrad(c, yB - ah, yB, [[0, '#2A1244'], [0.5, '#8A4A3A'], [1, '#FFB060']]); c.fillRect(x, yB - ah, aw, ah);
+      c.globalCompositeOperation = 'lighter'; glow(c, x + aw / 2, yB - 0.7 * u, aw * 0.95, '255,170,70', 0.6); c.globalCompositeOperation = 'source-over';
+      c.restore();
+      c.strokeStyle = '#FFE0C8'; c.lineWidth = u * 0.1; c.beginPath(); archPath(c, x - 0.05 * u, yB, aw + 0.1 * u, ah + 0.05 * u); c.stroke();
+      c.strokeStyle = 'rgba(80,25,50,0.7)'; c.lineWidth = lw * 1.2; c.beginPath(); archPath(c, x, yB, aw, ah); c.stroke();
+      // lamba alevi
+      const lx = x + aw / 2, ly = yB - 0.55 * u; rr(c, lx - 0.03 * u, ly, 0.06 * u, 0.3 * u, '#EBD7B0');
+      c.fillStyle = '#FF8A20'; c.beginPath(); c.ellipse(lx, ly - 0.12 * u, 0.09 * u, 0.18 * u, 0, 0, 7); c.fill(); c.fillStyle = '#FFE680'; c.beginPath(); c.ellipse(lx, ly - 0.08 * u, 0.045 * u, 0.1 * u, 0, 0, 7); c.fill();
+    }
+    for (let i = 0; i <= n; i++) { const px = x0 + i * (aw + pw); cyl(c, px, yT + 0.1 * u, pw, yB - yT - 0.1 * u, [[0, 'rgba(90,40,70,0.55)'], [1, 'rgba(255,230,210,0.25)']]); }
+    if (roof) {   // kiremit çatı
+      c.fillStyle = vgrad(c, yT - 1.0 * u, yT - 0.2 * u, [[0, '#E0603A'], [1, '#A83C28']]); c.beginPath(); c.moveTo(x0 - 0.3 * u, yT - 0.2 * u); c.lineTo(x0 + 0.5 * u, yT - 1.0 * u); c.lineTo(x1 - 0.5 * u, yT - 1.0 * u); c.lineTo(x1 + 0.3 * u, yT - 0.2 * u); c.closePath(); c.fill();
+      c.strokeStyle = 'rgba(70,20,10,0.55)'; c.lineWidth = lw; for (let k = 1; k < 4; k++) { const yy = yT - 0.2 * u - k * 0.2 * u; c.beginPath(); c.moveTo(x0 - 0.3 * u + k * 0.2 * u, yy); c.lineTo(x1 + 0.3 * u - k * 0.2 * u, yy); c.stroke(); }
+    }
+  };
+  tier(2.0 * u, 7.0 * u, 3.9 * u, 6.9 * u, 3, 2.1 * u, true);
+  tier(0.85 * u, 8.15 * u, 7.4 * u, 11.1 * u, 3, 2.9 * u, false);
+  tier(0, w, 11.6 * u, gy - 0.1 * u, 4, 3.0 * u, false);
+  // teras korkulukları ve çalılar
+  for (const yy of [7.4 * u, 11.1 * u]) { c.fillStyle = vgrad(c, yy - 0.5 * u, yy, [[0, '#1E6A3A'], [1, '#0E4226']]); for (let x = 0; x < w; x += 0.7 * u) { c.beginPath(); c.ellipse(x + 0.35 * u, yy - 0.12 * u, 0.4 * u, 0.3 * u, 0, 0, 7); c.fill(); } }
+  // selviler
+  cypress2(c, 0.45 * u, gy, 6.2 * u, 0.4 * u, [[0, '#08240F'], [0.55, '#14522A'], [1, '#2C7A3C']]); cypress2(c, 8.55 * u, gy, 5.6 * u, 0.38 * u, [[0, '#08240F'], [0.55, '#14522A'], [1, '#2C7A3C']]);
+  cypress2(c, 1.25 * u, gy, 3.6 * u, 0.3 * u, [[0, '#08240F'], [0.55, '#14522A'], [1, '#2C7A3C']]); cypress2(c, 7.7 * u, gy, 3.2 * u, 0.3 * u, [[0, '#08240F'], [0.55, '#14522A'], [1, '#2C7A3C']]);
+  // bahçe: yol, çalı kenarları, lambalar
+  c.fillStyle = vgrad(c, gy, h, [[0, '#4A2C58'], [1, '#2A1840']]); c.fillRect(0, gy, w, h - gy);
+  c.fillStyle = '#7A4A6A'; c.beginPath(); c.moveTo(cx - 0.9 * u, gy); c.lineTo(cx + 0.9 * u, gy); c.lineTo(cx + 3.2 * u, h); c.lineTo(cx - 3.2 * u, h); c.closePath(); c.fill();
+  c.strokeStyle = 'rgba(30,10,40,0.5)'; c.lineWidth = lw * 1.2; for (let i = 1; i < 5; i++) { const y = gy + i * i * 0.1 * u + i * 0.22 * u; c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); }
+  for (const hx of [0.4 * u, 8.6 * u, 2.6 * u, 6.4 * u]) {
+    rr(c, hx - 0.03 * u, gy - 0.1 * u, 0.06 * u, 0.9 * u, '#7A5A38'); c.fillStyle = '#FF8A20'; c.beginPath(); c.ellipse(hx, gy - 0.25 * u, 0.1 * u, 0.2 * u, 0, 0, 7); c.fill(); c.fillStyle = '#FFE680'; c.beginPath(); c.ellipse(hx, gy - 0.2 * u, 0.05 * u, 0.11 * u, 0, 0, 7); c.fill();
+    c.save(); c.globalCompositeOperation = 'lighter'; glow(c, hx, gy - 0.25 * u, 1.5 * u, '255,150,60', 0.5); c.restore();
+  }
+  rr(c, 0, gy - 0.05 * u, w, 0.1 * u, '#FFB078');
+}
+
+const mkMuted = (fn, tint, amp, extra) => mutedFrom(fn, tint, amp, extra);
+const rostra = mkMuted(rostraC, '#FFF0D0', 0.24, (o, w, h, u, ph) => { if (!ph) glow(o, w * 0.8, 2.6 * u, 6 * u, '255,250,225', 0.18); });
+const tabularium = mkMuted(tabulariumC, '#F2E2B8', 0.26, (o, w, h, u, ph) => { if (!ph) glow(o, w * 0.85, 1.2 * u, 5.5 * u, '255,236,170', 0.16); });
+const capitolium = mkMuted(capitoliumC, '#FFE2A0', 0.26, (o, w, h, u, ph) => { if (!ph) glow(o, w / 2, 6.5 * u, 8 * u, '255,226,150', 0.2); });
+const palatium = mkMuted(palatiumC, '#D4C0F8', 0.28, (o, w, h, u, ph) => { if (!ph) glow(o, w * 0.3, 11.5 * u, 7 * u, '255,170,130', 0.14); });
+
+const DRAW = [forum, basilika, rostra, tabularium, curia, capitolium, palatium, pantheon];
+const DRAWC = [forumC, basilikaC, (c, w, h, u) => rostraC(c, w, h, u, true), (c, w, h, u) => tabulariumC(c, w, h, u, true), curiaC, (c, w, h, u) => capitoliumC(c, w, h, u, true), (c, w, h, u) => palatiumC(c, w, h, u, true), pantheonC];
+const STRENGTH = [1, 0.8, 0.9, 0.9, 0.9, 0.9, 0.85, 0.8];   // sönük sürümde seviye başına genel şiddet
 export function makeBackdrop(level, w, h, col) {
-  const lv = Math.max(0, Math.min(3, level));
+  const lv = ((Math.floor(level) % 8) + 8) % 8;
   const cv = mk(w, h), out = cv.getContext('2d'), u = cv.height / 18;   // dikey düzen 18 satıra göre; yatay yerleşim w oranlarıyla
   const tmp = mk(w, h), tc = tmp.getContext('2d');
   if (col) DRAWC[lv](tc, tmp.width, tmp.height, u); else DRAW[lv](tc, tmp.width, tmp.height, u, false);

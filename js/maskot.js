@@ -8,11 +8,16 @@ let overIdx = -1;
 const queue = [];
 let busy = false, timer = 0, cur = null;
 
-function build(who, text, cls) {
+function build(who, text, cls, head) {
   const el = document.createElement('div');
   el.className = 'pop ' + cls;
   el.innerHTML = '<div class="mascot-badge"><svg viewBox="0 0 120 120"><use href="#' + (who === 'aslan' ? 'mf-aslan' : 'mf-kedi') + '"/></svg></div><div class="bubble"></div>';
-  el.querySelector('.bubble').textContent = text;
+  const bb = el.querySelector('.bubble');
+  if (head) {   // tam ad (kalın) + kısa bilgi
+    const b = document.createElement('b'); b.textContent = head; b.style.cssText = 'display:block;margin-bottom:2px';
+    bb.appendChild(b); bb.appendChild(document.createTextNode(text));
+    bb.style.fontSize = '.78em'; bb.style.maxWidth = '236px'; bb.style.lineHeight = '1.25';
+  } else bb.textContent = text;
   return el;
 }
 
@@ -35,8 +40,9 @@ function next() {
   const layer = $('mascotLayer');
   if (!item || !layer) { busy = false; return; }
   busy = true;
-  const el = build(item.who, item.text, item.cls);
+  const el = build(item.who, item.text, item.cls, item.head);
   el.style.setProperty('--dur', item.ms + 'ms');
+  if (item.head) el.style.setProperty('--ms', '92px');   // yeni mekân balonu: rozet küçük, metin geniş
   if (reduce()) el.classList.add('rm');
   layer.appendChild(el);
   cur = el;
@@ -47,9 +53,8 @@ export function aslanHukum(n) {
   const text = t('lion.' + Math.min(Math.max(n, 2), 4));
   enqueue({ kind: 'hukum', who: 'aslan', text, cls: 'aslan-side', ms: 1500 });
 }
-export function aslanSeviye(level) {
-  const text = t('lion.lvl.' + level);
-  enqueue({ kind: 'seviye', who: 'aslan', text, cls: 'aslan-big', ms: 1800 });
+export function aslanSeviye(head, body) {
+  enqueue({ kind: 'seviye', who: 'aslan', text: body, head, cls: 'aslan-big', ms: 3800 });
 }
 export function kediSoyle(text, ms = 2200) {
   enqueue({ kind: 'kedi', who: 'kedi', text, cls: 'kedi-corner', ms: Math.min(ms, 2200) });

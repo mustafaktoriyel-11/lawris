@@ -10,8 +10,8 @@ Lex Stack, hukuk temalı, düşen bloklu bir bulmaca oyunudur. Tahta 9 sütun x 
 
 - Parçaları sola/sağa kaydırın, döndürün, hızlı indirin veya düşürün.
 - Tamamen dolan satırlar silinir ve "Hüküm!" yazısı çıkar.
-- Her 8 satırda mahkeme yükselir: Sulh, Asliye, İstinaf, Yargıtay (Yargıtay'da hız artmaya devam eder).
-- Puan etiketi "İçtihat puanı"dır; sıradaki 3 parça "Sıradaki" kutusunda görünür (ilki büyük). Hız eğrisi yumuşaktır: her 3 satırda yerçekimi %5 hızlanır, en hızlı 110 ms.
+- Her 8 satırda yeni bir Roma mekânına geçersiniz: Forum, Bazilika Iulia, Rostra, Tabularium, Curia Iulia (Senato), Capitolium, Palatium, Pantheon; ardından sonsuz mod (İmparatorluk) başlar: sahneler yeniden döner, hız artmaya devam eder. Her mekân 3 aşamadır (I, II, III; satır 0-2, 3-5, 6-7) ve her aşamada yerçekimi bir kademe hızlanır.
+- Puan etiketi "İçtihat puanı"dır; sıradaki 3 parça "Sıradaki" kutusunda görünür (ilki büyük). Hız tablosu aşama başınadır: 1000 ms/satırdan başlar, 8. mekânın son aşamasında 180 ms'dir; sonsuzda her aşamada x0,96, en hızlı 110 ms.
 - **Talik**: her parçada bir kez, geçerli parçayı beklemeye alır (boşsa sıradaki gelir, doluysa yer değiştirirler; altın parça altın kalır). Klavyede C veya Shift, dokunmatikte HUD'daki Talik kutusu ya da ⇄ düğmesi.
 - Yaklaşık %8 ihtimalle gelen **altın** parçalar yerleştiğinde özel etki yapar:
   - Tokmak: değdiği 3 satırın tamamını siler, +150 puan.
@@ -54,8 +54,8 @@ Lex Stack is a legal-themed falling-block puzzle. The board is 9 columns x 18 ro
 
 - Slide, rotate, soft-drop or hard-drop the pieces.
 - Completed rows are cleared and "Verdict!" flashes.
-- Every 8 rows you move up a court: Magistrates' Court, District Court, Court of Appeal, Supreme Court (speed keeps rising in the Supreme Court).
-- The score label is "Precedent"; the next 3 pieces show in the "Next" box (the first is large). Gravity gets 5% faster every 3 rows, down to 110 ms.
+- Every 8 rows you move to a new Roman place: Forum, Basilica Iulia, Rostra, Tabularium, Curia Iulia (Senate), Capitolium, Palatine Palace, Pantheon; then Endless Imperium begins (scenes cycle, speed keeps rising). Each place has 3 stages (I, II, III; rows 0-2, 3-5, 6-7) and gravity steps up at every stage.
+- The score label is "Precedent"; the next 3 pieces show in the "Next" box (the first is large). Gravity follows a per-stage table: 1000 ms/row at the start, 180 ms in the last stage of the 8th place, then x0.96 per stage in endless down to 110 ms.
 - **Hold** (once per piece): set the current piece aside (the next one comes if the slot is empty, otherwise they swap; a golden piece stays golden). Use C or Shift on a keyboard, the Hold box in the HUD or the ⇄ button on touch screens.
 - About 8% of pieces are **golden** and trigger a special effect when they land:
   - Gavel: clears all 3 rows it touches, +150 points.
@@ -74,3 +74,9 @@ Lex Stack is a legal-themed falling-block puzzle. The board is 9 columns x 18 ro
 ### Language
 
 The game opens in Turkish or English depending on the browser language (anything starting with `tr` is Turkish, everything else English). Use the TR | EN switch on the start screen or the pause card to change it live; the choice is stored in `localStorage` (`lawris.dil`). To add a language, add a dictionary to `js/i18n.js`. The privacy policy is available as `privacy.html` (Turkish) and `privacy-en.html` (English).
+
+## Müzik ve kaynaklar / Music credits
+
+Arka plan müziği, `audio/` klasöründeki gerçek çalgı kayıtlarını (folk harp, konser harbi, blok flüt, psaltery, çerçeve davulu, darbuka, tef, shaker, parmak zilleri) uyarlamalı bir diziciyle çalar; örnekler yüklenene kadar eski prosedürel sesler devrede kalır. Örnekler [Versilian Community Sample Library](https://github.com/sgossner/VCSL) kütüphanesinden alınmıştır (CC0 1.0, kamu malı; atıf zorunlu değildir, teşekkürle belirtilir). Ayrıntı: `audio/LICENSE.txt`.
+
+Background music is played by an adaptive sequencer using the real instrument recordings in `audio/` (folk harp, concert harp, recorders, psaltery, frame drum, darbuka, tambourine, shaker, finger cymbals); the old synthesized voices stay as a fallback until the samples are decoded. Samples come from the [Versilian Community Sample Library](https://github.com/sgossner/VCSL) (CC0 1.0 public domain; attribution not required, credited with thanks). See `audio/LICENSE.txt`.

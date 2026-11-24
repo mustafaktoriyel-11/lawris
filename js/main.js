@@ -8,14 +8,22 @@ import { music } from './music.js';
 import { sfx } from './sfx.js';
 import * as skor from './skor.js';
 import { initRehber } from './rehber.js';
-import { t, setLang, onLang, fmtDate, courtLabel, isDefaultName } from './i18n.js';
+import { t, setLang, onLang, fmtDate, courtLabel, isDefaultName, roman } from './i18n.js';
 import { aslanHukum, aslanSeviye, kediSoyle, kediMenu, kediOver, maskotReset } from './maskot.js';
 import './menuyigin.js';
 
-const DEBUG_LV = (() => { try { const v = +new URLSearchParams(location.search).get('seviye'); return v >= 1 && v <= 3 ? v | 0 : 0; } catch (_) { return 0; } })();
-const LEVEL_COUNT = 4;   // mahkeme adları i18n'de: court.N.short / court.N.full
+const DEBUG_LV = (() => { try { const v = +new URLSearchParams(location.search).get('seviye'); return v >= 1 && v <= 60 ? v | 0 : 0; } catch (_) { return 0; } })();
+// 8 Roma mekânı (court.N.short/full/fact) + sonsuz mod (seviye >= 8: sahneler yeniden döner, hız artmaya devam eder).
+// Her mekân 8 satır; 3 aşama (I: 0-2, II: 3-5, III: 6-7 satır). Yerçekimi: aşama başına açık tablo (ms/satır).
+const PLACES = 8, PLACE_ROWS = 8;
+// Acemi oyuncular için ilk mekânlar daha yavaş (kullanıcı geri bildirimi: oyun zor)
+const STAGE_MS = [1000, 940, 880, 820, 770, 720, 670, 625, 585, 545, 505, 470, 435, 405, 375, 345, 320, 295, 270, 250, 230, 210, 195, 180];
+const ENDLESS_MUL = 0.96, GRAV_FLOOR = 110;   // sonsuzda her aşamada x0,96; alt sınır 110 ms
+const levelOf = (r) => Math.floor(r / PLACE_ROWS);
+const stageOf = (r) => { const w = r % PLACE_ROWS; return w < 3 ? 0 : w < 6 ? 1 : 2; };
+const stageIdx = (r) => levelOf(r) * 3 + stageOf(r);
+const baseMs = (r) => { const i = stageIdx(r); return i < STAGE_MS.length ? STAGE_MS[i] : Math.max(GRAV_FLOOR, Math.round(STAGE_MS[STAGE_MS.length - 1] * Math.pow(ENDLESS_MUL, i - STAGE_MS.length + 1))); };
 const REDUCED_MOTION = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-const levelName = (i) => t('court.' + i + '.short');
 const LINE_SCORE = [0, 100, 300, 500, 800, 1200, 1800];
 const GOLD_TYPES = ['sutun', 'kanun'];   // yalnız Sütun ve Kanun altın olabilir
 const GOLD_CHANCE = 0.4;     // bu iki türden gelen parçanın altın olma şansı
@@ -48,7 +56,7 @@ const burst = (o) => {
 };
 // Roma'yı yeniden inşa: görsel seviye (seviye atlama parıltısı sürerken eski seviyede kalır) ve seviye içi ilerleme
 let visLevel = 0, levelTimer = 0;
-const syncProg = (instant) => renderer.setProgress(visLevel, Math.min(8, Math.max(0, rows - visLevel * 8)), instant);
+const syncProg = (instant) => renderer.setProgress(visLevel % PLACES, Math.min(8, Math.max(0, rows - visLevel * 8)), instant);
 function resetReveal() { clearTimeout(levelTimer); levelTimer = 0; renderer.resetReveal(); visLevel = level; syncProg(true); }
 const announced = new WeakSet();
 let slowMs = 0, acc = 0, last = 0;
@@ -107,11 +115,26 @@ function spawn() {
 }
 
 const gravityMs = () => {
-  let ms = Math.max(140, 1000 * Math.pow(0.96, Math.floor(rows / 4)));
+  let ms = baseMs(rows);
   if (slowMs > 0) ms *= 1.8;
   return ms;
 };
 
+let prevStage = 0;
+// Yeni mekân: aslan balonunda tam ad + kısa bilgi (3,8 sn, oyunu engellemez)
+function placeToast(lv) {
+  let head, body;
+  if (lv < PLACES) { head = t('court.' + lv + '.full'); body = t('court.' + lv + '.fact'); }
+  else if (lv === PLACES) { head = t('court.end.full'); body = t('court.end.line'); }
+  else { head = t('court.end.short') + ' ' + roman(lv - PLACES + 1); body = t('court.' + (lv % PLACES) + '.full'); }
+  aslanSeviye(head, body);
+}
+// Aşama atlama: rakam hafifçe büyüyüp altına döner + yumuşak çınlama (büyük geri bildirim yalnız mekân değişiminde)
+function stagePop() {
+  sfx.stageUp();
+  const sp = $('level').querySelector('.stg');
+  if (sp && sp.animate && !REDUCED_MOTION) sp.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.75)', color: '#E6C45A', offset: 0.3 }, { transform: 'scale(1)' }], { duration: 700, easing: 'ease-out' });
+}
 function toast(text, gold) {
   if (state === 'play' && gold) { kediSoyle(text, 2200); return; }
   const el = $('toast');
@@ -124,11 +147,30 @@ function flash(text) {
   el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
 }
 
+// Uzun mekân adları (Tabularium II...) kutuya sığmazsa yazı biraz küçülür; tek satırda kalır
+function fitLevel() {
+  const el = $('level'); if (!el) return;
+  el.style.whiteSpace = 'nowrap'; el.style.fontSize = '';
+  const box = el.parentElement; if (!box || !box.clientWidth) return;
+  let px = parseFloat(getComputedStyle(el).fontSize) || 14, n = 0;
+  const room = () => box.clientWidth - parseFloat(getComputedStyle(box).paddingLeft || 0) - parseFloat(getComputedStyle(box).paddingRight || 0);
+  while (el.scrollWidth > room() + 0.5 && n++ < 12) { px *= 0.93; el.style.fontSize = px.toFixed(2) + 'px'; }
+}
+window.addEventListener('resize', () => { if ($('level')) fitLevel(); });
 function hud() {
   $('score').textContent = score;
   $('best').textContent = best;
   $('menuBest').textContent = best;
-  $('level').textContent = levelName(level);
+  { // mekân adı + küçük aşama rakamı (sonsuzda: İmparatorluk + tur sayısı)
+    const el = $('level'), end = level >= PLACES;
+    const nm = end ? t('court.end.short') : t('court.' + level + '.short'), nu = end ? roman(level - PLACES + 1) : roman(stageOf(rows) + 1);
+    if (el.dataset.k !== nm + '|' + nu) {
+      el.dataset.k = nm + '|' + nu; el.textContent = nm + ' ';
+      const sp = document.createElement('span'); sp.className = 'stg'; sp.textContent = nu;
+      sp.style.cssText = 'display:inline-block;font-size:.66em;font-variant:normal;opacity:.9;letter-spacing:.02em;transform-origin:50% 70%';
+      el.appendChild(sp); fitLevel();
+    }
+  }
   $('status').textContent = (slowMs > 0 ? t('hud.slow', { n: Math.ceil(slowMs / 1000) }) : '');
   $('level').parentElement.classList.toggle('st', slowMs > 0);   // dar ekranda süre yerine durum görünür
 }
@@ -179,14 +221,15 @@ function lockPiece(hard) {
     flash(t('flash.verdict'));
     if (n >= 2) aslanHukum(n);
     sfx.lineClear(n, level);
-    const nl = Math.min(LEVEL_COUNT - 1, Math.floor(rows / 8));
+    const nl = levelOf(rows), si = stageIdx(rows);
+    const stageUp = si > prevStage; prevStage = si;
     if (nl > level) {
-      level = nl; music.setLevel(level); aslanSeviye(level); sfx.levelUp(level, 0.45);
+      level = nl; music.setLevel(level); placeToast(level); sfx.levelUp(level, 0.45);
       // 8. satır: eski mekân tamamen renklenir, kısa parıltı, ardından yeni mekâna geçiş
-      const old = visLevel; renderer.setProgress(old, 8); renderer.shimmer();
+      const old = visLevel; renderer.setProgress(old % PLACES, 8); renderer.shimmer();
       clearTimeout(levelTimer);
       levelTimer = setTimeout(() => { levelTimer = 0; visLevel = level; setLevelColors(level); syncProg(true); }, REDUCED_MOTION ? 0 : 700);
-    } else syncProg();
+    } else { syncProg(); if (stageUp) stagePop(); }
   }
   piece = null;
   updateTension();
@@ -264,7 +307,8 @@ function start() {
   music.setTension(0);
   board.reset();
   score = 0; rows = 0; level = DEBUG_LV; slowMs = 0;
-  if (level) rows = level * 8;
+  if (level) rows = level * PLACE_ROWS;
+  prevStage = stageIdx(rows);
   setLevelColors(level, true); resetReveal();
   queue = []; held = null; holdUsed = false; piece = null;
   for (const id of ['menu', 'over', 'pause', 'rehber']) $(id).hidden = true;
@@ -287,7 +331,7 @@ function kayitEt(e) {
   e.preventDefault();
   if ($('kayit').hidden) return;
   const ad = skor.temizAd($('adIn').value);
-  const sira = skor.ekle(ad, score, 'c' + level, rows);
+  const sira = skor.ekle(ad, score, level < PLACES ? 'p' + level : 'e' + (level - PLACES + 1), rows);
   sonKayit = { ad, puan: score };
   best = Math.max(best, skor.enIyi());
   hud(); $('finalBest').textContent = best;
@@ -440,7 +484,7 @@ $('again').addEventListener('click', start);
 function toMenu() {
   state = 'menu'; piece = null;
   for (const id of ['over', 'pause', 'kursu', 'rehber']) { const el = $(id); if (el) el.hidden = true; }
-  board.reset(); setLevelColors(0, true); level = 0; rows = 0; resetReveal();
+  board.reset(); setLevelColors(0, true); level = 0; rows = 0; prevStage = 0; resetReveal();
   music.startMenu(); music.setTension(0); maskotReset(); kediMenu();
   $('menuBest').textContent = best;
   $('menu').hidden = false;
@@ -510,7 +554,7 @@ $('menuBest').textContent = best;
 kediMenu();
 layout();
 requestAnimationFrame((t) => { last = t; frame(t); });
-window.__lawris = { board, act, applyGolden, lockPiece, get state() { return state; }, get piece() { return piece; }, get held() { return held; }, get queue() { return queue; }, get holdUsed() { return holdUsed; }, get score() { return score; }, setLevel(n) { level = n; rows = n * 8; setLevelColors(n); resetReveal(); }, setProgress(n) { rows = level * 8 + n; renderer.setProgress(visLevel, n, true); }, renderer, burst };
+window.__lawris = { board, act, applyGolden, lockPiece, get state() { return state; }, get piece() { return piece; }, get held() { return held; }, get queue() { return queue; }, get holdUsed() { return holdUsed; }, get score() { return score; }, setLevel(n) { level = n; rows = n * PLACE_ROWS; prevStage = stageIdx(rows); setLevelColors(n); resetReveal(); music.setLevel(n); hud(); }, setRows(r) { rows = r; level = levelOf(r); prevStage = stageIdx(r); setLevelColors(level); resetReveal(); hud(); }, setProgress(n) { rows = level * PLACE_ROWS + n; renderer.setProgress(visLevel % PLACES, n, true); }, gravityMs, baseMs, stageOf, renderer, burst };
 
 // Çevrimdışı çalışma ve her açılışta güncel sürüm
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

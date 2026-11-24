@@ -25,9 +25,22 @@ const tr = {
   'hud.next': 'Sıradaki',
   'hud.slow': 'yavaş {n}sn',
   'court.0.short': 'Forum', 'court.0.full': 'Forum Romanum',
-  'court.1.short': 'Bazilika', 'court.1.full': 'Bazilika',
-  'court.2.short': 'Senato', 'court.2.full': 'Curia (Senato)',
-  'court.3.short': 'Pantheon', 'court.3.full': 'Pantheon',
+  'court.0.fact': 'Forum Romanum, Roma\'nın siyasi, adli ve ticari yaşamının kalbiydi; halk burada bir araya gelirdi.',
+  'court.1.short': 'Bazilika', 'court.1.full': 'Bazilika Iulia',
+  'court.1.fact': 'Bazilika Iulia, Roma\'da medeni hukuk davalarının görüldüğü büyük bir salondu.',
+  'court.2.short': 'Rostra', 'court.2.full': 'Forum Rostraları',
+  'court.2.fact': 'Rostra kürsüsünden yasalar halka ilan edilir, hatipler kalabalığa burada seslenirdi.',
+  'court.3.short': 'Tabularium', 'court.3.full': 'Tabularium Arşivi',
+  'court.3.fact': 'Tabularium, Roma devletinin yasa ve resmi kayıtlarının saklandığı devlet arşiviydi.',
+  'court.4.short': 'Senato', 'court.4.full': 'Curia Iulia (Senato)',
+  'court.4.fact': 'Curia Iulia, Roma Senatosu\'nun toplandığı meclis binasıydı; kararlar burada alınırdı.',
+  'court.5.short': 'Kapitol', 'court.5.full': 'Capitolium (Jüpiter)',
+  'court.5.fact': 'Kapitol Tepesi\'ndeki Jüpiter Tapınağı, devlet dininin ve zafer törenlerinin merkeziydi.',
+  'court.6.short': 'Palatin', 'court.6.full': 'Palatium (İmparator)',
+  'court.6.fact': 'Palatin Tepesi\'ndeki saray, imparatorluk yönetiminin ve imparatorun kararlarının çıktığı merkezdi.',
+  'court.7.short': 'Pantheon', 'court.7.full': 'Pantheon Tapınağı',
+  'court.7.fact': 'Hadrianus döneminde yeniden inşa edilen Pantheon, tüm tanrılara adanmış görkemli bir tapınaktır.',
+  'court.end.short': 'İmparatorluk', 'court.end.full': 'Sonsuz İmparatorluk', 'court.end.line': 'Dava hiç kapanmaz. Her tur daha hızlı, her dava daha zor.',
   'aria.pause': 'Duraklat',
   'aria.musicOff': 'Müziği kapat', 'aria.musicOn': 'Müziği aç',
   'aria.sfxOff': 'Efektleri kapat', 'aria.sfxOn': 'Efektleri aç',
@@ -35,9 +48,13 @@ const tr = {
   'aria.hold': 'Talik', 'aria.drop': 'Düşür', 'aria.rotate': 'Döndür',
   'aria.close': 'Kapat',
   'lion.2': 'Hüküm!', 'lion.3': 'Oybirliğiyle!', 'lion.4': 'Emsal karar!',
-  'lion.lvl.1': 'Dosya Bazilika\'ya taşındı',
-  'lion.lvl.2': 'Curia kapıları açıldı',
-  'lion.lvl.3': 'Pantheon\'un kubbesi altındasın',
+  'lion.lvl.1': 'Dosyanı aç, net konuş. Burada bağırmak delil sayılmaz.',
+  'lion.lvl.2': 'Kürsüye çık, ama her sözün tutanağa geçecek.',
+  'lion.lvl.3': 'Kayıtlar uyur ama hiçbir kanun unutulmaz.',
+  'lion.lvl.4': 'Senato toplandı. Oylarınızı verin, bağırmanızı değil.',
+  'lion.lvl.5': 'Zafer alayları buraya varır. Dosyanı kusursuz kapat.',
+  'lion.lvl.6': 'Saraydasın. Her ferman er ya da geç tartışılır.',
+  'lion.lvl.7': 'Tüm tanrılar izliyor. Dürüst ol, hâkim de dinliyor.',
   'flash.verdict': 'Hüküm!',
   'pause.title': 'Duraklatıldı',
   'pause.resume': 'Devam',
@@ -114,9 +131,22 @@ const en = {
   'hud.next': 'Next',
   'hud.slow': 'slow {n}s',
   'court.0.short': 'Forum', 'court.0.full': 'Forum Romanum',
-  'court.1.short': 'Basilica', 'court.1.full': 'Basilica',
-  'court.2.short': 'Senate', 'court.2.full': 'Curia (Senate)',
-  'court.3.short': 'Pantheon', 'court.3.full': 'Pantheon',
+  'court.0.fact': 'The Forum Romanum was the heart of Rome\'s political, judicial and commercial life.',
+  'court.1.short': 'Basilica', 'court.1.full': 'Basilica Iulia',
+  'court.1.fact': 'The Basilica Iulia was a great hall where Rome\'s civil lawsuits were heard.',
+  'court.2.short': 'Rostra', 'court.2.full': 'Rostra in the Forum',
+  'court.2.fact': 'From the Rostra, laws were announced to the public and orators addressed the crowd.',
+  'court.3.short': 'Tabularium', 'court.3.full': 'Tabularium Archive',
+  'court.3.fact': 'The Tabularium was Rome\'s state archive, where laws and official records were kept.',
+  'court.4.short': 'Senate', 'court.4.full': 'Curia Iulia (Senate)',
+  'court.4.fact': 'The Curia Iulia was the Senate house, where senators met and decided public business.',
+  'court.5.short': 'Capitol', 'court.5.full': 'Capitolium (Jupiter)',
+  'court.5.fact': 'The Temple of Jupiter on the Capitoline Hill was the centre of state religion and triumphs.',
+  'court.6.short': 'Palatine', 'court.6.full': 'Palatine Palace',
+  'court.6.fact': 'On the Palatine Hill, the imperial palace was the seat of government and imperial decrees.',
+  'court.7.short': 'Pantheon', 'court.7.full': 'Pantheon Temple',
+  'court.7.fact': 'Rebuilt under Hadrian, the Pantheon was a majestic temple dedicated to all the gods.',
+  'court.end.short': 'Imperium', 'court.end.full': 'Endless Imperium', 'court.end.line': 'The case never closes. Each round, faster and harder.',
   'aria.pause': 'Pause',
   'aria.musicOff': 'Turn music off', 'aria.musicOn': 'Turn music on',
   'aria.sfxOff': 'Turn sound effects off', 'aria.sfxOn': 'Turn sound effects on',
@@ -124,9 +154,13 @@ const en = {
   'aria.hold': 'Hold', 'aria.drop': 'Drop', 'aria.rotate': 'Rotate',
   'aria.close': 'Close',
   'lion.2': 'Verdict!', 'lion.3': 'Unanimous!', 'lion.4': 'Landmark ruling!',
-  'lion.lvl.1': 'The case moves to the Basilica',
-  'lion.lvl.2': 'The Curia doors open',
-  'lion.lvl.3': 'You stand beneath the Pantheon dome',
+  'lion.lvl.1': 'Open the file, speak clearly. Shouting is not evidence.',
+  'lion.lvl.2': 'Take the rostra, but every word goes on the record.',
+  'lion.lvl.3': 'Records sleep here, but no law is ever truly forgotten.',
+  'lion.lvl.4': 'The Senate is in session. Vote, don\'t shout.',
+  'lion.lvl.5': 'Triumphs end here. Close your case flawlessly.',
+  'lion.lvl.6': 'You\'re in the palace. Every decree gets debated eventually.',
+  'lion.lvl.7': 'All the gods are watching. Be honest, the judge is listening.',
   'flash.verdict': 'Verdict!',
   'pause.title': 'Paused',
   'pause.resume': 'Resume',
@@ -242,12 +276,23 @@ export function fmtDate(iso) {
   try { return new Intl.DateTimeFormat(lang).format(d); } catch (_) { return d.toLocaleDateString(); }
 }
 
-// Kürsüde saklanan mahkeme: yeni kayıtlar 'c0'..'c3', eski kayıtlar Türkçe ad ('Sulh' ...)
+// Roma rakamı (1..39 yeterli; sonrası sayı)
+export function roman(n) {
+  n = Math.floor(n); if (!(n >= 1 && n < 400)) return String(n);
+  let r = ''; for (const [v, s] of [[100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']]) while (n >= v) { r += s; n -= v; }
+  return r;
+}
+// Kürsüde saklanan mahkeme (yeni: 'p0'..'p7' mekân, 'eN' sonsuz tur; eski 'c0'..'c3' ve Türkçe adlar desteklenir): yeni kayıtlar 'c0'..'c3', eski kayıtlar Türkçe ad ('Sulh' ...)
 export function courtLabel(stored) {
-  const m = /^c([0-3])$/.exec(stored || '');
-  let i = m ? +m[1] : -1;
-  if (i < 0) { const L = { Sulh: 0, Asliye: 1, 'İstinaf': 2, 'Yargıtay': 3, 'Magistr.': 0, District: 1, Appeal: 2, Supreme: 3 }[stored]; if (L !== undefined) i = L; }
-  if (i < 0) for (let k = 0; k < 4; k++) if (DICT.tr['court.' + k + '.short'] === stored) i = k;
+  const OLD = [0, 1, 4, 7];   // eski 4 kademe -> yeni mekân sırası (Forum, Bazilika, Senato, Pantheon)
+  let m = /^p([0-7])$/.exec(stored || '');
+  if (m) return t('court.' + m[1] + '.full');
+  m = /^e(\d+)$/.exec(stored || '');
+  if (m) return t('court.end.short') + ' ' + roman(+m[1]);
+  m = /^c([0-3])$/.exec(stored || '');
+  let i = m ? OLD[+m[1]] : -1;
+  if (i < 0) { const L = { Sulh: 0, Asliye: 1, 'İstinaf': 4, 'Yargıtay': 7, 'Magistr.': 0, District: 1, Appeal: 4, Supreme: 7 }[stored]; if (L !== undefined) i = L; }
+  if (i < 0) for (const k of [0, 1, 4, 7]) if (DICT.tr['court.' + k + '.short'] === stored) i = k;
   return i < 0 ? String(stored || '') : t('court.' + i + '.full');
 }
 
