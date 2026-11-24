@@ -55,6 +55,13 @@ const PAL = {
   // vermilyon lak: dört zemin rengine karşı kontrast >= 4.2:1
   kalem: { main: '#D9573A', dark: '#6B2010', acc: '#F6E3A1', ring: '#F2C94C' },
 };
+// Deneme: ?islem=pirinc ile normal parçaların işlemeleri antik pirinç olur (parlak altın yalnızca altın parçalarda)
+const ISLEM = (() => { try { return new URLSearchParams(location.search).get('islem'); } catch (_) { return null; } })();
+if (ISLEM === 'pirinc') {
+  const B = '#C2A26A', BD = '#6E5A33';
+  PAL.tokmak.acc = '#D2B47E'; PAL.kanun.acc = B; PAL.kanun.accD = BD; PAL.paragraf.acc = B;
+  PAL.terazi.acc = BD; PAL.terazi.pivot = B; PAL.kilic.hilt = B; PAL.kalem.acc = '#DCC89E'; PAL.kalem.ring = B;
+}
 const GOLDEN = { main: C.gold, dark: C.goldD, acc: C.ink, accD: '#A89C74', grip: C.goldD, gripD: '#5E4A0C', gem: C.bordo };
 
 function rr(c, x, y, w, h, r) {
