@@ -10,6 +10,7 @@ import * as skor from './skor.js';
 import { initRehber } from './rehber.js';
 import { t, setLang, onLang, fmtDate, courtLabel, isDefaultName } from './i18n.js';
 import { aslanHukum, aslanSeviye, kediSoyle, kediMenu, kediOver, maskotReset } from './maskot.js';
+import './menuyigin.js';
 
 const LEVEL_COUNT = 4;   // mahkeme adları i18n'de: court.N.short / court.N.full
 const levelName = (i) => t('court.' + i + '.short');
@@ -63,7 +64,7 @@ function place(p) {
   piece = p;
   announce(piece);
   piece.id = nextId();
-  piece.rot = 0;
+  piece.rot = 0; piece.rx = 0; piece.ry = 0;
   piece.x = Math.floor((COLS - sizeOf(piece.type, 0).w) / 2);
   piece.y = 0;
   acc = 0; lockMs = 0; resets = 0; lowestY = 0;
@@ -226,14 +227,17 @@ const act = {
   rotate() {
     if (state !== 'play') return;
     const nr = (piece.rot + 1) & 3;
-    // Parça kendi merkezi etrafında döner (sol üst köşe değil); sonra yakın konumlar denenir
+    // Parça kendi merkezi etrafında döner. Yarım hücrelik kayma rx/ry'de saklanır,
+    // böylece 4 dönüşte parça başladığı yere döner (yukarı/sola tırmanmaz).
     const o = sizeOf(piece.type, piece.rot), n = sizeOf(piece.type, nr);
-    const bx = piece.x + Math.floor((o.w - n.w) / 2), by = piece.y + Math.floor((o.h - n.h) / 2);
-    const kicks = [[0, 0], [-1, 0], [1, 0], [0, -1], [-1, -1], [1, -1], [-2, 0], [2, 0], [0, 1], [-1, 1], [1, 1],
-      [0, -2], [-2, -1], [2, -1], [-1, -2], [1, -2], [-2, -2], [2, -2]];
+    const ex = piece.x + (piece.rx || 0) + (o.w - n.w) / 2, ey = piece.y + (piece.ry || 0) + (o.h - n.h) / 2;
+    const bx = Math.round(ex), by = Math.round(ey), rx = ex - bx, ry = ey - by;
+    // Önce yerinde, sonra yanlara, sonra aşağı; yukarı itme en son çare
+    const kicks = [[0, 0], [-1, 0], [1, 0], [-2, 0], [2, 0], [0, 1], [-1, 1], [1, 1],
+      [0, -1], [-1, -1], [1, -1], [-2, -1], [2, -1], [0, -2], [-1, -2], [1, -2]];
     for (const [dx, dy] of kicks) {
       const x = bx + dx, y = by + dy;
-      if (y >= 0 && !board.collides(piece, x, y, nr)) { piece.x = x; piece.y = y; piece.rot = nr; moved(); sfx.rotate(); return; }
+      if (y >= 0 && !board.collides(piece, x, y, nr)) { piece.x = x; piece.y = y; piece.rot = nr; piece.rx = rx; piece.ry = ry; moved(); sfx.rotate(); return; }
     }
   },
   drop() {
