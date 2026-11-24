@@ -3,7 +3,7 @@ const q = (() => { try { return new URLSearchParams(location.search).get('tema')
 const THEMES = {
   lacivert: { name: 'lacivert', bg: '#1B2340', grid: '#253058', panel: '#253058', f: '#E8E4DA', fD: '#A9A397', band: null, kanun: null },
   a: { name: 'a', bg: '#5A1520', grid: '#6B2230', panel: '#6B2230', f: '#C9A227', fD: '#8C6F12', band: null, kanun: null },
-  b: { name: 'b', bg: '#2A0E14', grid: '#3B1820', panel: '#3B1820', f: '#E8E4DA', fD: '#A9A397', band: '#C9A227', kanun: { main: '#4A72C4', dark: '#26407A' } },
+  b: { name: 'b', bg: '#190A0E', grid: '#2A1419', panel: '#2A1419', f: '#E8E4DA', fD: '#A9A397', band: '#C9A227', kanun: { main: '#4A72C4', dark: '#26407A' } },
 };
 export const THEME = THEMES[q] || THEMES.b;
 document.documentElement.style.setProperty('--bg', THEME.bg);
@@ -11,10 +11,10 @@ document.documentElement.style.setProperty('--panel', THEME.panel);
 
 // Mahkeme seviyesine göre zemin renkleri (yalnızca varsayılan temada)
 const LEVEL_COLORS = [
-  { bg: '#2A0E14', grid: '#3B1820' }, // Sulh: koyu bordo
-  { bg: '#10202A', grid: '#1B3140' }, // Asliye: koyu petrol mavisi
-  { bg: '#1C1A12', grid: '#2E2A1C' }, // İstinaf: koyu bronz
-  { bg: '#1C0F2A', grid: '#2D1B42' }, // Yargıtay: derin mor
+  { bg: '#190A0E', grid: '#2A1419' }, // Sulh: koyu bordo
+  { bg: '#0A161D', grid: '#152733' }, // Asliye: koyu petrol mavisi
+  { bg: '#14120C', grid: '#252217' }, // İstinaf: koyu bronz
+  { bg: '#130A1D', grid: '#22142F' }, // Yargıtay: derin mor
 ];
 const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
 const mix = (a, b, t) => '#' + hex(a).map((v, i) => Math.round(v + (hex(b)[i] - v) * t).toString(16).padStart(2, '0')).join('');

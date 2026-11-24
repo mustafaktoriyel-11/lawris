@@ -36,26 +36,45 @@ export function initInput(a, canvas, getCell) {
     el.addEventListener('contextmenu', (e) => e.preventDefault());
   });
 
-  // Kaydırma: yatay sürükle = taşı, aşağı sürükle = hızlı in, hızlı aşağı fiske = düşür, dokun = döndür
+  // Kaydırma: yön kilidi ile
+  //  - parmak önce hangi yöne belirgin giderse o eksene kilitlenir (yatay ya da dikey), parmak kalkana kadar diğer eksen yok sayılır
+  //  - yatay sürükle = taşı, yavaş aşağı sürükle = hızlı in, hızlı aşağı fiske = düşür, yukarı fiske = talik, dokun = döndür
   let st = null;
   canvas.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     if (e.pointerType === 'mouse') return;   // masaüstünde fare tıklaması oyunu etkilemez (klavye kullanılır)
     try { canvas.setPointerCapture(e.pointerId); } catch (_) { /* yoksay */ }
-    st = { x: e.clientX, y: e.clientY, t: performance.now(), ax: e.clientX, ay: e.clientY, moved: false };
+    st = { x: e.clientX, y: e.clientY, t: performance.now(), ax: e.clientX, ay: e.clientY, moved: false, axis: null, done: false };
   });
   canvas.addEventListener('pointermove', (e) => {
-    if (!st) return;
-    const cell = getCell() * 1.1;
-    while (e.clientX - st.ax > cell) { st.ax += cell; st.moved = true; fire('right'); }
-    while (st.ax - e.clientX > cell) { st.ax -= cell; st.moved = true; fire('left'); }
-    while (e.clientY - st.ay > cell) { st.ay += cell; st.moved = true; fire('down'); }
+    if (!st || st.done) return;
+    const c = getCell(), dx = e.clientX - st.x, dy = e.clientY - st.y;
+    if (!st.axis) {
+      const lock = c * 0.55;
+      if (Math.abs(dx) < lock && Math.abs(dy) < lock) return;
+      st.axis = Math.abs(dy) > Math.abs(dx) ? 'y' : 'x';
+      st.ax = st.x; st.ay = st.y;
+    }
+    if (st.axis === 'x') {
+      const cell = c * 1.1;
+      while (e.clientX - st.ax > cell) { st.ax += cell; st.moved = true; fire('right'); }
+      while (st.ax - e.clientX > cell) { st.ax -= cell; st.moved = true; fire('left'); }
+    } else {
+      const dt = performance.now() - st.t;
+      // hızlı aşağı fiske: hemen düşür (parmak kalkmayı beklemeden)
+      if (dy > c * 2.2 && dt < 220) { st.done = true; st.moved = true; fire('drop'); return; }
+      const cell = c * 1.1;
+      while (e.clientY - st.ay > cell) { st.ay += cell; st.moved = true; fire('down'); }
+    }
   });
   const end = (e) => {
     if (!st) return;
-    const dt = performance.now() - st.t, dx = e.clientX - st.x, dy = e.clientY - st.y;
-    if (!st.moved && Math.abs(dx) < 10 && Math.abs(dy) < 10 && dt < 350) fire('rotate');
-    else if (dy > getCell() * 3 && dt < 280 && Math.abs(dx) < dy) fire('drop');
+    const dt = performance.now() - st.t, dx = e.clientX - st.x, dy = e.clientY - st.y, c = getCell();
+    if (!st.done) {
+      if (!st.axis && Math.abs(dx) < 10 && Math.abs(dy) < 10 && dt < 350) fire('rotate');
+      else if (st.axis === 'y' && dy > c * 3 && dt < 320) fire('drop');
+      else if (st.axis === 'y' && -dy > c * 2.2 && dt < 320) fire('hold');
+    }
     st = null;
   };
   canvas.addEventListener('pointerup', end);

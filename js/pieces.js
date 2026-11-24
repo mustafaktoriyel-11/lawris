@@ -135,14 +135,33 @@ function dKanun(c, s, P) {
   c.font = 'bold ' + Math.round(s * 0.5) + 'px Georgia, serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
   c.fillText('LAW', cx, 1.02 * s);
 }
+function canlandir(hex) {
+  let r = parseInt(hex.slice(1, 3), 16) / 255, g = parseInt(hex.slice(3, 5), 16) / 255, b = parseInt(hex.slice(5, 7), 16) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b); let h = 0, sa = 0; const l = (mx + mn) / 2;
+  if (mx !== mn) { const d = mx - mn; sa = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+    h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h /= 6; }
+  const s2 = Math.min(1, sa * 1.15 + 0.03), l2 = Math.min(0.92, l * 1.04);
+  const f = (n) => { const k = (n + h * 12) % 12, a = s2 * Math.min(l2, 1 - l2); return Math.round(255 * (l2 - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))); };
+  return '#' + [f(0), f(8), f(4)].map((v) => v.toString(16).padStart(2, '0')).join('');
+}
 function unionPlate(c, s, cells, P) {
   const has = (x, y) => cells.some((q) => q[0] === x && q[1] === y);
   const lw = Math.max(1.5, s * 0.07), i = 0.04 * s;
-  c.fillStyle = P.main;
+  c.fillStyle = canlandir(P.main);
   for (const [x, y] of cells) {
     const x0 = x * s + (has(x - 1, y) ? 0 : i), x1 = (x + 1) * s - (has(x + 1, y) ? 0 : i);
     const y0 = y * s + (has(x, y - 1) ? 0 : i), y1 = (y + 1) * s - (has(x, y + 1) ? 0 : i);
     c.fillRect(x0, y0, x1 - x0, y1 - y0);
+  }
+  {   // üstten ışık, alttan gölge: cilalı levha hissi
+    const e = lw * 1.6;
+    for (const [x, y] of cells) {
+      const L = x * s + i, R = (x + 1) * s - i, T = y * s + i, B = (y + 1) * s - i;
+      if (!has(x, y - 1)) { c.fillStyle = 'rgba(255,255,255,0.22)'; c.fillRect(L, T, R - L, e); }
+      if (!has(x - 1, y)) { c.fillStyle = 'rgba(255,255,255,0.10)'; c.fillRect(L, T, e, B - T); }
+      if (!has(x, y + 1)) { c.fillStyle = 'rgba(0,0,0,0.26)'; c.fillRect(L, B - e, R - L, e); }
+      if (!has(x + 1, y)) { c.fillStyle = 'rgba(0,0,0,0.16)'; c.fillRect(R - e, T, e, B - T); }
+    }
   }
   c.strokeStyle = P.dark; c.lineWidth = lw; c.lineCap = 'square';
   for (const [x, y] of cells) {
