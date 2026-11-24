@@ -387,12 +387,34 @@ function frame(t) {
 }
 
 let lastKey = '';
+// Dikey ekranda yan raylar: Talik + puan solda, Sıradaki + düğmeler sağda.
+// Kural: tahta tam genişlikteyken hücre boyutu (cF) ile raylar için yer ayrılınca (cR) karşılaştırılır;
+// genişlik artıyorsa (tahta yükseklikle sınırlı) ya da hücre en çok %10 küçülüyorsa raylar kullanılır.
+const RAIL_MIN = 92, RAIL_GAP = 8, BOARD_CW = COLS + 2, BOARD_CH = ROWS + 2.2;
+function railsWanted(w) {
+  const root = document.documentElement;
+  if (!root.classList.contains('ui-mix')) return false;
+  if (window.innerWidth / window.innerHeight >= 1.1 || window.innerWidth < 340) return false;
+  const had = root.classList.contains('rails');
+  root.classList.remove('rails'); const fw = w.clientWidth, fh = w.clientHeight;
+  root.classList.add('rails'); const rw = w.clientWidth, rh = w.clientHeight;
+  if (!had) root.classList.remove('rails');
+  const cF = Math.min(fw / BOARD_CW, fh / BOARD_CH);
+  const cR = Math.min((rw - 2 * (RAIL_MIN + RAIL_GAP)) / BOARD_CW, rh / BOARD_CH);
+  return cR >= cF * 0.9;
+}
 function layout() {
   const w = $('stage');
+  if (!w.clientWidth || !w.clientHeight) return;
+  const rails = railsWanted(w);
+  document.documentElement.classList.toggle('rails', rails);
   const cw = w.clientWidth, ch = w.clientHeight;
   if (!cw || !ch) return;
   const d = window.devicePixelRatio || 1;
-  renderer.resize(cw, ch);
+  renderer.resize(rails ? cw - 2 * (RAIL_MIN + RAIL_GAP) : cw, ch);
+  const rs = document.documentElement.style;
+  rs.setProperty('--cell', renderer.cellCss + 'px');
+  rs.setProperty('--stw', canvas.getBoundingClientRect().width + 'px');
   // hücre boyutu ya da çözünürlük değişmediyse sprite önbelleği korunur
   const key = renderer.s + '@' + d;
   if (key !== lastKey) { clearSpriteCache(); lastKey = key; }

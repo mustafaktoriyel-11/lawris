@@ -630,3 +630,47 @@ html.ui-mix #menu .mascot-badge svg { filter: drop-shadow(0 4px 8px rgba(60,30,1
 }
 /* Aydınlık menüde parıltı animasyonu gereksiz (sürekli yeniden boyama yapıyordu) */
 html.ui-mix #menu button.big { animation: none; }
+
+/* =====================================================================
+   Dikey yan ray düzeni (html.rails, js/main.js railsWanted): solda Talik + puan + mekân,
+   sağda Sıradaki (3 parça dikey) + ses/duraklat düğmeleri. Tahta tam genişlikteki #stage'in ortasında kalır.
+   ===================================================================== */
+html.ui-mix.rails #app {
+  max-width: 1100px; padding-left: 10px; padding-right: 10px;
+  display: grid; grid-template-columns: minmax(0, 1fr) var(--stw, 0px) minmax(0, 1fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto auto auto auto;
+  column-gap: 8px; row-gap: 8px;
+}
+html.ui-mix.rails #hud { display: contents; }
+html.ui-mix.rails #stage { grid-column: 1 / -1; grid-row: 1 / 8; contain: size; min-width: 0; align-items: flex-start; }
+html.ui-mix.rails #pad { grid-column: 1 / -1; grid-row: 8; }
+html.ui-mix.rails #kbdHelp { display: none; }
+html.ui-mix.rails #app #hud .box {
+  container-type: inline-size; position: relative; z-index: 2; align-self: start; justify-self: stretch;
+  height: auto; min-height: 0; padding: 10px 8px; gap: 3px; justify-content: flex-start; align-items: center; text-align: center;
+  background: var(--glass); border: 1px solid var(--hair); border-radius: 16px;
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 6px 20px rgba(0,0,0,.25);
+}
+html.ui-mix.rails #app #hud .box:first-child { padding-left: 8px; border-left: 1px solid var(--hair); }
+html.ui-mix.rails #app #hud .lbl { white-space: normal; width: auto; line-height: 1.15; letter-spacing: .1em; font-size: clamp(.56rem, 9cqw, .8rem); opacity: .75; }
+html.ui-mix.rails #app #hud .box b { font-size: clamp(1.05rem, 16cqw, 1.8rem); line-height: 1.15; }
+html.ui-mix.rails #app #hud #level { font-size: clamp(.95rem, 13cqw, 1.5rem); }
+html.ui-mix.rails #app #hud .sub { font-size: clamp(.64rem, 9.5cqw, .95rem); opacity: .8; line-height: 1.3; white-space: normal; max-width: none; overflow: visible; }
+html.ui-mix.rails #app #hud .box.st #sure { display: inline; }
+html.ui-mix.rails #app #hud #holdBox { grid-column: 1; grid-row: 1; cursor: pointer; }
+html.ui-mix.rails #app #hud .box:nth-child(1) { grid-column: 1; grid-row: 2; }
+html.ui-mix.rails #app #hud .box:nth-child(2) { grid-column: 1; grid-row: 3; }
+html.ui-mix.rails #app #hud #nextBox { grid-column: 3; grid-row: 1 / 5; flex-direction: column; padding-right: 8px; }
+html.ui-mix.rails #app #hud #nextBox .lbl, html.ui-mix.rails #app #hud #holdBox .lbl { width: auto; font-size: clamp(.6rem, 10cqw, .84rem); letter-spacing: .14em; }
+html.ui-mix.rails #app #hud .pv { flex-direction: column; align-items: center; gap: 6px; margin-top: 4px; width: 100%; }
+html.ui-mix.rails #app #hud .nx { flex-direction: column; align-items: center; gap: 6px; }
+html.ui-mix.rails #app #hud #hold, html.ui-mix.rails #app #hud #next { width: min(100cqw, calc(var(--cell, 36px) * 2.7)); height: min(100cqw, calc(var(--cell, 36px) * 2.7)); }
+html.ui-mix.rails #app #hud #next2, html.ui-mix.rails #app #hud #next3 { width: min(100cqw, calc(var(--cell, 36px) * 2.1)); height: min(100cqw, calc(var(--cell, 36px) * 2.1)); opacity: .9; }
+html.ui-mix.rails #app #hud #pauseBtn, html.ui-mix.rails #app #hud #muteBtn, html.ui-mix.rails #app #hud #sfxBtn {
+  grid-column: 3; justify-self: center; flex: none; z-index: 2; width: 44px; height: 44px; margin: 0; border-radius: 50%; font-size: 15px;
+}
+html.ui-mix.rails #app #hud #pauseBtn { grid-row: 5; }
+html.ui-mix.rails #app #hud #muteBtn { grid-row: 6; }
+html.ui-mix.rails #app #hud #sfxBtn { grid-row: 7; }
+html.ui-mix.rails #app .snd svg { width: 20px; height: 20px; }
+html.ui-mix.rails #app #hud .box:is(#holdBox, #nextBox) { height: auto; min-height: 0; padding-top: 10px; padding-bottom: 10px; }
