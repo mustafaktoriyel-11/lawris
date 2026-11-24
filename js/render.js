@@ -1,7 +1,8 @@
 // Lex Stack - çizim
 import { COLS, ROWS } from './board.js';
-import { THEME as TH } from './theme.js';
+import { THEME as TH, levelFade } from './theme.js';
 import { getSprite, hasCell, sizeOf, cellsOf, COLORS as C } from './pieces.js';
+import { makeBackdrop } from './roma.js';
 import { drawBurst, BURST_MS, shakeX, drawCalm } from './fx.js';
 
 const TOP = 1.7;     // alınlık yüksekliği (hücre)
@@ -53,6 +54,7 @@ export class Renderer {
     this.cv.style.width = this.cv.width / this.dpr + 'px';
     this.cv.style.height = this.cv.height / this.dpr + 'px';
     this.bx = this.s * COLW; this.by = this.s * TOP;
+    this.bdrop = {};   // arka plan önbelleği (seviye başına), boyut değişince yeniden kurulur
   }
   get cellCss() { return this.s / this.dpr; }
 
@@ -62,6 +64,15 @@ export class Renderer {
     const nowT = performance.now(), sx = g.bursts && g.bursts.length ? shakeX(g.bursts, nowT, s) : 0;
     c.save(); if (sx) c.translate(sx, 0);
     this.drawFrame(c, s, W, H);
+    // Roma mekân arka planı (ızgaranın arkasında; seviye geçişinde çapraz solma)
+    {
+      const f = levelFade(), bw = COLS * s, bh = ROWS * s;
+      const get = (lv) => (this.bdrop[lv] || (this.bdrop[lv] = makeBackdrop(lv, bw, bh)));
+      c.save(); c.beginPath(); c.rect(this.bx, this.by, bw, bh); c.clip();
+      if (f.e < 1 && f.a !== f.b) { c.globalAlpha = 1 - f.e; c.drawImage(get(f.a), this.bx, this.by); }
+      c.globalAlpha = f.a !== f.b ? f.e : 1; c.drawImage(get(f.b), this.bx, this.by);
+      c.restore();
+    }
     // ızgara
     c.strokeStyle = TH.grid; c.lineWidth = 1; c.beginPath();
     for (let x = 0; x <= COLS; x++) { c.moveTo(this.bx + x * s + 0.5, this.by); c.lineTo(this.bx + x * s + 0.5, this.by + ROWS * s); }

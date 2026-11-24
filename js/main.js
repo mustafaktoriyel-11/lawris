@@ -12,6 +12,7 @@ import { t, setLang, onLang, fmtDate, courtLabel, isDefaultName } from './i18n.j
 import { aslanHukum, aslanSeviye, kediSoyle, kediMenu, kediOver, maskotReset } from './maskot.js';
 import './menuyigin.js';
 
+const DEBUG_LV = (() => { try { const v = +new URLSearchParams(location.search).get('seviye'); return v >= 1 && v <= 3 ? v | 0 : 0; } catch (_) { return 0; } })();
 const LEVEL_COUNT = 4;   // mahkeme adları i18n'de: court.N.short / court.N.full
 const levelName = (i) => t('court.' + i + '.short');
 const LINE_SCORE = [0, 100, 300, 500, 800, 1200, 1800];
@@ -273,8 +274,9 @@ function start() {
   music.start();
   music.setTension(0);
   board.reset();
-  score = 0; rows = 0; level = 0; doubleLeft = 0; slowMs = 0;
-  setLevelColors(0, true);
+  score = 0; rows = 0; level = DEBUG_LV; doubleLeft = 0; slowMs = 0;
+  if (level) rows = level * 8;
+  setLevelColors(level, true);
   queue = []; held = null; holdUsed = false; piece = null;
   for (const id of ['menu', 'over', 'pause', 'rehber']) $(id).hidden = true;
   state = 'play';
@@ -490,7 +492,7 @@ $('menuBest').textContent = best;
 kediMenu();
 layout();
 requestAnimationFrame((t) => { last = t; frame(t); });
-window.__lawris = { board, act, applyGolden, lockPiece, get state() { return state; }, get piece() { return piece; }, get held() { return held; }, get queue() { return queue; }, get holdUsed() { return holdUsed; }, get score() { return score; } };
+window.__lawris = { board, act, applyGolden, lockPiece, get state() { return state; }, get piece() { return piece; }, get held() { return held; }, get queue() { return queue; }, get holdUsed() { return holdUsed; }, get score() { return score; }, setLevel(n) { level = n; setLevelColors(n); } };
 
 // Çevrimdışı çalışma ve her açılışta güncel sürüm
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

@@ -11,17 +11,20 @@ document.documentElement.style.setProperty('--panel', THEME.panel);
 
 // Mahkeme seviyesine göre zemin renkleri (yalnızca varsayılan temada)
 const LEVEL_COLORS = [
-  { bg: '#190A0E', grid: '#2A1419' }, // Sulh: koyu bordo
-  { bg: '#0A161D', grid: '#152733' }, // Asliye: koyu petrol mavisi
-  { bg: '#14120C', grid: '#252217' }, // İstinaf: koyu bronz
-  { bg: '#130A1D', grid: '#22142F' }, // Yargıtay: derin mor
+  { bg: '#1A0D0C', grid: '#2D1815' }, // Forum: terracotta alacakaranlık
+  { bg: '#16130C', grid: '#292317' }, // Bazilika: traverten
+  { bg: '#0E1115', grid: '#1D232B' }, // Senato (Curia): mermer grisi
+  { bg: '#180A1D', grid: '#2B1531' }, // Pantheon: imparatorluk moru
 ];
 const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
 const mix = (a, b, t) => '#' + hex(a).map((v, i) => Math.round(v + (hex(b)[i] - v) * t).toString(16).padStart(2, '0')).join('');
-let from = null, to = null, t = 1;
+let from = null, to = null, t = 1, fromLv = 0, toLv = 0;
+// Arka plan geçişi için: önceki/sonraki seviye ve 0..1 yumuşatılmış ilerleme
+export function levelFade() { return { a: fromLv, b: toLv, e: t * t * (3 - 2 * t) }; }
 export function setLevelColors(level, instant) {
   if (THEME.name !== 'b') return;
   const target = LEVEL_COLORS[Math.min(level, LEVEL_COLORS.length - 1)];
+  fromLv = toLv; toLv = Math.min(level, LEVEL_COLORS.length - 1); if (instant) fromLv = toLv;
   from = { bg: THEME.bg, grid: THEME.grid }; to = target; t = instant ? 1 : 0;
   if (instant) apply(target.bg, target.grid);
 }
