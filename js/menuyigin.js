@@ -10,7 +10,7 @@ menu.appendChild(cv);
 const c = cv.getContext('2d');
 const azHareket = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-let DPR = 1, sonu = 0, gor = 1, W = 0, H = 0, s = 24, cols = 12, rows = 7, grid = [], kalici = [], dusen = null, bekle = 0, isik = null, son = 0;
+let kirli = true, bosta = false, st = null, stc = null, DPR = 1, sonu = 0, gor = 1, W = 0, H = 0, s = 24, cols = 12, rows = 7, grid = [], kalici = [], dusen = null, bekle = 0, isik = null, son = 0;
 
 const bos = () => Array.from({ length: rows }, () => Array(cols).fill(false));
 function carpar(cs, x, y) {
@@ -18,7 +18,7 @@ function carpar(cs, x, y) {
 }
 function yerles(p) {
   for (const [cx, cy] of cellsOf(p.t, p.r)) if (p.y + cy >= 0) grid[p.y + cy][p.x + cx] = true;
-  kalici.push(p);
+  kalici.push(p); kirli = true;
 }
 // Rastgele parça, ama düzgün yerleşim: delik bırakmayan ve alçakta kalan konum seçilir
 function yeniParca() {
@@ -52,6 +52,7 @@ function satirSil() {
 }
 // Silinen satır: o satırdaki hücreler gizlenir, üstteki hücreler bir satır iner (parça başına hücre ofseti)
 function kaydir(y) {
+  kirli = true;
   grid.splice(y, 1); grid.unshift(Array(cols).fill(false));
   for (const p of kalici) {
     p.dy = p.dy || {};
@@ -71,22 +72,24 @@ function kur() {
   const dpr = Math.min(3, devicePixelRatio || 1); DPR = dpr;
   cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.width = W + 'px'; cv.style.height = H + 'px';
   c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  st = document.createElement('canvas'); st.width = cv.width; st.height = cv.height; stc = st.getContext('2d'); stc.setTransform(dpr, 0, 0, dpr, 0, 0);
   doldur();
 }
 function doldur() {
+  kirli = true;
   grid = bos(); kalici = []; dusen = null;
   // Başlangıç yığını: yaklaşık 2-3 satır
   for (let i = 0; i < 80 && grid.flat().filter(Boolean).length < cols * 2.4; i++) { const p = yeniParca(); if (p) { p.y = p.hedef; yerles(p); } }
 }
 
-function parcaCiz(p, y) {
+function parcaCiz(p, y, x = c) {
   // Keskinlik: sprite ekranın gerçek piksel yoğunluğunda üretilir (oyun tahtasıyla aynı netlik)
   const S = Math.round(s * DPR), spr = getSprite(p.t, p.r, p.g, S);
-  if (!p.dy || !Object.keys(p.dy).length) { c.drawImage(spr, p.x * s, y * s, spr.width / DPR, spr.height / DPR); return; }
+  if (!p.dy || !Object.keys(p.dy).length) { x.drawImage(spr, p.x * s, y * s, spr.width / DPR, spr.height / DPR); return; }
   // satır silindiyse hücre hücre çiz
   for (const [cx, cy] of cellsOf(p.t, p.r)) {
     const d = p.dy[cx + ',' + cy] || 0; if (d === 99) continue;
-    c.drawImage(spr, cx * S, cy * S, S, S, (p.x + cx) * s, (y + cy + d) * s, s, s);
+    x.drawImage(spr, cx * S, cy * S, S, S, (p.x + cx) * s, (y + cy + d) * s, s, s);
   }
 }
 
@@ -103,16 +106,25 @@ function kare(now) {
       if (dusen.fy >= dusen.hedef) { dusen.y = dusen.hedef; yerles(dusen); dusen = null; bekle = 0.9; satirSil(); }
     }
   }
+  // Hareket yoksa hiç çizme (menü boşta iken işlemciyi yormasın; dil değiştirme vb. akıcı kalsın)
+  const hareketli = !!dusen || !!isik || sonu || gor < 1;
+  if (!hareketli && !kirli && bosta) return;
+  bosta = !hareketli;
+  if (kirli) {
+    // Yerleşik yığın + kaide tek seferde önbelleğe çizilir
+    stc.clearRect(0, 0, W, H);
+    for (const p of kalici) parcaCiz(p, p.y, stc);
+    const ky = rows * s, kg = stc.createLinearGradient(0, ky, 0, ky + 7);
+    kg.addColorStop(0, '#E8E4DA'); kg.addColorStop(1, '#9E978A');
+    stc.fillStyle = kg; stc.fillRect(0, ky, W, 7);
+    stc.fillStyle = '#C9A227'; stc.fillRect(0, ky, W, 1.5);
+    kirli = false;
+  }
   c.clearRect(0, 0, W, H);
-  c.save(); c.globalAlpha = Math.max(0, gor);
-  for (const p of kalici) parcaCiz(p, p.y);
+  c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = Math.max(0, gor); c.drawImage(st, 0, 0); c.restore();
+  c.save();
   if (dusen) { c.globalAlpha = Math.max(0, gor) * Math.min(1, Math.max(0, (dusen.fy + 4) / 3)); parcaCiz(dusen, dusen.fy); }
   c.restore();
-  // mermer kaide + altın çizgi (yığın havada durmasın)
-  const ky = rows * s, kg = c.createLinearGradient(0, ky, 0, ky + 7);
-  kg.addColorStop(0, '#E8E4DA'); kg.addColorStop(1, '#9E978A');
-  c.fillStyle = kg; c.fillRect(0, ky, W, 7);
-  c.fillStyle = '#C9A227'; c.fillRect(0, ky, W, 1.5);
   if (isik) {
     isik.t += dt; const a = Math.max(0, 1 - isik.t / 0.6);
     const yy = isik.y * s, gr = c.createLinearGradient(0, yy - s, 0, yy + 2 * s);

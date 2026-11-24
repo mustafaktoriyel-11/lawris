@@ -628,3 +628,5 @@ html.ui-mix #menu .mascot-badge svg { filter: drop-shadow(0 4px 8px rgba(60,30,1
   }
   html.ui-mix #menu::before { background-image: url("img/acilis-tapinak.webp"); top: 17vh; }
 }
+/* Aydınlık menüde parıltı animasyonu gereksiz (sürekli yeniden boyama yapıyordu) */
+html.ui-mix #menu button.big { animation: none; }
