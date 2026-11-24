@@ -40,6 +40,7 @@ export function initInput(a, canvas, getCell) {
   let st = null;
   canvas.addEventListener('pointerdown', (e) => {
     e.preventDefault();
+    if (e.pointerType === 'mouse') return;   // masaüstünde fare tıklaması oyunu etkilemez (klavye kullanılır)
     try { canvas.setPointerCapture(e.pointerId); } catch (_) { /* yoksay */ }
     st = { x: e.clientX, y: e.clientY, t: performance.now(), ax: e.clientX, ay: e.clientY, moved: false };
   });

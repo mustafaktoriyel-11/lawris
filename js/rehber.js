@@ -31,7 +31,8 @@ export function initRehber({ onStart }) {
       const bw = cv.offsetWidth || box.width, bh = cv.offsetHeight || box.height;
       if (!bw || !bh) return;
       const sz = sizeOf(t, 0);
-      const cell = Math.min(g ? 13 : 12, bw / sz.w, bh / sz.h);
+      const k = (parseFloat(getComputedStyle(document.documentElement).fontSize) || 16) / 16;
+      const cell = Math.min((g ? 13 : 12) * k, bw / sz.w, bh / sz.h);
       const s = Math.max(4, Math.round(cell * d));
       const sp = getSprite(t, 0, g, s);
       cv.width = Math.round(bw * d); cv.height = Math.round(bh * d);

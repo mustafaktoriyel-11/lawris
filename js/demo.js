@@ -36,9 +36,11 @@ export function createDemo(canvas, nameEl, textEl) {
 
   function size() {
     const d = Math.min(3, window.devicePixelRatio || 1);
-    s = Math.max(6, Math.round(CELL * d));
+    const k = (parseFloat(getComputedStyle(document.documentElement).fontSize) || 16) / 16;
+    const cell = Math.round(CELL * k * 2) / 2;
+    s = Math.max(6, Math.round(cell * d));
     canvas.width = s * COLS; canvas.height = s * ROWS;
-    canvas.style.width = CELL * COLS + 'px'; canvas.style.height = CELL * ROWS + 'px';
+    canvas.style.width = cell * COLS + 'px'; canvas.style.height = cell * ROWS + 'px';
   }
 
   // sahneyi hazırlar; captionEl metinlerini düğmelerden okur

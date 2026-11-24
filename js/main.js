@@ -374,14 +374,29 @@ function frame(t) {
   requestAnimationFrame(frame);
 }
 
+let lastKey = '';
 function layout() {
   const w = $('stage');
-  renderer.resize(w.clientWidth, w.clientHeight);
-  clearSpriteCache();
+  const cw = w.clientWidth, ch = w.clientHeight;
+  if (!cw || !ch) return;
   const d = window.devicePixelRatio || 1;
-  for (const cv of [...prevCvs, holdCv]) { const px = Number(cv.dataset.px); cv.width = cv.height = Math.round(px * d); }
+  renderer.resize(cw, ch);
+  // hücre boyutu ya da çözünürlük değişmediyse sprite önbelleği korunur
+  const key = renderer.s + '@' + d;
+  if (key !== lastKey) { clearSpriteCache(); lastKey = key; }
+  for (const cv of [...prevCvs, holdCv]) {
+    const px = cv.clientWidth || Number(cv.dataset.px);
+    const n = Math.round(px * d);
+    if (cv.width !== n) cv.width = cv.height = n;
+  }
+  // balon, uyarı ve bildirimler görünüm penceresine değil tahta dikdörtgenine göre konumlanır
+  const st = w.style;
+  st.setProperty('--bx', canvas.offsetLeft + 'px'); st.setProperty('--by', canvas.offsetTop + 'px');
+  st.setProperty('--bw', canvas.offsetWidth + 'px'); st.setProperty('--bh', canvas.offsetHeight + 'px');
   drawQueue();
 }
+let layoutTm = 0;
+function layoutSoon() { clearTimeout(layoutTm); layoutTm = setTimeout(layout, 60); }
 
 $('play').addEventListener('click', start);
 $('again').addEventListener('click', start);
@@ -408,8 +423,11 @@ function showMute() {
 $('muteBtn').addEventListener('click', () => { music.setMuted(!music.isMuted()); showMute(); });
 showMute();
 document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') act.pause(); });
-window.addEventListener('resize', layout);
-window.addEventListener('orientationchange', () => setTimeout(layout, 150));
+window.addEventListener('resize', layoutSoon);
+window.addEventListener('orientationchange', () => { layoutSoon(); setTimeout(layout, 300); });
+if (typeof ResizeObserver === 'function') new ResizeObserver(layoutSoon).observe($('stage'));
+// Üst çubuk düğmeleri odakta kalmasın (Boşluk tuşu düşürme olarak çalışsın)
+document.addEventListener('click', (e) => { const b = e.target.closest && e.target.closest('#hud button, #hud [data-act]'); if (b && b.blur) b.blur(); });
 
 initInput(act, canvas, () => renderer.cellCss);
 initRehber({ onStart: start });
